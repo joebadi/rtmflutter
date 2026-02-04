@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../services/profile_service.dart';
 
 class ProfileDetailsPage extends StatefulWidget {
@@ -35,6 +37,7 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
   String _selectedBodyType = 'Average';
   bool _hasTattoos = false;
   bool _hasPiercings = false;
+  bool _isLoadingLocation = false;
 
   final List<String> _countries = [
     'Nigeria',
@@ -220,6 +223,62 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
     }
   }
 
+  Future<void> _fetchLocation() async {
+    setState(() => _isLoadingLocation = true);
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Location services are disabled.');
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Location permissions are denied');
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception(
+            'Location permissions are permanently denied, we cannot request permissions.');
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        final locationString = [
+          place.locality,
+          place.administrativeArea,
+          place.country
+        ].where((e) => e != null && e.isNotEmpty).join(', ');
+
+        setState(() {
+          _locationCtrl.text = locationString;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error getting location: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
+    }
+  }
+
   Future<void> _continue() async {
     if (_formKey.currentState!.validate()) {
       showDialog(
@@ -393,29 +452,7 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
                                     controller: _locationCtrl,
                                     label: 'Location',
                                     hint: 'City, State, Country',
-                                    onGeolocate: () {
-                                      // TODO: Implement geolocation
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Fetching your location...',
-                                          ),
-                                          duration: Duration(seconds: 1),
-                                        ),
-                                      );
-                                      // Simulate location fetch
-                                      Future.delayed(
-                                        const Duration(seconds: 1),
-                                        () {
-                                          setState(() {
-                                            _locationCtrl.text =
-                                                'Lagos, Lagos State, Nigeria';
-                                          });
-                                        },
-                                      );
-                                    },
+                                    onGeolocate: _isLoadingLocation ? () {} : _fetchLocation,
                                   ),
                                   const SizedBox(height: 20),
 
@@ -749,7 +786,13 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
                 vertical: 14,
               ),
               suffixIcon: IconButton(
-                icon: const Icon(Icons.my_location, color: Color(0xFFFF6B35)),
+                icon: _isLoadingLocation
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.my_location, color: Color(0xFFFF6B35)),
                 onPressed: onGeolocate,
                 tooltip: 'Use current location',
               ),

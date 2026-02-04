@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../config/theme.dart';
+import '../../services/profile_service.dart';
 
 class PersonalInformationPage extends StatefulWidget {
   const PersonalInformationPage({super.key});
@@ -53,6 +56,8 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
   bool _hasPiercings = false;
   bool _isHairy = false;
   bool _hasTribalMarks = false;
+  bool _isLoadingLocation = false;
+  bool _isSaving = false;
 
   // Lists
   final List<String> _genders = ['Male', 'Female'];
@@ -183,16 +188,130 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
     'Akwa Ibom': ['Ibibio', 'Annang', 'Oron'],
   };
 
-  void _saveChanges() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Save to backend
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Personal information updated successfully!'),
-          backgroundColor: AppTheme.primary,
-        ),
+  final ProfileService _profileService = ProfileService();
+
+  Future<void> _fetchLocation() async {
+    setState(() => _isLoadingLocation = true);
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Location services are disabled.');
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Location permissions are denied');
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception(
+            'Location permissions are permanently denied, we cannot request permissions.');
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
       );
-      context.pop();
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        final locationString = [
+          place.locality,
+          place.administrativeArea,
+          place.country
+        ].where((e) => e != null && e.isNotEmpty).join(', ');
+
+        setState(() {
+          _locationCtrl.text = locationString;
+          // Could also auto-set country/state if we wanted to be fancy
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error getting location: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingLocation = false);
+      }
+    }
+  }
+
+  Future<void> _saveChanges() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isSaving = true);
+
+      try {
+        final data = {
+          'aboutMe': _aboutMeCtrl.text,
+          'hobbies': _hobbiesCtrl.text,
+          'location': _locationCtrl.text,
+          'gender': _gender, // Backend handles string (Male/Female) -> MALE/FEMALE
+          'dateOfBirth': _dobCtrl.text,
+          
+          // Ethnicity
+          'ethnicityCountry': _ethnicityCountry,
+          'ethnicityState': _ethnicityState,
+          'tribe': _tribe,
+
+          // Personal Details
+          'relationshipStatus': _relationshipStatus,
+          'language': _preferredLanguage,
+          'workStatus': _workStatus,
+          'education': _educationLevel,
+          'religion': _religion,
+          'personalityType': _personalityType,
+
+          // Physical Attributes
+          'height': _height,
+          'bodyType': _bodyType,
+          'skinColor': _skinColor,
+          'eyeColor': _eyeColor,
+          'hasTattoos': _hasTattoos,
+          'hasPiercings': _hasPiercings,
+          'isHairy': _isHairy,
+          'hasTribalMarks': _hasTribalMarks,
+
+          // Medical
+          'genotype': _genotype,
+          'bloodGroup': _bloodGroup,
+        };
+
+        await _profileService.updateProfile(data);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Personal information updated successfully!'),
+              backgroundColor: AppTheme.primary,
+            ),
+          );
+          context.pop();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update profile: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+      }
     }
   }
 
@@ -345,6 +464,17 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
                     controller: _locationCtrl,
                     label: 'Location',
                     hint: 'City, State, Country',
+                    suffix: IconButton(
+                      onPressed: _isLoadingLocation ? null : _fetchLocation,
+                      icon: _isLoadingLocation
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.my_location,
+                              color: AppTheme.primary),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -619,7 +749,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _saveChanges,
+                    onPressed: _isSaving ? null : _saveChanges,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
                       shape: RoundedRectangleBorder(
@@ -627,14 +757,24 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
                       ),
                       elevation: 0,
                     ),
-                    child: Text(
-                      'Save Changes',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : Text(
+                            'Save Changes',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
 
@@ -696,6 +836,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
     required TextEditingController controller,
     required String label,
     required String hint,
+    Widget? suffix,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -726,6 +867,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),
+              suffixIcon: suffix,
             ),
           ),
         ),
