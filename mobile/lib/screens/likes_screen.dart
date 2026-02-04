@@ -9,9 +9,10 @@ class LikesScreen extends StatefulWidget {
   State<LikesScreen> createState() => _LikesScreenState();
 }
 
-class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStateMixin {
+class _LikesScreenState extends State<LikesScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+
   // Sample data
   final List<Map<String, dynamic>> _receivedLikes = [
     {
@@ -145,10 +146,15 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text('Received'),
-                      if (_receivedLikes.where((l) => l['isNew'] == true).isNotEmpty)
+                      if (_receivedLikes
+                          .where((l) => l['isNew'] == true)
+                          .isNotEmpty)
                         Container(
                           margin: const EdgeInsets.only(left: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFF5722),
                             borderRadius: BorderRadius.circular(10),
@@ -173,7 +179,10 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                       const Text('Matches'),
                       Container(
                         margin: const EdgeInsets.only(left: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green,
                           borderRadius: BorderRadius.circular(10),
@@ -313,7 +322,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                       ),
                     ),
                   ),
-                  
+
                   // Gradient Overlay
                   Container(
                     decoration: BoxDecoration(
@@ -330,7 +339,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                       ),
                     ),
                   ),
-                  
+
                   // New Badge
                   if (like['isNew'])
                     Positioned(
@@ -362,7 +371,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                         ),
                       ),
                     ),
-                  
+
                   // Compatibility Badge
                   Positioned(
                     top: 8,
@@ -397,7 +406,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                       ),
                     ),
                   ),
-                  
+
                   // Name and Location
                   Positioned(
                     bottom: 8,
@@ -439,7 +448,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                 ],
               ),
             ),
-            
+
             // Action Buttons
             Padding(
               padding: const EdgeInsets.all(8),
@@ -515,7 +524,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
 
   Widget _buildSentLikeCard(Map<String, dynamic> like) {
     final isPending = like['status'] == 'Pending';
-    
+
     return GestureDetector(
       onTap: () {
         // Navigate to profile
@@ -553,7 +562,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                       ),
                     ),
                   ),
-                  
+
                   // Gradient Overlay
                   Container(
                     decoration: BoxDecoration(
@@ -570,7 +579,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                       ),
                     ),
                   ),
-                  
+
                   // Status Badge
                   Positioned(
                     top: 8,
@@ -594,7 +603,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                       ),
                     ),
                   ),
-                  
+
                   // Name and Location
                   Positioned(
                     bottom: 8,
@@ -636,7 +645,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                 ],
               ),
             ),
-            
+
             // Unlike Button
             Padding(
               padding: const EdgeInsets.all(8),
@@ -737,7 +746,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                   ),
                 ),
                 const SizedBox(width: 12),
-                
+
                 // Match Info
                 Expanded(
                   child: Column(
@@ -817,7 +826,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                     ],
                   ),
                 ),
-                
+
                 // Message Button
                 Container(
                   width: 44,
@@ -867,11 +876,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
                 color: Colors.grey[200],
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 50,
-                color: Colors.grey[400],
-              ),
+              child: Icon(icon, size: 50, color: Colors.grey[400]),
             ),
             const SizedBox(height: 24),
             Text(
@@ -885,10 +890,7 @@ class _LikesScreenState extends State<LikesScreen> with SingleTickerProviderStat
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ],

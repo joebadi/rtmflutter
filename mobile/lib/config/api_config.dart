@@ -19,12 +19,15 @@ class ApiConfig {
   static const String logout = '$authBase/logout';
   static const String forgotPassword = '$authBase/forgot-password';
   static const String resetPassword = '$authBase/reset-password';
+  static const String checkPasswordStrength = '$authBase/check-password-strength';
 
   // Profile Endpoints
   static const String myProfile = '$profileBase/me';
   static const String updateProfile = '$profileBase/me';
   static const String uploadPhoto = '$profileBase/photos';
-  static const String updatePreferences = '$profileBase/preferences';
+  
+  // Preferences Endpoints
+  static const String preferences = '$baseUrl/preferences';
 
   // Match Endpoints
   static const String exploreMatches = '$matchBase/explore';

@@ -4,11 +4,8 @@ import 'package:go_router/go_router.dart';
 
 class ChatScreen extends StatefulWidget {
   final String userName;
-  
-  const ChatScreen({
-    super.key,
-    required this.userName,
-  });
+
+  const ChatScreen({super.key, required this.userName});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -17,14 +14,10 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   // Sample messages
   final List<Map<String, dynamic>> _messages = [
-    {
-      'text': 'Hi Karen, Ciara here!!',
-      'time': '9:25 am',
-      'isSent': false,
-    },
+    {'text': 'Hi Karen, Ciara here!!', 'time': '9:25 am', 'isSent': false},
     {
       'text': 'Hey, Jana, Nice to meet you!',
       'time': '10:15 am',
@@ -40,17 +33,12 @@ class _ChatScreenState extends State<ChatScreen> {
       'time': '10:45 am',
       'isSent': true,
     },
-    {
-      'type': 'audio',
-      'duration': '2:25',
-      'time': '10:50 am',
-      'isSent': false,
-    },
+    {'type': 'audio', 'duration': '2:25', 'time': '10:50 am', 'isSent': false},
   ];
 
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
-    
+
     setState(() {
       _messages.add({
         'text': _messageController.text,
@@ -59,7 +47,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       _messageController.clear();
     });
-    
+
     // Scroll to bottom
     Future.delayed(const Duration(milliseconds: 100), () {
       _scrollController.animateTo(
@@ -217,10 +205,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   // Emoji Button
                   IconButton(
-                    icon: Icon(Icons.emoji_emotions_outlined, color: Colors.grey[600]),
+                    icon: Icon(
+                      Icons.emoji_emotions_outlined,
+                      color: Colors.grey[600],
+                    ),
                     onPressed: () {},
                   ),
-                  
+
                   // Text Input
                   Expanded(
                     child: Container(
@@ -249,13 +240,13 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                   ),
-                  
+
                   // Attachment Button
                   IconButton(
                     icon: Icon(Icons.attach_file, color: Colors.grey[600]),
                     onPressed: () {},
                   ),
-                  
+
                   // Send Button
                   Container(
                     width: 44,
@@ -265,7 +256,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                      icon: const Icon(
+                        Icons.send,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                       onPressed: _sendMessage,
                     ),
                   ),
@@ -281,11 +276,13 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildMessageBubble(Map<String, dynamic> message) {
     final isSent = message['isSent'] ?? false;
     final isAudio = message['type'] == 'audio';
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
-        mainAxisAlignment: isSent ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isSent
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isSent) ...[
@@ -294,10 +291,7 @@ class _ChatScreenState extends State<ChatScreen> {
               height: 32,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFFF5722),
-                  width: 1.5,
-                ),
+                border: Border.all(color: const Color(0xFFFF5722), width: 1.5),
               ),
               child: ClipOval(
                 child: Image.network(
@@ -314,7 +308,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(width: 8),
           ],
-          
+
           Flexible(
             child: Column(
               crossAxisAlignment: isSent
@@ -327,9 +321,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: isSent
-                        ? const Color(0xFFFFB300)
-                        : Colors.white,
+                    color: isSent ? const Color(0xFFFFB300) : Colors.white,
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
@@ -366,7 +358,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
-          
+
           if (isSent) const SizedBox(width: 8),
         ],
       ),
@@ -384,11 +376,7 @@ class _ChatScreenState extends State<ChatScreen> {
             color: Colors.black.withOpacity(0.1),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.play_arrow,
-            color: Colors.black87,
-            size: 20,
-          ),
+          child: const Icon(Icons.play_arrow, color: Colors.black87, size: 20),
         ),
         const SizedBox(width: 12),
         Column(
@@ -415,10 +403,7 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(height: 4),
             Text(
               message['duration'],
-              style: GoogleFonts.poppins(
-                fontSize: 11,
-                color: Colors.black54,
-              ),
+              style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54),
             ),
           ],
         ),

@@ -17,17 +17,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<OnboardingPage> _pages = [
     OnboardingPage(
       title: 'Find Your\nPerfect Match',
-      subtitle: 'Meet New People, Spark Real Connections,\nAnd See Where It Goes.',
+      subtitle:
+          'Meet New People, Spark Real Connections,\nAnd See Where It Goes.',
       color: const Color(0xFFB85C4E),
     ),
     OnboardingPage(
       title: 'Instant Video\nDates',
-      subtitle: 'Connect face-to-face instantly.\nNo more catfishing, just real connections.',
+      subtitle:
+          'Connect face-to-face instantly.\nNo more catfishing, just real connections.',
       color: const Color(0xFF7B68EE),
     ),
     OnboardingPage(
       title: 'Secure &\nVerified',
-      subtitle: 'Join a community of verified users\nlooking for serious relationships.',
+      subtitle:
+          'Join a community of verified users\nlooking for serious relationships.',
       color: const Color(0xFF667EEA),
     ),
   ];
@@ -54,7 +57,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 return _buildPage(_pages[index], index);
               },
             ),
-            
+
             // Top Bar with App Name and Skip Buttons
             Positioned(
               top: 20,
@@ -77,7 +80,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       children: [
                         // Demo Mode Skip
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.orange.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(20),
@@ -87,7 +93,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             onTap: () => context.go('/home'),
                             child: Row(
                               children: [
-                                const Icon(Icons.developer_mode, color: Colors.orange, size: 16),
+                                const Icon(
+                                  Icons.developer_mode,
+                                  color: Colors.orange,
+                                  size: 16,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Demo',
@@ -120,7 +130,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
             ),
-            
+
             // Bottom Section (Text areas allow swipe, button remains clickable)
             Positioned(
               bottom: 0,
@@ -156,7 +166,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Subtitle (Allows swipe through)
                     IgnorePointer(
                       child: Text(
@@ -170,7 +180,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    
+
                     // Page Indicators (Allows swipe through)
                     IgnorePointer(
                       child: Row(
@@ -193,7 +203,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
                     const SizedBox(height: 30),
-                    
+
                     // Get Started Button (Fully interactive)
                     Container(
                       width: double.infinity,
@@ -222,7 +232,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           // Button Text
                           Expanded(
                             child: Text(
-                              _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
+                              _currentPage == _pages.length - 1
+                                  ? 'Get Started'
+                                  : 'Next',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.poppins(
                                 fontSize: 16,
@@ -293,12 +305,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
           ),
-          
+
           // Floating Icons
           Positioned(
             top: MediaQuery.of(context).size.height * 0.25,
             left: 40,
-            child: _buildFloatingIcon(Icons.chat_bubble, const Color(0xFF6B4EFF)),
+            child: _buildFloatingIcon(
+              Icons.chat_bubble,
+              const Color(0xFF6B4EFF),
+            ),
           ),
           Positioned(
             top: MediaQuery.of(context).size.height * 0.18,
@@ -315,7 +330,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildProfileCard(String imageUrl, String name, Color accentColor, IconData icon) {
+  Widget _buildProfileCard(
+    String imageUrl,
+    String name,
+    Color accentColor,
+    IconData icon,
+  ) {
     return Container(
       width: 180,
       height: 240,
@@ -334,19 +354,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-            ),
+            Image.network(imageUrl, fit: BoxFit.cover),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
                 ),
               ),
             ),
@@ -383,11 +397,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ],
       ),
-      child: Icon(
-        icon,
-        color: Colors.white,
-        size: 24,
-      ),
+      child: Icon(icon, color: Colors.white, size: 24),
     );
   }
 }
@@ -406,9 +416,6 @@ class OnboardingPage {
 
 extension WidgetExtension on Widget {
   Widget onTap(VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: this,
-    );
+    return GestureDetector(onTap: onTap, child: this);
   }
 }

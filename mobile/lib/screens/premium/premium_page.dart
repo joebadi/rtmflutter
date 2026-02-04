@@ -37,7 +37,10 @@ class _PremiumPageState extends State<PremiumPage> {
               // Premium Header Card
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 28,
+                  horizontal: 24,
+                ),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
@@ -320,11 +323,7 @@ class _PremiumPageState extends State<PremiumPage> {
             color: Colors.grey[400],
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.check,
-            color: Colors.white,
-            size: 14,
-          ),
+          child: const Icon(Icons.check, color: Colors.white, size: 14),
         ),
         const SizedBox(width: 10),
         Expanded(

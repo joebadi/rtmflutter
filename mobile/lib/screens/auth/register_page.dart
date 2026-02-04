@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/password_strength_indicator.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -263,6 +264,11 @@ class _RegisterPageState extends State<RegisterPage> {
                                       () =>
                                           _obscurePassword = !_obscurePassword,
                                     ),
+                                  ),
+
+                                  // Password Strength Indicator
+                                  PasswordStrengthIndicator(
+                                    password: _passCtrl.text,
                                   ),
 
                                   const SizedBox(height: 14),

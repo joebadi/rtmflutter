@@ -3,7 +3,7 @@ import '../services/profile_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
   final ProfileService _profileService = ProfileService();
-  
+
   Map<String, dynamic>? _profile;
   bool _isLoading = false;
   String? _error;

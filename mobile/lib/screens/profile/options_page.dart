@@ -91,7 +91,10 @@ class _OptionsPageState extends State<OptionsPage> {
                       splashColor: Colors.white.withOpacity(0.3),
                       highlightColor: Colors.white.withOpacity(0.1),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         child: Row(
                           children: [
                             Container(
@@ -222,7 +225,8 @@ class _OptionsPageState extends State<OptionsPage> {
             ),
             _buildToggleItem(
               title: 'Go Anonymous',
-              subtitle: 'Turn On, if you don\'t want to be seen anywhere in the app',
+              subtitle:
+                  'Turn On, if you don\'t want to be seen anywhere in the app',
               value: _goAnonymous,
               onChanged: (v) => setState(() => _goAnonymous = v),
             ),
@@ -245,14 +249,8 @@ class _OptionsPageState extends State<OptionsPage> {
 
             const SizedBox(height: 10),
 
-            _buildLegalItem(
-              title: 'Privacy Policy',
-              onTap: () {},
-            ),
-            _buildLegalItem(
-              title: 'Terms Of Use',
-              onTap: () {},
-            ),
+            _buildLegalItem(title: 'Privacy Policy', onTap: () {}),
+            _buildLegalItem(title: 'Terms Of Use', onTap: () {}),
 
             const SizedBox(height: 24),
 
@@ -275,7 +273,10 @@ class _OptionsPageState extends State<OptionsPage> {
                   height: 48,
                   child: OutlinedButton(
                     onPressed: () {
-                      Provider.of<AuthProvider>(context, listen: false).logout();
+                      Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      ).logout();
                       context.go('/login');
                     },
                     style: OutlinedButton.styleFrom(
@@ -367,7 +368,10 @@ class _OptionsPageState extends State<OptionsPage> {
                       _showDeleteAccountDialog();
                     },
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.red.withOpacity(0.3), width: 1.5),
+                      side: BorderSide(
+                        color: Colors.red.withOpacity(0.3),
+                        width: 1.5,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -426,11 +430,7 @@ class _OptionsPageState extends State<OptionsPage> {
                     color: const Color(0xFFFF5722).withOpacity(0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
-                    icon,
-                    color: const Color(0xFFFF5722),
-                    size: 20,
-                  ),
+                  child: Icon(icon, color: const Color(0xFFFF5722), size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -443,11 +443,7 @@ class _OptionsPageState extends State<OptionsPage> {
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey[400],
-                  size: 20,
-                ),
+                Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
               ],
             ),
           ),
@@ -519,10 +515,7 @@ class _OptionsPageState extends State<OptionsPage> {
     );
   }
 
-  Widget _buildLegalItem({
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildLegalItem({required String title, required VoidCallback onTap}) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
       decoration: BoxDecoration(

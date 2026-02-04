@@ -83,23 +83,42 @@ class ProfileService {
     }
   }
 
-  /// Update match preferences
-  Future<Map<String, dynamic>> updatePreferences(
+  /// Save match preferences
+  Future<Map<String, dynamic>> savePreferences(
     Map<String, dynamic> preferences,
   ) async {
     final token = await _storage.read(key: 'access_token');
     if (token == null) throw Exception('Not authenticated');
 
     try {
-      final response = await _dio.put(
-        ApiConfig.updatePreferences,
+      final response = await _dio.post(
+        ApiConfig.preferences,
         data: preferences,
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       return response.data;
     } on DioException catch (e) {
       throw Exception(
-        e.response?.data['message'] ?? 'Failed to update preferences',
+        e.response?.data['message'] ?? 'Failed to save preferences',
+      );
+    }
+  }
+
+  /// Get match preferences
+  Future<Map<String, dynamic>?> getPreferences() async {
+    final token = await _storage.read(key: 'access_token');
+    if (token == null) throw Exception('Not authenticated');
+
+    try {
+      final response = await _dio.get(
+        ApiConfig.preferences,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      throw Exception(
+        e.response?.data['message'] ?? 'Failed to get preferences',
       );
     }
   }

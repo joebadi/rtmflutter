@@ -65,29 +65,21 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Skip Verification?',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-          ),
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
         content: Text(
           'Video verification helps build trust in our community. You can verify later in settings, but some features may be limited.',
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-          ),
+          style: GoogleFonts.poppins(fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: GoogleFonts.poppins(
-                color: Colors.grey[600],
-              ),
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
             ),
           ),
           TextButton(
@@ -175,10 +167,7 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
                       height: 400,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [
-                            Colors.grey[900]!,
-                            Colors.grey[800]!,
-                          ],
+                          colors: [Colors.grey[900]!, Colors.grey[800]!],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -269,12 +258,17 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
                               ),
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                                  colors: [
+                                    Color(0xFFFF5722),
+                                    Color(0xFFFF7043),
+                                  ],
                                 ),
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFFF5722).withOpacity(0.4),
+                                    color: const Color(
+                                      0xFFFF5722,
+                                    ).withOpacity(0.4),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -357,7 +351,9 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
                                     Icons.refresh,
                                     color: Color(0xFFFF5722),
                                   ),
-                                  onPressed: _isVerifying ? null : _generateChallenge,
+                                  onPressed: _isVerifying
+                                      ? null
+                                      : _generateChallenge,
                                 ),
                               ],
                             ),
@@ -397,8 +393,14 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          _buildBenefit(Icons.verified, 'Get verified badge on profile'),
-                          _buildBenefit(Icons.security, 'Build trust with matches'),
+                          _buildBenefit(
+                            Icons.verified,
+                            'Get verified badge on profile',
+                          ),
+                          _buildBenefit(
+                            Icons.security,
+                            'Build trust with matches',
+                          ),
                           _buildBenefit(Icons.block, 'Prevent fake accounts'),
                           _buildBenefit(Icons.star, 'Unlock premium features'),
                         ],
@@ -423,7 +425,9 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
                             elevation: 2,
                           ),
                           child: Text(
-                            _isVerifying ? 'Verifying...' : 'Start Verification',
+                            _isVerifying
+                                ? 'Verifying...'
+                                : 'Start Verification',
                             style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -450,19 +454,12 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: const Color(0xFFFF5722),
-          ),
+          Icon(icon, size: 20, color: const Color(0xFFFF5722)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: Colors.grey[700],
-              ),
+              style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[700]),
             ),
           ),
         ],

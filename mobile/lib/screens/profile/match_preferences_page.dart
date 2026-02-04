@@ -12,7 +12,7 @@ class MatchPreferencesPage extends StatefulWidget {
 
 class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
   final _formKey = GlobalKey<FormState>();
-  
+
   RangeValues _ageRange = const RangeValues(25, 35);
   final List<String> _selectedRelationshipStatuses = ['Single'];
   String _selectedCountry = 'Nigeria';
@@ -41,21 +41,78 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     'piercings': false,
   };
 
-  final List<String> _relationshipStatuses = ['Single', 'Divorced', 'Widowed', 'Separated'];
-  final List<String> _countries = ['Nigeria', 'Ghana', 'Kenya', 'South Africa', 'USA', 'UK'];
-  final List<String> _nigerianStates = [
-    'Lagos', 'Abuja', 'Kano', 'Rivers', 'Oyo', 'Ogun', 'Edo', 'Anambra', 'Enugu'
+  final List<String> _relationshipStatuses = [
+    'Single',
+    'Divorced',
+    'Widowed',
+    'Separated',
   ];
-  final List<String> _tribes = ['Yoruba', 'Igbo', 'Hausa', 'Ijaw', 'Fulani', 'Edo'];
-  final List<String> _religions = ['Christianity', 'Islam', 'Traditional', 'Other'];
+  final List<String> _countries = [
+    'Nigeria',
+    'Ghana',
+    'Kenya',
+    'South Africa',
+    'USA',
+    'UK',
+  ];
+  final List<String> _nigerianStates = [
+    'Lagos',
+    'Abuja',
+    'Kano',
+    'Rivers',
+    'Oyo',
+    'Ogun',
+    'Edo',
+    'Anambra',
+    'Enugu',
+  ];
+  final List<String> _tribes = [
+    'Yoruba',
+    'Igbo',
+    'Hausa',
+    'Ijaw',
+    'Fulani',
+    'Edo',
+  ];
+  final List<String> _religions = [
+    'Christianity',
+    'Islam',
+    'Traditional',
+    'Other',
+  ];
   final List<String> _zodiacs = [
-    'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
-    'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
+    'Aries',
+    'Taurus',
+    'Gemini',
+    'Cancer',
+    'Leo',
+    'Virgo',
+    'Libra',
+    'Scorpio',
+    'Sagittarius',
+    'Capricorn',
+    'Aquarius',
+    'Pisces',
   ];
   final List<String> _genotypes = ['AA', 'AS', 'SS', 'AC'];
-  final List<String> _bloodGroups = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
+  final List<String> _bloodGroups = [
+    'O+',
+    'O-',
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+  ];
   final List<String> _heights = ['4\'0"', '5\'0"', '5\'6"', '6\'0"', '6\'6"'];
-  final List<String> _bodyTypes = ['Slim', 'Average', 'Athletic', 'Curvy', 'Plus Size'];
+  final List<String> _bodyTypes = [
+    'Slim',
+    'Average',
+    'Athletic',
+    'Curvy',
+    'Plus Size',
+  ];
 
   void _savePreferences() {
     if (_formKey.currentState!.validate()) {
@@ -131,97 +188,85 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                 const SizedBox(height: 16),
 
                 // AGE RANGE
-                _buildSectionCard(
-                  'Age Range',
-                  Icons.calendar_today,
-                  [
-                    Text(
-                      '${_ageRange.start.round()} - ${_ageRange.end.round()} years',
-                      style: GoogleFonts.poppins(
-                        color: AppTheme.primary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                _buildSectionCard('Age Range', Icons.calendar_today, [
+                  Text(
+                    '${_ageRange.start.round()} - ${_ageRange.end.round()} years',
+                    style: GoogleFonts.poppins(
+                      color: AppTheme.primary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 8),
-                    RangeSlider(
-                      values: _ageRange,
-                      min: 18,
-                      max: 70,
-                      divisions: 52,
-                      activeColor: AppTheme.primary,
-                      inactiveColor: Colors.grey[300],
-                      labels: RangeLabels(
-                        _ageRange.start.round().toString(),
-                        _ageRange.end.round().toString(),
-                      ),
-                      onChanged: (values) => setState(() => _ageRange = values),
+                  ),
+                  const SizedBox(height: 8),
+                  RangeSlider(
+                    values: _ageRange,
+                    min: 18,
+                    max: 70,
+                    divisions: 52,
+                    activeColor: AppTheme.primary,
+                    inactiveColor: Colors.grey[300],
+                    labels: RangeLabels(
+                      _ageRange.start.round().toString(),
+                      _ageRange.end.round().toString(),
                     ),
-                  ],
-                ),
+                    onChanged: (values) => setState(() => _ageRange = values),
+                  ),
+                ]),
 
                 const SizedBox(height: 16),
 
                 // RELATIONSHIP & LOCATION
-                _buildSectionCard(
-                  'Relationship & Location',
-                  Icons.favorite,
-                  [
-                    _buildMultiSelectWithDealBreaker(
-                      'Relationship Status',
-                      _selectedRelationshipStatuses,
-                      _relationshipStatuses,
-                      'relationshipStatus',
+                _buildSectionCard('Relationship & Location', Icons.favorite, [
+                  _buildMultiSelectWithDealBreaker(
+                    'Relationship Status',
+                    _selectedRelationshipStatuses,
+                    _relationshipStatuses,
+                    'relationshipStatus',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDropdownWithDealBreaker(
+                    'Partner\'s Location',
+                    _selectedCountry,
+                    _countries,
+                    (v) => setState(() => _selectedCountry = v!),
+                    'location',
+                  ),
+                  if (_selectedCountry == 'Nigeria') ...[
+                    const SizedBox(height: 16),
+                    _buildMultiSelectField(
+                      'Preferred States',
+                      _selectedStates,
+                      _nigerianStates,
                     ),
                     const SizedBox(height: 16),
-                    _buildDropdownWithDealBreaker(
-                      'Partner\'s Location',
-                      _selectedCountry,
-                      _countries,
-                      (v) => setState(() => _selectedCountry = v!),
-                      'location',
+                    _buildMultiSelectField(
+                      'Preferred Tribes',
+                      _selectedTribes,
+                      _tribes,
                     ),
-                    if (_selectedCountry == 'Nigeria') ...[
-                      const SizedBox(height: 16),
-                      _buildMultiSelectField(
-                        'Preferred States',
-                        _selectedStates,
-                        _nigerianStates,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildMultiSelectField(
-                        'Preferred Tribes',
-                        _selectedTribes,
-                        _tribes,
-                      ),
-                    ],
                   ],
-                ),
+                ]),
 
                 const SizedBox(height: 16),
 
                 // RELIGION & ZODIAC
-                _buildSectionCard(
-                  'Religion & Zodiac',
-                  Icons.auto_awesome,
-                  [
-                    _buildDropdownWithDealBreaker(
-                      'Preferred Religion',
-                      _selectedReligion,
-                      _religions,
-                      (v) => setState(() => _selectedReligion = v),
-                      'religion',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDropdownWithDealBreaker(
-                      'Preferred Zodiac',
-                      _selectedZodiac,
-                      _zodiacs,
-                      (v) => setState(() => _selectedZodiac = v),
-                      'zodiac',
-                    ),
-                  ],
-                ),
+                _buildSectionCard('Religion & Zodiac', Icons.auto_awesome, [
+                  _buildDropdownWithDealBreaker(
+                    'Preferred Religion',
+                    _selectedReligion,
+                    _religions,
+                    (v) => setState(() => _selectedReligion = v),
+                    'religion',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDropdownWithDealBreaker(
+                    'Preferred Zodiac',
+                    _selectedZodiac,
+                    _zodiacs,
+                    (v) => setState(() => _selectedZodiac = v),
+                    'zodiac',
+                  ),
+                ]),
 
                 const SizedBox(height: 16),
 
@@ -251,41 +296,37 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                 const SizedBox(height: 16),
 
                 // PHYSICAL
-                _buildSectionCard(
-                  'Physical Preferences',
-                  Icons.face,
-                  [
-                    _buildDropdownWithDealBreaker(
-                      'Preferred Height',
-                      _selectedHeight,
-                      _heights,
-                      (v) => setState(() => _selectedHeight = v),
-                      'height',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDropdownWithDealBreaker(
-                      'Preferred Body Type',
-                      _selectedBodyType,
-                      _bodyTypes,
-                      (v) => setState(() => _selectedBodyType = v),
-                      'bodyType',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildBooleanWithDealBreaker(
-                      'Tattoos',
-                      _preferredTattoos,
-                      (v) => setState(() => _preferredTattoos = v),
-                      'tattoos',
-                    ),
-                    const SizedBox(height: 16),
-                    _buildBooleanWithDealBreaker(
-                      'Piercings',
-                      _preferredPiercings,
-                      (v) => setState(() => _preferredPiercings = v),
-                      'piercings',
-                    ),
-                  ],
-                ),
+                _buildSectionCard('Physical Preferences', Icons.face, [
+                  _buildDropdownWithDealBreaker(
+                    'Preferred Height',
+                    _selectedHeight,
+                    _heights,
+                    (v) => setState(() => _selectedHeight = v),
+                    'height',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDropdownWithDealBreaker(
+                    'Preferred Body Type',
+                    _selectedBodyType,
+                    _bodyTypes,
+                    (v) => setState(() => _selectedBodyType = v),
+                    'bodyType',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildBooleanWithDealBreaker(
+                    'Tattoos',
+                    _preferredTattoos,
+                    (v) => setState(() => _preferredTattoos = v),
+                    'tattoos',
+                  ),
+                  const SizedBox(height: 16),
+                  _buildBooleanWithDealBreaker(
+                    'Piercings',
+                    _preferredPiercings,
+                    (v) => setState(() => _preferredPiercings = v),
+                    'piercings',
+                  ),
+                ]),
 
                 const SizedBox(height: 24),
 
@@ -402,7 +443,8 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   scale: 0.8,
                   child: Switch(
                     value: _dealBreakers[dealBreakerKey]!,
-                    onChanged: (v) => setState(() => _dealBreakers[dealBreakerKey] = v),
+                    onChanged: (v) =>
+                        setState(() => _dealBreakers[dealBreakerKey] = v),
                     activeColor: Colors.red,
                   ),
                 ),
@@ -416,7 +458,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             color: Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _dealBreakers[dealBreakerKey]! ? Colors.red : Colors.grey[300]!,
+              color: _dealBreakers[dealBreakerKey]!
+                  ? Colors.red
+                  : Colors.grey[300]!,
               width: _dealBreakers[dealBreakerKey]! ? 2 : 1,
             ),
           ),
@@ -425,15 +469,22 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              hint: Text('Select', style: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 14)),
+              hint: Text(
+                'Select',
+                style: GoogleFonts.poppins(
+                  color: Colors.grey[400],
+                  fontSize: 14,
+                ),
+              ),
               dropdownColor: Colors.white,
               style: GoogleFonts.poppins(color: Colors.black87, fontSize: 14),
-              icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey[600], size: 22),
+              icon: Icon(
+                Icons.keyboard_arrow_down,
+                color: Colors.grey[600],
+                size: 22,
+              ),
               items: items.map((String item) {
-                return DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(item),
-                );
+                return DropdownMenuItem<String>(value: item, child: Text(item));
               }).toList(),
               onChanged: onChanged,
             ),
@@ -477,7 +528,8 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   scale: 0.8,
                   child: Switch(
                     value: _dealBreakers[dealBreakerKey]!,
-                    onChanged: (v) => setState(() => _dealBreakers[dealBreakerKey] = v),
+                    onChanged: (v) =>
+                        setState(() => _dealBreakers[dealBreakerKey] = v),
                     activeColor: Colors.red,
                   ),
                 ),
@@ -492,7 +544,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             color: Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _dealBreakers[dealBreakerKey]! ? Colors.red : Colors.grey[300]!,
+              color: _dealBreakers[dealBreakerKey]!
+                  ? Colors.red
+                  : Colors.grey[300]!,
               width: _dealBreakers[dealBreakerKey]! ? 2 : 1,
             ),
           ),
@@ -512,7 +566,10 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? AppTheme.primary : Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -525,7 +582,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       color: isSelected ? Colors.white : Colors.black87,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -537,7 +596,11 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     );
   }
 
-  Widget _buildMultiSelectField(String label, List<String> selectedValues, List<String> items) {
+  Widget _buildMultiSelectField(
+    String label,
+    List<String> selectedValues,
+    List<String> items,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -573,7 +636,10 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? AppTheme.primary : Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -586,7 +652,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       color: isSelected ? Colors.white : Colors.black87,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -632,7 +700,8 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   scale: 0.8,
                   child: Switch(
                     value: _dealBreakers[dealBreakerKey]!,
-                    onChanged: (v) => setState(() => _dealBreakers[dealBreakerKey] = v),
+                    onChanged: (v) =>
+                        setState(() => _dealBreakers[dealBreakerKey] = v),
                     activeColor: Colors.red,
                   ),
                 ),
@@ -647,7 +716,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             color: Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _dealBreakers[dealBreakerKey]! ? Colors.red : Colors.grey[300]!,
+              color: _dealBreakers[dealBreakerKey]!
+                  ? Colors.red
+                  : Colors.grey[300]!,
               width: _dealBreakers[dealBreakerKey]! ? 2 : 1,
             ),
           ),
@@ -659,7 +730,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: value == true ? AppTheme.primary : Colors.transparent,
+                      color: value == true
+                          ? AppTheme.primary
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(
@@ -681,7 +754,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: value == false ? AppTheme.primary : Colors.transparent,
+                      color: value == false
+                          ? AppTheme.primary
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(
@@ -703,7 +778,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      color: value == null ? AppTheme.primary : Colors.transparent,
+                      color: value == null
+                          ? AppTheme.primary
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Center(

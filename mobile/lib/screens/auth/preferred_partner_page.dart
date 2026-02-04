@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/profile_service.dart';
 
 class PreferredPartnerPage extends StatefulWidget {
   const PreferredPartnerPage({super.key});
@@ -12,7 +13,7 @@ class PreferredPartnerPage extends StatefulWidget {
 
 class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
   final _formKey = GlobalKey<FormState>();
-  
+
   RangeValues _ageRange = const RangeValues(25, 35);
   final List<String> _selectedRelationshipStatuses = ['Single'];
   String _selectedCountry = 'Nigeria';
@@ -41,26 +42,135 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
     'piercings': false,
   };
 
-  final List<String> _relationshipStatuses = ['Single', 'Divorced', 'Widowed', 'Separated'];
-  final List<String> _countries = ['Nigeria', 'Ghana', 'Kenya', 'South Africa', 'USA', 'UK'];
-  final List<String> _nigerianStates = [
-    'Lagos', 'Abuja', 'Kano', 'Rivers', 'Oyo', 'Ogun', 'Edo', 'Anambra', 'Enugu'
+  final List<String> _relationshipStatuses = [
+    'Single',
+    'Divorced',
+    'Widowed',
+    'Separated',
   ];
-  final List<String> _tribes = ['Yoruba', 'Igbo', 'Hausa', 'Ijaw', 'Fulani', 'Edo'];
-  final List<String> _religions = ['Christianity', 'Islam', 'Traditional', 'Other'];
+  final List<String> _countries = [
+    'Nigeria',
+    'Ghana',
+    'Kenya',
+    'South Africa',
+    'USA',
+    'UK',
+  ];
+  final List<String> _nigerianStates = [
+    'Lagos',
+    'Abuja',
+    'Kano',
+    'Rivers',
+    'Oyo',
+    'Ogun',
+    'Edo',
+    'Anambra',
+    'Enugu',
+  ];
+  final List<String> _tribes = [
+    'Yoruba',
+    'Igbo',
+    'Hausa',
+    'Ijaw',
+    'Fulani',
+    'Edo',
+  ];
+  final List<String> _religions = [
+    'Christianity',
+    'Islam',
+    'Traditional',
+    'Other',
+  ];
   final List<String> _zodiacs = [
-    'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
-    'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
+    'Aries',
+    'Taurus',
+    'Gemini',
+    'Cancer',
+    'Leo',
+    'Virgo',
+    'Libra',
+    'Scorpio',
+    'Sagittarius',
+    'Capricorn',
+    'Aquarius',
+    'Pisces',
   ];
   final List<String> _genotypes = ['AA', 'AS', 'SS', 'AC'];
-  final List<String> _bloodGroups = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
+  final List<String> _bloodGroups = [
+    'O+',
+    'O-',
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+  ];
   final List<String> _heights = ['4\'0"', '5\'0"', '5\'6"', '6\'0"', '6\'6"'];
-  final List<String> _bodyTypes = ['Slim', 'Average', 'Athletic', 'Curvy', 'Plus Size'];
+  final List<String> _bodyTypes = [
+    'Slim',
+    'Average',
+    'Athletic',
+    'Curvy',
+    'Plus Size',
+  ];
 
-  void _continue() {
+  final ProfileService _profileService = ProfileService();
+  bool _isSaving = false;
+
+  Future<void> _continue() async {
     if (_formKey.currentState!.validate()) {
-      // Navigate to OTP verification
-      context.push('/otp-verification');
+      setState(() => _isSaving = true);
+
+      try {
+        // Prepare preferences data
+        final preferencesData = {
+          'ageMin': _ageRange.start.round(),
+          'ageMax': _ageRange.end.round(),
+          'ageIsDealBreaker': false, // Age is not typically a deal breaker
+          'relationshipStatus': _selectedRelationshipStatuses,
+          'relationshipIsDealBreaker': _dealBreakers['relationshipStatus'] ?? false,
+          'locationCountry': _selectedCountry,
+          'locationStates': _selectedStates,
+          'locationTribes': _selectedTribes,
+          'locationIsDealBreaker': _dealBreakers['location'] ?? false,
+          if (_selectedReligion != null) 'religion': [_selectedReligion],
+          'religionIsDealBreaker': _dealBreakers['religion'] ?? false,
+          if (_selectedZodiac != null) 'zodiac': [_selectedZodiac],
+          'zodiacIsDealBreaker': _dealBreakers['zodiac'] ?? false,
+          if (_selectedGenotype != null) 'genotype': [_selectedGenotype],
+          'genotypeIsDealBreaker': _dealBreakers['genotype'] ?? false,
+          if (_selectedBloodGroup != null) 'bloodGroup': [_selectedBloodGroup],
+          'bloodGroupIsDealBreaker': _dealBreakers['bloodGroup'] ?? false,
+          if (_selectedBodyType != null) 'bodyType': [_selectedBodyType],
+          'bodyTypeIsDealBreaker': _dealBreakers['bodyType'] ?? false,
+          if (_preferredTattoos != null) 'tattoosAcceptable': _preferredTattoos,
+          'tattoosIsDealBreaker': _dealBreakers['tattoos'] ?? false,
+          if (_preferredPiercings != null) 'piercingsAcceptable': _preferredPiercings,
+          'piercingsIsDealBreaker': _dealBreakers['piercings'] ?? false,
+        };
+
+        // Save preferences to backend
+        await _profileService.savePreferences(preferencesData);
+
+        // Navigate to home/dashboard
+        if (mounted) {
+          context.go('/home');
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save preferences: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
+      }
     }
   }
 
@@ -107,7 +217,11 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                           shape: BoxShape.circle,
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           onPressed: () => context.pop(),
                         ),
                       ),
@@ -176,8 +290,11 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                     max: 70,
                                     divisions: 52,
                                     activeColor: const Color(0xFFFF6B35),
-                                    inactiveColor: Colors.white.withOpacity(0.3),
-                                    onChanged: (values) => setState(() => _ageRange = values),
+                                    inactiveColor: Colors.white.withOpacity(
+                                      0.3,
+                                    ),
+                                    onChanged: (values) =>
+                                        setState(() => _ageRange = values),
                                   ),
                                   const SizedBox(height: 20),
 
@@ -195,10 +312,11 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                     'Partner\'s Location',
                                     _selectedCountry,
                                     _countries,
-                                    (v) => setState(() => _selectedCountry = v!),
+                                    (v) =>
+                                        setState(() => _selectedCountry = v!),
                                     'location',
                                   ),
-                                  
+
                                   if (_selectedCountry == 'Nigeria') ...[
                                     const SizedBox(height: 14),
                                     _buildMultiSelectField(
@@ -221,7 +339,8 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                     'Preferred Religion',
                                     _selectedReligion,
                                     _religions,
-                                    (v) => setState(() => _selectedReligion = v),
+                                    (v) =>
+                                        setState(() => _selectedReligion = v),
                                     'religion',
                                   ),
                                   const SizedBox(height: 14),
@@ -241,7 +360,8 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                     'Preferred Genotype',
                                     _selectedGenotype,
                                     _genotypes,
-                                    (v) => setState(() => _selectedGenotype = v),
+                                    (v) =>
+                                        setState(() => _selectedGenotype = v),
                                     'genotype',
                                   ),
                                   const SizedBox(height: 14),
@@ -251,7 +371,8 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                     'Preferred Blood Group',
                                     _selectedBloodGroup,
                                     _bloodGroups,
-                                    (v) => setState(() => _selectedBloodGroup = v),
+                                    (v) =>
+                                        setState(() => _selectedBloodGroup = v),
                                     'bloodGroup',
                                   ),
                                   const SizedBox(height: 14),
@@ -271,7 +392,8 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                     'Preferred Body Type',
                                     _selectedBodyType,
                                     _bodyTypes,
-                                    (v) => setState(() => _selectedBodyType = v),
+                                    (v) =>
+                                        setState(() => _selectedBodyType = v),
                                     'bodyType',
                                   ),
                                   const SizedBox(height: 14),
@@ -280,7 +402,8 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                   _buildBooleanWithDealBreaker(
                                     'Tattoos',
                                     _preferredTattoos,
-                                    (v) => setState(() => _preferredTattoos = v),
+                                    (v) =>
+                                        setState(() => _preferredTattoos = v),
                                     'tattoos',
                                   ),
                                   const SizedBox(height: 14),
@@ -289,7 +412,8 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                   _buildBooleanWithDealBreaker(
                                     'Piercings',
                                     _preferredPiercings,
-                                    (v) => setState(() => _preferredPiercings = v),
+                                    (v) =>
+                                        setState(() => _preferredPiercings = v),
                                     'piercings',
                                   ),
 
@@ -300,24 +424,41 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                     width: double.infinity,
                                     height: 50,
                                     child: ElevatedButton(
-                                      onPressed: _continue,
+                                      onPressed: _isSaving ? null : _continue,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFFFF6B35),
+                                        backgroundColor: const Color(
+                                          0xFFFF6B35,
+                                        ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                         elevation: 0,
-                                        padding: const EdgeInsets.symmetric(vertical: 14),
-                                      ),
-                                      child: Text(
-                                        'Continue',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                          letterSpacing: 0.5,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
                                         ),
                                       ),
+                                      child: _isSaving
+                                          ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
+                                              ),
+                                            )
+                                          : Text(
+                                              'Continue',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
                                     ),
                                   ),
                                 ],
@@ -386,7 +527,8 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                   scale: 0.7,
                   child: Switch(
                     value: _dealBreakers[dealBreakerKey]!,
-                    onChanged: (v) => setState(() => _dealBreakers[dealBreakerKey] = v),
+                    onChanged: (v) =>
+                        setState(() => _dealBreakers[dealBreakerKey] = v),
                     activeColor: Colors.red,
                   ),
                 ),
@@ -399,24 +541,28 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.9),
             borderRadius: BorderRadius.circular(10),
-            border: _dealBreakers[dealBreakerKey]! 
-              ? Border.all(color: Colors.red, width: 2)
-              : null,
+            border: _dealBreakers[dealBreakerKey]!
+                ? Border.all(color: Colors.red, width: 2)
+                : null,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: value,
               isExpanded: true,
-              hint: Text('Select', style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13)),
+              hint: Text(
+                'Select',
+                style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
+              ),
               dropdownColor: Colors.white,
               style: GoogleFonts.poppins(color: Colors.black, fontSize: 13),
-              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey, size: 20),
+              icon: const Icon(
+                Icons.keyboard_arrow_down,
+                color: Colors.grey,
+                size: 20,
+              ),
               items: items.map((String item) {
-                return DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(item),
-                );
+                return DropdownMenuItem<String>(value: item, child: Text(item));
               }).toList(),
               onChanged: onChanged,
             ),
@@ -460,7 +606,8 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                   scale: 0.7,
                   child: Switch(
                     value: _dealBreakers[dealBreakerKey]!,
-                    onChanged: (v) => setState(() => _dealBreakers[dealBreakerKey] = v),
+                    onChanged: (v) =>
+                        setState(() => _dealBreakers[dealBreakerKey] = v),
                     activeColor: Colors.red,
                   ),
                 ),
@@ -474,9 +621,9 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.9),
             borderRadius: BorderRadius.circular(10),
-            border: _dealBreakers[dealBreakerKey]! 
-              ? Border.all(color: Colors.red, width: 2)
-              : null,
+            border: _dealBreakers[dealBreakerKey]!
+                ? Border.all(color: Colors.red, width: 2)
+                : null,
           ),
           child: Wrap(
             spacing: 8,
@@ -494,9 +641,14 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFFF6B35) : Colors.grey[200],
+                    color: isSelected
+                        ? const Color(0xFFFF6B35)
+                        : Colors.grey[200],
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -504,7 +656,9 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: isSelected ? Colors.white : Colors.black,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -516,7 +670,11 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
     );
   }
 
-  Widget _buildMultiSelectField(String label, List<String> selectedValues, List<String> items) {
+  Widget _buildMultiSelectField(
+    String label,
+    List<String> selectedValues,
+    List<String> items,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -551,9 +709,14 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFFFF6B35) : Colors.grey[200],
+                    color: isSelected
+                        ? const Color(0xFFFF6B35)
+                        : Colors.grey[200],
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -561,7 +724,9 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: isSelected ? Colors.white : Colors.black,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -607,7 +772,8 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                   scale: 0.7,
                   child: Switch(
                     value: _dealBreakers[dealBreakerKey]!,
-                    onChanged: (v) => setState(() => _dealBreakers[dealBreakerKey] = v),
+                    onChanged: (v) =>
+                        setState(() => _dealBreakers[dealBreakerKey] = v),
                     activeColor: Colors.red,
                   ),
                 ),
@@ -621,9 +787,9 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.9),
             borderRadius: BorderRadius.circular(10),
-            border: _dealBreakers[dealBreakerKey]! 
-              ? Border.all(color: Colors.red, width: 2)
-              : null,
+            border: _dealBreakers[dealBreakerKey]!
+                ? Border.all(color: Colors.red, width: 2)
+                : null,
           ),
           child: Row(
             children: [
@@ -633,7 +799,9 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: value == true ? const Color(0xFFFF6B35) : Colors.transparent,
+                      color: value == true
+                          ? const Color(0xFFFF6B35)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
@@ -656,7 +824,9 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: value == false ? const Color(0xFFFF6B35) : Colors.transparent,
+                      color: value == false
+                          ? const Color(0xFFFF6B35)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
@@ -679,7 +849,9 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: value == null ? const Color(0xFFFF6B35) : Colors.transparent,
+                      color: value == null
+                          ? const Color(0xFFFF6B35)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(

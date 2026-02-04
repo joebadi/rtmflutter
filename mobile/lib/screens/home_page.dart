@@ -10,29 +10,33 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final CardSwiperController controller = CardSwiperController();
-  
+
   // Mock Data for "Wow" Effect
   final List<Map<String, dynamic>> _candidates = [
     {
       'name': 'Sophia Williams',
       'age': 25,
-      'bio': 'Book lover, coffee enthusiast, and part-time traveler. Looking for someone to share deep conversations.',
-      'image': 'assets/profile1.jpg', // We'll use a placeholder gradient since we don't have assets yet
-      'color': Colors.orangeAccent
+      'bio':
+          'Book lover, coffee enthusiast, and part-time traveler. Looking for someone to share deep conversations.',
+      'image':
+          'assets/profile1.jpg', // We'll use a placeholder gradient since we don't have assets yet
+      'color': Colors.orangeAccent,
     },
     {
       'name': 'Mia Kennedy',
       'age': 23,
-      'bio': 'Yoga instructor 🧘‍♀️ and vegan foodie. Let\'s explore the city together!',
+      'bio':
+          'Yoga instructor 🧘‍♀️ and vegan foodie. Let\'s explore the city together!',
       'image': 'assets/profile2.jpg',
-      'color': Colors.blueAccent
+      'color': Colors.blueAccent,
     },
     {
       'name': 'Olivia Thompson',
       'age': 27,
-      'bio': 'Artist by day, gamer by night. Swipe right if you can beat me at Mario Kart.',
+      'bio':
+          'Artist by day, gamer by night. Swipe right if you can beat me at Mario Kart.',
       'image': 'assets/profile3.jpg',
-      'color': Colors.purpleAccent
+      'color': Colors.purpleAccent,
     },
   ];
 
@@ -48,18 +52,18 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                   const Text(
+                  const Text(
                     'Nearby You',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
                     onPressed: () {}, // TODO: Filters
                     icon: const Icon(Icons.tune_rounded), // Sliders icon
-                  )
+                  ),
                 ],
               ),
             ),
-            
+
             // Card Stack
             Expanded(
               child: CardSwiper(
@@ -68,24 +72,41 @@ class _HomePageState extends State<HomePage> {
                 numberOfCardsDisplayed: 3,
                 backCardOffset: const Offset(0, 40),
                 padding: const EdgeInsets.all(16),
-                cardBuilder: (context, index, horizontalOffset, verticalOffset) {
-                  final candidate = _candidates[index];
-                  return _buildCard(candidate);
-                },
+                cardBuilder:
+                    (context, index, horizontalOffset, verticalOffset) {
+                      final candidate = _candidates[index];
+                      return _buildCard(candidate);
+                    },
               ),
             ),
-            
-            // Bottom Action Bar (Floating above the card stack effectively in layouts, 
+
+            // Bottom Action Bar (Floating above the card stack effectively in layouts,
             // but here we put it below to ensure tap targets are clear like standard apps)
             Padding(
               padding: const EdgeInsets.only(bottom: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildActionButton(Icons.refresh, Colors.orange, () => controller.undo()),
-                  _buildActionButton(Icons.close, Colors.red, () => controller.swipe(CardSwiperDirection.left)),
-                  _buildActionButton(Icons.star, Colors.blue, () => controller.swipe(CardSwiperDirection.top)),
-                  _buildActionButton(Icons.favorite, Colors.green, () => controller.swipe(CardSwiperDirection.right)),
+                  _buildActionButton(
+                    Icons.refresh,
+                    Colors.orange,
+                    () => controller.undo(),
+                  ),
+                  _buildActionButton(
+                    Icons.close,
+                    Colors.red,
+                    () => controller.swipe(CardSwiperDirection.left),
+                  ),
+                  _buildActionButton(
+                    Icons.star,
+                    Colors.blue,
+                    () => controller.swipe(CardSwiperDirection.top),
+                  ),
+                  _buildActionButton(
+                    Icons.favorite,
+                    Colors.green,
+                    () => controller.swipe(CardSwiperDirection.right),
+                  ),
                   _buildActionButton(Icons.flash_on, Colors.purple, () {}),
                 ],
               ),
@@ -144,17 +165,14 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 8),
                 Text(
                   candidate['bio'],
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          
+
           // Distance Badge
           Positioned(
             top: 20,
@@ -171,7 +189,10 @@ class _HomePageState extends State<HomePage> {
                   SizedBox(width: 4),
                   Text(
                     '3.5 km away',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -182,7 +203,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildActionButton(IconData icon, Color color, VoidCallback onPressed) {
+  Widget _buildActionButton(
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,

@@ -5,17 +5,15 @@ import 'package:go_router/go_router.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String userName;
-  
-  const UserProfilePage({
-    super.key,
-    required this.userName,
-  });
+
+  const UserProfilePage({super.key, required this.userName});
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
 }
 
-class _UserProfilePageState extends State<UserProfilePage> with TickerProviderStateMixin {
+class _UserProfilePageState extends State<UserProfilePage>
+    with TickerProviderStateMixin {
   int _currentImageIndex = 0;
   bool _showInfo = false;
   bool _showReportMenu = false;
@@ -68,7 +66,10 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Report User', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Report User',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
         content: Text(
           'Are you sure you want to report this user?',
           style: GoogleFonts.poppins(fontSize: 14),
@@ -76,7 +77,10 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600])),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -90,7 +94,10 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
             },
             child: Text(
               'Report',
-              style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.w600),
+              style: GoogleFonts.poppins(
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -128,7 +135,8 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
             // Full Screen Image Viewer
             PageView.builder(
               itemCount: _images.length,
-              onPageChanged: (index) => setState(() => _currentImageIndex = index),
+              onPageChanged: (index) =>
+                  setState(() => _currentImageIndex = index),
               itemBuilder: (context, index) {
                 return Image.network(
                   _images[index],
@@ -138,7 +146,11 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       color: Colors.grey[800],
-                      child: const Icon(Icons.person, size: 100, color: Colors.white),
+                      child: const Icon(
+                        Icons.person,
+                        size: 100,
+                        color: Colors.white,
+                      ),
                     );
                   },
                 );
@@ -152,7 +164,10 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
               right: 0,
               child: SafeArea(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -166,7 +181,11 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+                        icon: const Icon(
+                          Icons.arrow_back,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                         onPressed: () => context.pop(),
                       ),
                       const SizedBox(width: 12),
@@ -176,7 +195,9 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                             return Expanded(
                               child: Container(
                                 height: 3,
-                                margin: const EdgeInsets.symmetric(horizontal: 2),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: index == _currentImageIndex
                                       ? Colors.white
@@ -194,7 +215,11 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                         clipBehavior: Clip.none,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.more_vert, color: Colors.white, size: 28),
+                            icon: const Icon(
+                              Icons.more_vert,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                             onPressed: _toggleReportMenu,
                           ),
                           // Sophisticated Report Menu
@@ -225,7 +250,10 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(12),
                                     child: BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                      filter: ImageFilter.blur(
+                                        sigmaX: 10,
+                                        sigmaY: 10,
+                                      ),
                                       child: Material(
                                         color: Colors.transparent,
                                         child: InkWell(
@@ -316,19 +344,31 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                   ),
                                 ),
                               ),
-                              const Icon(Icons.verified, color: Color(0xFFFF5722), size: 28),
+                              const Icon(
+                                Icons.verified,
+                                color: Color(0xFFFF5722),
+                                size: 28,
+                              ),
                               const SizedBox(width: 8),
                               // Match Score Badge
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                                    colors: [
+                                      Color(0xFFFF5722),
+                                      Color(0xFFFF7043),
+                                    ],
                                   ),
                                   borderRadius: BorderRadius.circular(20),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFFFF5722).withOpacity(0.4),
+                                      color: const Color(
+                                        0xFFFF5722,
+                                      ).withOpacity(0.4),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
@@ -337,7 +377,11 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.favorite, color: Colors.white, size: 14),
+                                    const Icon(
+                                      Icons.favorite,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       '92%',
@@ -356,7 +400,11 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                           // Location
                           Row(
                             children: [
-                              const Icon(Icons.location_on, color: Color(0xFFFF5722), size: 16),
+                              const Icon(
+                                Icons.location_on,
+                                color: Color(0xFFFF5722),
+                                size: 16,
+                              ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
@@ -385,12 +433,17 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                   height: 50,
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                                      colors: [
+                                        Color(0xFFFF5722),
+                                        Color(0xFFFF7043),
+                                      ],
                                     ),
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFFFF5722).withOpacity(0.4),
+                                        color: const Color(
+                                          0xFFFF5722,
+                                        ).withOpacity(0.4),
                                         blurRadius: 12,
                                         offset: const Offset(0, 4),
                                       ),
@@ -399,7 +452,9 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
-                                      onTap: () => context.push('/chat/${widget.userName}'),
+                                      onTap: () => context.push(
+                                        '/chat/${widget.userName}',
+                                      ),
                                       borderRadius: BorderRadius.circular(12),
                                       child: Center(
                                         child: Text(
@@ -452,7 +507,9 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                               itemCount: _images.length,
                               itemBuilder: (context, index) {
                                 return GestureDetector(
-                                  onTap: () => setState(() => _currentImageIndex = index),
+                                  onTap: () => setState(
+                                    () => _currentImageIndex = index,
+                                  ),
                                   child: Container(
                                     width: 60,
                                     margin: const EdgeInsets.only(right: 12),
@@ -462,7 +519,9 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                         color: index == _currentImageIndex
                                             ? const Color(0xFFFF5722)
                                             : Colors.white.withOpacity(0.5),
-                                        width: index == _currentImageIndex ? 3 : 2,
+                                        width: index == _currentImageIndex
+                                            ? 3
+                                            : 2,
                                       ),
                                     ),
                                     child: ClipRRect(
@@ -470,12 +529,17 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                       child: Image.network(
                                         _images[index],
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
-                                            color: Colors.grey[700],
-                                            child: const Icon(Icons.person, size: 30, color: Colors.white),
-                                          );
-                                        },
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey[700],
+                                                child: const Icon(
+                                                  Icons.person,
+                                                  size: 30,
+                                                  color: Colors.white,
+                                                ),
+                                              );
+                                            },
                                       ),
                                     ),
                                   ),
@@ -522,13 +586,17 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
               child: SizedBox(
                 height: 700,
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.4),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
                         border: Border.all(
                           color: Colors.white.withOpacity(0.2),
                           width: 1.5,
@@ -558,7 +626,9 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                           // Profile Info Content
                           Expanded(
                             child: SingleChildScrollView(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -575,21 +645,37 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                           ),
                                         ),
                                       ),
-                                      const Icon(Icons.verified, color: Color(0xFFFF5722), size: 28),
+                                      const Icon(
+                                        Icons.verified,
+                                        color: Color(0xFFFF5722),
+                                        size: 28,
+                                      ),
                                       const SizedBox(width: 8),
                                       // Match Score Badge
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
                                         decoration: BoxDecoration(
                                           gradient: const LinearGradient(
-                                            colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                                            colors: [
+                                              Color(0xFFFF5722),
+                                              Color(0xFFFF7043),
+                                            ],
                                           ),
-                                          borderRadius: BorderRadius.circular(20),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            const Icon(Icons.favorite, color: Colors.white, size: 14),
+                                            const Icon(
+                                              Icons.favorite,
+                                              color: Colors.white,
+                                              size: 14,
+                                            ),
                                             const SizedBox(width: 4),
                                             Text(
                                               '92%',
@@ -607,14 +693,20 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
-                                      const Icon(Icons.location_on, color: Color(0xFFFF5722), size: 18),
+                                      const Icon(
+                                        Icons.location_on,
+                                        color: Color(0xFFFF5722),
+                                        size: 18,
+                                      ),
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
                                           'Lagos, Lagos State, Nigeria',
                                           style: GoogleFonts.poppins(
                                             fontSize: 14,
-                                            color: Colors.white.withOpacity(0.9),
+                                            color: Colors.white.withOpacity(
+                                              0.9,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -622,7 +714,6 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                   ),
 
                                   const SizedBox(height: 24),
-
 
                                   // Embossed Pill Tabs - Right after location
                                   Container(
@@ -642,19 +733,25 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                       indicatorSize: TabBarIndicatorSize.tab,
                                       indicator: BoxDecoration(
                                         gradient: const LinearGradient(
-                                          colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                                          colors: [
+                                            Color(0xFFFF5722),
+                                            Color(0xFFFF7043),
+                                          ],
                                         ),
                                         borderRadius: BorderRadius.circular(25),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFFFF5722).withOpacity(0.4),
+                                            color: const Color(
+                                              0xFFFF5722,
+                                            ).withOpacity(0.4),
                                             blurRadius: 8,
                                             offset: const Offset(0, 2),
                                           ),
                                         ],
                                       ),
                                       labelColor: Colors.white,
-                                      unselectedLabelColor: Colors.white.withOpacity(0.6),
+                                      unselectedLabelColor: Colors.white
+                                          .withOpacity(0.6),
                                       labelStyle: GoogleFonts.poppins(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
@@ -664,20 +761,31 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                                       tabs: [
                                         // User's Profile - extends to left, padding on right
                                         Container(
-                                          padding: const EdgeInsets.only(left: 20, right: 24, top: 12, bottom: 12),
+                                          padding: const EdgeInsets.only(
+                                            left: 20,
+                                            right: 24,
+                                            top: 12,
+                                            bottom: 12,
+                                          ),
                                           alignment: Alignment.centerLeft,
                                           child: const Text('User\'s Profile'),
                                         ),
                                         // Preferred Partner - extends to right, padding on left
                                         Container(
-                                          padding: const EdgeInsets.only(left: 24, right: 20, top: 12, bottom: 12),
+                                          padding: const EdgeInsets.only(
+                                            left: 24,
+                                            right: 20,
+                                            top: 12,
+                                            bottom: 12,
+                                          ),
                                           alignment: Alignment.centerRight,
-                                          child: const Text('Preferred Partner'),
+                                          child: const Text(
+                                            'Preferred Partner',
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
-
 
                                   const SizedBox(height: 20),
 
@@ -750,11 +858,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: const Color(0xFFFF5722),
-            size: 18,
-          ),
+          Icon(icon, color: const Color(0xFFFF5722), size: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -807,7 +911,11 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.chat_bubble, color: Colors.white, size: 18),
+                      const Icon(
+                        Icons.chat_bubble,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Chat with ${widget.userName}',
@@ -832,10 +940,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.15),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: const Color(0xFFFF5722),
-              width: 1.5,
-            ),
+            border: Border.all(color: const Color(0xFFFF5722), width: 1.5),
           ),
           child: Material(
             color: Colors.transparent,
@@ -858,21 +963,14 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.15),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: Colors.red.withOpacity(0.6),
-              width: 1.5,
-            ),
+            border: Border.all(color: Colors.red.withOpacity(0.6), width: 1.5),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: _reportUser,
               borderRadius: BorderRadius.circular(10),
-              child: const Icon(
-                Icons.flag,
-                color: Colors.red,
-                size: 20,
-              ),
+              child: const Icon(Icons.flag, color: Colors.red, size: 20),
             ),
           ),
         ),
@@ -940,12 +1038,12 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
           _buildDetailItem(Icons.smoking_rooms, 'Smoking', 'No'),
           _buildDetailItem(Icons.child_care, 'Children', 'No'),
           _buildDetailItem(Icons.psychology, 'Personality', 'Extrovert'),
-          
+
           const SizedBox(height: 24),
-          
+
           // Action Buttons at bottom
           _buildActionButtons(),
-          
+
           const SizedBox(height: 40),
         ],
       ),
@@ -962,11 +1060,17 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
             decoration: BoxDecoration(
               color: const Color(0xFFFF5722).withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFFF5722).withOpacity(0.3)),
+              border: Border.all(
+                color: const Color(0xFFFF5722).withOpacity(0.3),
+              ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: Color(0xFFFF5722), size: 20),
+                const Icon(
+                  Icons.info_outline,
+                  color: Color(0xFFFF5722),
+                  size: 20,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -981,7 +1085,7 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
             ),
           ),
           const SizedBox(height: 20),
-          
+
           // Basic Preferences
           Text(
             'Basic Preferences',
@@ -997,9 +1101,9 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
           _buildDetailItem(Icons.school, 'Education', 'Bachelor\'s or higher'),
           _buildDetailItem(Icons.work, 'Work', 'Employed'),
           _buildDetailItem(Icons.favorite, 'Status', 'Single'),
-          
+
           const SizedBox(height: 16),
-          
+
           // Physical Preferences
           Text(
             'Physical Preferences',
@@ -1011,10 +1115,14 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
           ),
           const SizedBox(height: 10),
           _buildDetailItem(Icons.height, 'Height', '5\'8" - 6\'2"'),
-          _buildDetailItem(Icons.fitness_center, 'Body Type', 'Athletic or Average'),
-          
+          _buildDetailItem(
+            Icons.fitness_center,
+            'Body Type',
+            'Athletic or Average',
+          ),
+
           const SizedBox(height: 16),
-          
+
           // Lifestyle Preferences
           Text(
             'Lifestyle Preferences',
@@ -1029,12 +1137,12 @@ class _UserProfilePageState extends State<UserProfilePage> with TickerProviderSt
           _buildDetailItem(Icons.smoking_rooms, 'Smoking', 'No'),
           _buildDetailItem(Icons.local_bar, 'Drinking', 'Socially or No'),
           _buildDetailItem(Icons.church, 'Religion', 'Christianity'),
-          
+
           const SizedBox(height: 24),
-          
+
           // Action Buttons at bottom
           _buildActionButtons(),
-          
+
           const SizedBox(height: 40),
         ],
       ),

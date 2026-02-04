@@ -10,35 +10,16 @@ class WalletPage extends StatefulWidget {
   State<WalletPage> createState() => _WalletPageState();
 }
 
-class _WalletPageState extends State<WalletPage> with SingleTickerProviderStateMixin {
+class _WalletPageState extends State<WalletPage>
+    with SingleTickerProviderStateMixin {
   late AnimationController _shimmerController;
   int _currentBalance = 250; // User's current diamond balance
 
   final List<Map<String, dynamic>> _diamondPackages = [
-    {
-      'diamonds': 100,
-      'price': 1500,
-      'bonus': 0,
-      'popular': false,
-    },
-    {
-      'diamonds': 500,
-      'price': 6500,
-      'bonus': 50,
-      'popular': true,
-    },
-    {
-      'diamonds': 1000,
-      'price': 12000,
-      'bonus': 150,
-      'popular': false,
-    },
-    {
-      'diamonds': 2500,
-      'price': 28000,
-      'bonus': 500,
-      'popular': false,
-    },
+    {'diamonds': 100, 'price': 1500, 'bonus': 0, 'popular': false},
+    {'diamonds': 500, 'price': 6500, 'bonus': 50, 'popular': true},
+    {'diamonds': 1000, 'price': 12000, 'bonus': 150, 'popular': false},
+    {'diamonds': 2500, 'price': 28000, 'bonus': 500, 'popular': false},
   ];
 
   @override
@@ -133,7 +114,9 @@ class _WalletPageState extends State<WalletPage> with SingleTickerProviderStateM
                                 ),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: const Color(0xFFFF5722).withOpacity(0.3),
+                                  color: const Color(
+                                    0xFFFF5722,
+                                  ).withOpacity(0.3),
                                   width: 1.5,
                                 ),
                               ),
@@ -290,10 +273,7 @@ class _WalletPageState extends State<WalletPage> with SingleTickerProviderStateM
               child: Container(
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFF1A1A1A),
-                      Color(0xFF2A2A2A),
-                    ],
+                    colors: [Color(0xFF1A1A1A), Color(0xFF2A2A2A)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -385,18 +365,12 @@ class _WalletPageState extends State<WalletPage> with SingleTickerProviderStateM
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            const Color(0xFF1A1A1A),
-            const Color(0xFF2A2A2A),
-          ],
+          colors: [const Color(0xFF1A1A1A), const Color(0xFF2A2A2A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.5),
@@ -458,11 +432,7 @@ class _WalletPageState extends State<WalletPage> with SingleTickerProviderStateM
                         ),
                       ],
                     ),
-                    child: Icon(
-                      icon,
-                      color: color,
-                      size: 28,
-                    ),
+                    child: Icon(icon, color: color, size: 28),
                   ),
                   Container(
                     padding: const EdgeInsets.all(6),
@@ -536,14 +506,8 @@ class _WalletPageState extends State<WalletPage> with SingleTickerProviderStateM
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: isPopular
-                ? [
-                    const Color(0xFF2A2A2A),
-                    const Color(0xFF1A1A1A),
-                  ]
-                : [
-                    const Color(0xFF1A1A1A),
-                    const Color(0xFF2A2A2A),
-                  ],
+                ? [const Color(0xFF2A2A2A), const Color(0xFF1A1A1A)]
+                : [const Color(0xFF1A1A1A), const Color(0xFF2A2A2A)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -691,7 +655,9 @@ class _WalletPageState extends State<WalletPage> with SingleTickerProviderStateM
                         style: GoogleFonts.poppins(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: isPopular ? Colors.white : Colors.white.withOpacity(0.9),
+                          color: isPopular
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.9),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -977,7 +943,7 @@ class _WalletPageState extends State<WalletPage> with SingleTickerProviderStateM
     setState(() {
       _currentBalance += diamonds + bonus;
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -986,9 +952,7 @@ class _WalletPageState extends State<WalletPage> with SingleTickerProviderStateM
         ),
         backgroundColor: const Color(0xFFFF5722),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }

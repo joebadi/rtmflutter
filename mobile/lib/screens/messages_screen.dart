@@ -11,7 +11,7 @@ class MessagesScreen extends StatefulWidget {
 
 class _MessagesScreenState extends State<MessagesScreen> {
   final TextEditingController _searchController = TextEditingController();
-  
+
   // Sample active chats for shortcuts
   final List<Map<String, dynamic>> _activeChats = [
     {
@@ -100,15 +100,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Chat deleted',
-          style: GoogleFonts.poppins(),
-        ),
+        content: Text('Chat deleted', style: GoogleFonts.poppins()),
         backgroundColor: const Color(0xFFFF5722),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -116,15 +111,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
   void _reportChat(int index) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Chat reported',
-          style: GoogleFonts.poppins(),
-        ),
+        content: Text('Chat reported', style: GoogleFonts.poppins()),
         backgroundColor: Colors.orange,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -478,7 +468,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              
+
               // Chat Info
               Expanded(
                 child: Column(
@@ -515,8 +505,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               color: hasUnread
                                   ? Colors.black87
                                   : Colors.grey[600],
-                              fontWeight:
-                                  hasUnread ? FontWeight.w500 : FontWeight.normal,
+                              fontWeight: hasUnread
+                                  ? FontWeight.w500
+                                  : FontWeight.normal,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,

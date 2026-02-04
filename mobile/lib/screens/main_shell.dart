@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 class MainShell extends StatelessWidget {
   final Widget child;
-  
+
   const MainShell({super.key, required this.child});
 
   /// Helper to calculate current index based on route location

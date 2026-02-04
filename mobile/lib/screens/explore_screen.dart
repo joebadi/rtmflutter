@@ -19,21 +19,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
     {
       'name': 'Sophia Williams',
       'age': 25,
-      'bio': 'Book lover, coffee enthusiast, and part-time traveler. Looking for someone to share deep conversations.',
+      'bio':
+          'Book lover, coffee enthusiast, and part-time traveler. Looking for someone to share deep conversations.',
       'color': Colors.orangeAccent,
       'distance': '3.5 km',
     },
     {
       'name': 'Mia Kennedy',
       'age': 23,
-      'bio': 'Yoga instructor 🧘‍♀️ and vegan foodie. Let\'s explore the city together!',
+      'bio':
+          'Yoga instructor 🧘‍♀️ and vegan foodie. Let\'s explore the city together!',
       'color': Colors.blueAccent,
       'distance': '1.2 km',
     },
     {
       'name': 'Olivia Thompson',
       'age': 27,
-      'bio': 'Artist by day, gamer by night. Swipe right if you can beat me at Mario Kart.',
+      'bio':
+          'Artist by day, gamer by night. Swipe right if you can beat me at Mario Kart.',
       'color': Colors.purpleAccent,
       'distance': '2.8 km',
     },
@@ -83,7 +86,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
@@ -121,7 +127,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
                             )
                           : null,
-                      color: _viewMode == 0 ? null : Colors.white.withOpacity(0.15),
+                      color: _viewMode == 0
+                          ? null
+                          : Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: _viewMode == 0
@@ -156,7 +164,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               Icon(
                                 Icons.style,
                                 size: 18,
-                                color: _viewMode == 0 ? Colors.white : Colors.grey[700],
+                                color: _viewMode == 0
+                                    ? Colors.white
+                                    : Colors.grey[700],
                               ),
                               AnimatedSize(
                                 duration: const Duration(milliseconds: 250),
@@ -194,7 +204,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
                             )
                           : null,
-                      color: _viewMode == 1 ? null : Colors.white.withOpacity(0.15),
+                      color: _viewMode == 1
+                          ? null
+                          : Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: _viewMode == 1
@@ -229,7 +241,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               Icon(
                                 Icons.location_on,
                                 size: 18,
-                                color: _viewMode == 1 ? Colors.white : Colors.grey[700],
+                                color: _viewMode == 1
+                                    ? Colors.white
+                                    : Colors.grey[700],
                               ),
                               AnimatedSize(
                                 duration: const Duration(milliseconds: 250),
@@ -267,7 +281,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
                             )
                           : null,
-                      color: _viewMode == 2 ? null : Colors.white.withOpacity(0.15),
+                      color: _viewMode == 2
+                          ? null
+                          : Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: _viewMode == 2
@@ -302,7 +318,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               Icon(
                                 Icons.grid_view,
                                 size: 18,
-                                color: _viewMode == 2 ? Colors.white : Colors.grey[700],
+                                color: _viewMode == 2
+                                    ? Colors.white
+                                    : Colors.grey[700],
                               ),
                               AnimatedSize(
                                 duration: const Duration(milliseconds: 250),
@@ -336,9 +354,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             const SizedBox(height: 16),
 
             // Content based on view mode
-            Expanded(
-              child: _buildContent(),
-            ),
+            Expanded(child: _buildContent()),
           ],
         ),
       ),
@@ -416,10 +432,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             transitionBuilder: (child, animation) {
               return FadeTransition(
                 opacity: animation,
-                child: ScaleTransition(
-                  scale: animation,
-                  child: child,
-                ),
+                child: ScaleTransition(scale: animation, child: child),
               );
             },
             child: isActive
@@ -428,11 +441,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        icon,
-                        size: 20,
-                        color: Colors.white,
-                      ),
+                      Icon(icon, size: 20, color: Colors.white),
                       const SizedBox(width: 6),
                       Text(
                         label,
@@ -491,10 +500,26 @@ class _ExploreScreenState extends State<ExploreScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildActionButton(Icons.refresh, Colors.orange, () => controller.undo()),
-              _buildActionButton(Icons.close, Colors.red, () => controller.swipe(CardSwiperDirection.left)),
-              _buildActionButton(Icons.star, Colors.blue, () => controller.swipe(CardSwiperDirection.top)),
-              _buildActionButton(Icons.favorite, Colors.green, () => controller.swipe(CardSwiperDirection.right)),
+              _buildActionButton(
+                Icons.refresh,
+                Colors.orange,
+                () => controller.undo(),
+              ),
+              _buildActionButton(
+                Icons.close,
+                Colors.red,
+                () => controller.swipe(CardSwiperDirection.left),
+              ),
+              _buildActionButton(
+                Icons.star,
+                Colors.blue,
+                () => controller.swipe(CardSwiperDirection.top),
+              ),
+              _buildActionButton(
+                Icons.favorite,
+                Colors.green,
+                () => controller.swipe(CardSwiperDirection.right),
+              ),
               _buildActionButton(Icons.flash_on, Colors.purple, () {}),
             ],
           ),
@@ -550,10 +575,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 const SizedBox(height: 8),
                 Text(
                   candidate['bio'],
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -575,7 +597,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   const SizedBox(width: 4),
                   Text(
                     '${candidate['distance']} away',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -586,7 +611,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  Widget _buildActionButton(IconData icon, Color color, VoidCallback onPressed) {
+  Widget _buildActionButton(
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -689,13 +718,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
         ],
       ),
-      child: CircleAvatar(
-        backgroundImage: NetworkImage(imageUrl),
-      ),
+      child: CircleAvatar(backgroundImage: NetworkImage(imageUrl)),
     );
   }
 
-  Widget _buildUserCard(String name, String location, String distance, String imageUrl) {
+  Widget _buildUserCard(
+    String name,
+    String location,
+    String distance,
+    String imageUrl,
+  ) {
     return Container(
       width: 160,
       decoration: BoxDecoration(
@@ -719,10 +751,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
                 ),
               ),
             ),
@@ -796,7 +825,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
           'Olivia Brown, 27',
           'Mia Johnson, 24',
         ];
-        final distances = ['1.6 Km', '1.2 Km', '2.3 Km', '0.8 Km', '3.1 Km', '1.9 Km'];
+        final distances = [
+          '1.6 Km',
+          '1.2 Km',
+          '2.3 Km',
+          '0.8 Km',
+          '3.1 Km',
+          '1.9 Km',
+        ];
         final images = [47, 23, 32, 28, 45, 9];
 
         return _buildGridCard(
@@ -809,7 +845,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  Widget _buildGridCard(String name, String location, String distance, String imageUrl) {
+  Widget _buildGridCard(
+    String name,
+    String location,
+    String distance,
+    String imageUrl,
+  ) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
@@ -832,10 +873,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
                 ),
               ),
             ),

@@ -76,7 +76,10 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                         },
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green,
                           borderRadius: BorderRadius.circular(20),
@@ -110,9 +113,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
             ),
 
             // Main Content
-            Expanded(
-              child: _isInRoom ? _buildDateRoom() : _buildLobby(),
-            ),
+            Expanded(child: _isInRoom ? _buildDateRoom() : _buildLobby()),
           ],
         ),
       ),
@@ -124,7 +125,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
     return Column(
       children: [
         const SizedBox(height: 20),
-        
+
         // Illustration/Icon
         Container(
           width: 120,
@@ -135,15 +136,11 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
             ),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.video_call,
-            size: 60,
-            color: Colors.white,
-          ),
+          child: const Icon(Icons.video_call, size: 60, color: Colors.white),
         ),
-        
+
         const SizedBox(height: 30),
-        
+
         // Title
         Text(
           'Instant Video Dates',
@@ -153,9 +150,9 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
             color: Colors.white,
           ),
         ),
-        
+
         const SizedBox(height: 12),
-        
+
         // Description
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -169,9 +166,9 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
             ),
           ),
         ),
-        
+
         const SizedBox(height: 40),
-        
+
         // Stats Cards
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -197,9 +194,9 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
             ],
           ),
         ),
-        
+
         const Spacer(),
-        
+
         // Join Button
         Padding(
           padding: const EdgeInsets.all(20),
@@ -249,15 +246,18 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
     );
   }
 
-  Widget _buildStatCard(String value, String label, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String value,
+    String label,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
         children: [
@@ -323,7 +323,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Self preview (small)
                 Positioned(
                   top: 16,
@@ -346,7 +346,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                     ),
                   ),
                 ),
-                
+
                 // Controls overlay
                 Positioned(
                   bottom: 16,
@@ -392,7 +392,11 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                   ),
                   TextButton.icon(
                     onPressed: () => setState(() => _isInRoom = false),
-                    icon: const Icon(Icons.exit_to_app, color: Colors.red, size: 18),
+                    icon: const Icon(
+                      Icons.exit_to_app,
+                      color: Colors.red,
+                      size: 18,
+                    ),
                     label: Text(
                       'Leave Room',
                       style: GoogleFonts.poppins(
@@ -476,10 +480,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.network(
-                          user['image'],
-                          fit: BoxFit.cover,
-                        ),
+                        Image.network(user['image'], fit: BoxFit.cover),
                         if (!isAvailable)
                           Container(
                             color: Colors.black.withOpacity(0.6),
