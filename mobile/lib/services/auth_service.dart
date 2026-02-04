@@ -17,7 +17,8 @@ class AuthService {
     try {
       final response = await _dio.post(
         ApiConfig.login,
-        data: {'email': email, 'password': password},
+        // Backend expects 'emailOrPhone'
+        data: {'emailOrPhone': email, 'password': password},
       );
 
       // Extract tokens from response
@@ -37,7 +38,7 @@ class AuthService {
 
       return response.data;
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Login failed');
+      throw _handleDioError(e, 'Login failed');
     }
   }
 
@@ -83,59 +84,74 @@ class AuthService {
         }
 
         // Trigger OTP send immediately after successful registration
-        // Using email as the primary identifier for OTP as requested
         try {
           await sendOtp(email);
           print('Auto-sent OTP after registration to $email');
         } catch (e) {
           print('Failed to auto-send OTP: $e');
-          // We don't throw here, as registration was successful.
-          // User can request OTP resend from the verification screen.
         }
       }
 
       return response.data;
     } on DioException catch (e) {
-      // Enhanced error logging
-      print('Registration error: ${e.message}');
-      print('Response data: ${e.response?.data}');
-      print('Status code: ${e.response?.statusCode}');
-
-      // Extract error message from response
-      String errorMessage = 'Registration failed';
-      if (e.response?.data != null) {
-        final data = e.response!.data;
-        if (data is Map<String, dynamic>) {
-          // Check for validation errors with details
-          if (data.containsKey('errors') && data['errors'] is Map) {
-            final errors = data['errors'] as Map<String, dynamic>;
-            final errorList = errors.entries
-                .map((e) => '${e.key}: ${e.value}')
-                .join(', ');
-            errorMessage = 'Validation error: $errorList';
-          } else if (data.containsKey('message')) {
-            errorMessage = data['message'].toString();
-            // If there's additional error details, append them
-            if (data.containsKey('error') && data['error'] is Map) {
-              final errorDetails = data['error'] as Map<String, dynamic>;
-              if (errorDetails.containsKey('details')) {
-                errorMessage += '\nDetails: ${errorDetails['details']}';
-              }
-            }
-          } else if (data['error'] is Map) {
-            errorMessage = data['error']['message']?.toString() ?? errorMessage;
-          } else if (data['error'] is String) {
-            errorMessage = data['error'];
-          }
-        }
-      }
-      throw Exception(errorMessage);
+      throw _handleDioError(e, 'Registration failed');
     } catch (e) {
       print('Unexpected error during registration: $e');
       throw Exception(
         'Registration failed: ${e.toString().replaceAll('Exception: ', '')}',
       );
     }
+  }
+
+  Exception _handleDioError(DioException e, String defaultMessage) {
+    // Enhanced error logging
+    print('$defaultMessage error: ${e.message}');
+    print('Response data: ${e.response?.data}');
+    print('Status code: ${e.response?.statusCode}');
+
+    String errorMessage = defaultMessage;
+    if (e.response?.data != null) {
+      final data = e.response!.data;
+      if (data is Map<String, dynamic>) {
+        if (data.containsKey('errors')) {
+          final errors = data['errors'];
+          if (errors is List) {
+            // Handle Zod array errors
+            // Example: [{ code: '...', message: '...', path: ['email'] }]
+            final errorMessages =
+                errors.map((err) {
+                  if (err is Map) {
+                    final path =
+                        (err['path'] as List?)?.join('.') ?? 'Field';
+                    return '$path: ${err['message']}';
+                  }
+                  return err.toString();
+                }).join('\n');
+            errorMessage = 'Validation error:\n$errorMessages';
+          } else if (errors is Map) {
+            // Handle Map errors
+            final errorList =
+                errors.entries.map((e) => '${e.key}: ${e.value}').join(', ');
+            errorMessage = 'Validation error: $errorList';
+          }
+        } else if (data.containsKey('message')) {
+          errorMessage = data['message'].toString();
+          // If there's additional error details, append them
+          if (data.containsKey('error') && data['error'] is Map) {
+            final errorDetails = data['error'] as Map<String, dynamic>;
+            if (errorDetails.containsKey('details')) {
+              errorMessage += '\nDetails: ${errorDetails['details']}';
+            }
+          }
+        } else if (data['error'] is Map) {
+          errorMessage =
+              data['error']['message']?.toString() ?? errorMessage;
+        } else if (data['error'] is String) {
+          errorMessage = data['error'];
+        }
+      }
+    }
+    return Exception(errorMessage);
   }
 
   /// Send OTP for verification
