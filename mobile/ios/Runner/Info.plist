@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>We need your location to show it on your profile and help you find matches nearby.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>We need access to your camera so you can take and upload a profile picture.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>We need access to your photo gallery so you can select and upload a profile picture.</string>
 </dict>
 </plist>
