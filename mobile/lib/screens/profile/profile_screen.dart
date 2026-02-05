@@ -2,16 +2,31 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../providers/profile_provider.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
-  void _showProfileDetails(BuildContext context) {
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProfileProvider>().fetchProfile();
+    });
+  }
+
+  void _showProfileDetails(BuildContext context, Map<String, dynamic> profile) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const ProfileDetailsModal(),
+      builder: (context) => ProfileDetailsModal(profile: profile),
     );
   }
 
@@ -19,275 +34,342 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Logo/Brand
-                  Row(
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF5722),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.favorite,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'ReadytoMarry',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Icons
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.notifications_outlined,
-                          size: 26,
-                        ),
-                        onPressed: () {},
-                        color: Colors.black87,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.search, size: 26),
-                        onPressed: () {},
-                        color: Colors.black87,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+      body: Consumer<ProfileProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading && !provider.hasProfile) {
+            return const Center(child: CircularProgressIndicator(color: Color(0xFFFF5722)));
+          }
 
-            // Profile Card
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: GestureDetector(
-                  onTap: () => _showProfileDetails(context),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: Stack(
-                        fit: StackFit.expand,
+          final profileData = provider.profile?['data']?['profile'];
+          
+          if (profileData == null) {
+             return Center(
+               child: Column(
+                 mainAxisAlignment: MainAxisAlignment.center,
+                 children: [
+                   const Text('Unable to load profile'),
+                   const SizedBox(height: 10),
+                   ElevatedButton(
+                     onPressed: () => provider.fetchProfile(),
+                     child: const Text('Retry'),
+                   )
+                 ],
+               ),
+             );
+          }
+
+          // Extract Data
+          final user = profileData['user'] ?? {};
+          final firstName = user['firstName'] ?? 'User'; // Backend might return firstName in user object or profile? Schema says User has names.
+          // Note: Profile service include: user: { select: ... }. Wait, User model has firstName? 
+          // Schema: User has firstName/lastName. Profile has generated age.
+          // Let's verify if `firstName` is included in the include select in profile.service.ts
+          // Step 1219, lines 132-139: select id, email, phone, isPremium... 
+          // WAIT! firstName/lastName are NOT in the select list in `getProfile` (Step 1219)! 
+          // Schema says User has firstName? Let me check schema again (Step 1131).
+          // 1131 output was truncated. I didn't see firstName in User model lines 17-60. 
+          // Usually they are. Implementation Plan says "firstName ✅ (already in backend)".
+          // But `profile.service.ts` select doesn't include them?
+          // If they are missing, I should update `profile.service.ts` later. 
+          // For now I'll check if `firstName` is in `profile` object key (Step 68 of service.ts shows fields: firstName, lastName... in completeness calculation).
+          // Ah! `createProfile` moves them to Profile table? Or duplicates?
+          // Line 66 in service.ts: calculateProfileCompleteness checks `profile.firstName`. 
+          // So Profile table MUST have firstName/lastName.
+          // Yes, Step 1167 validator has firstName in `createProfileSchema`.
+          // So `profile['firstName']` should work.
+
+          final name = '${profileData['firstName'] ?? ''} ${profileData['lastName'] ?? ''}'.trim();
+          final age = profileData['age']?.toString() ?? '?';
+          final city = profileData['city'] ?? '';
+          final state = profileData['state'] ?? '';
+          final country = profileData['country'] ?? '';
+          final location = [city, state, country].where((s) => s != null && s.isNotEmpty).join(', ');
+          
+          // Photos
+          final List photos = profileData['photos'] ?? [];
+          String? mainPhotoUrl;
+          if (photos.isNotEmpty) {
+            final primary = photos.firstWhere((p) => p['isPrimary'] == true, orElse: () => photos.first);
+            mainPhotoUrl = primary['url'];
+          }
+          // Default fallback
+          mainPhotoUrl ??= 'https://randomuser.me/api/portraits/men/32.jpg'; // Still fallback but dynamic if available
+
+          return SafeArea(
+            child: Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Logo/Brand
+                      Row(
                         children: [
-                          // Background Image
-                          Image.network(
-                            'https://i.pravatar.cc/600?img=33',
-                            fit: BoxFit.cover,
-                          ),
-
-                          // Gradient Overlay
                           Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.transparent,
-                                  Colors.black.withOpacity(0.7),
-                                ],
-                                stops: const [0.5, 1.0],
-                              ),
+                            width: 32,
+                            height: 32,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFF5722),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.favorite,
+                              color: Colors.white,
+                              size: 18,
                             ),
                           ),
-
-                          // Profile Info
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.3),
-                                  ],
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Name and Verification
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  'John Doe',
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 28,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                const Icon(
-                                                  Icons.verified,
-                                                  color: Color(0xFFFF5722),
-                                                  size: 24,
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              '28 years old',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 16,
-                                                color: Colors.white.withOpacity(
-                                                  0.9,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 12),
-
-                                  // Location
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.location_on,
-                                        color: Color(0xFFFF5722),
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Expanded(
-                                        child: Text(
-                                          'Lagos, Lagos State, Nigeria',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 14,
-                                            color: Colors.white.withOpacity(
-                                              0.8,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 16),
-
-                                  // Tap to view profile hint
-                                  Center(
-                                    child: Text(
-                                      'Tap to view profile',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: Colors.white.withOpacity(0.6),
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 16),
-
-                                  // Edit Profile and More Options Buttons (Same Line)
-                                  Row(
-                                    children: [
-                                      // Edit Profile Button (Embossed Orange Gradient with Shine)
-                                      Expanded(
-                                        child: _ShinyButton(
-                                          onTap: () =>
-                                              context.push('/complete-profile'),
-                                          text: 'EDIT PROFILE',
-                                        ),
-                                      ),
-
-                                      const SizedBox(width: 12),
-
-                                      // More Options Button (3 dots)
-                                      Container(
-                                        width: 52,
-                                        height: 52,
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color: Colors.white.withOpacity(
-                                              0.5,
-                                            ),
-                                            width: 1.5,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                        ),
-                                        child: Material(
-                                          color: Colors.transparent,
-                                          child: InkWell(
-                                            onTap: () =>
-                                                context.push('/options'),
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                            splashColor: Colors.white
-                                                .withOpacity(0.3),
-                                            child: const Icon(
-                                              Icons.more_horiz,
-                                              color: Colors.white,
-                                              size: 24,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'ReadytoMarry',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
                             ),
                           ),
                         ],
                       ),
+                      // Icons
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.notifications_outlined,
+                              size: 26,
+                            ),
+                            onPressed: () {},
+                            color: Colors.black87,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.search, size: 26),
+                            onPressed: () {},
+                            color: Colors.black87,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Profile Card
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: GestureDetector(
+                      onTap: () => _showProfileDetails(context, profileData),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              // Background Image
+                              Image.network(
+                                mainPhotoUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(color: Colors.grey);
+                                },
+                              ),
+
+                              // Gradient Overlay
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withOpacity(0.7),
+                                    ],
+                                    stops: const [0.5, 1.0],
+                                  ),
+                                ),
+                              ),
+
+                              // Profile Info
+                              Positioned(
+                                bottom: 0,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        Colors.black.withOpacity(0.3),
+                                      ],
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Name and Verification
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      name.isNotEmpty ? name : 'User',
+                                                      style: GoogleFonts.poppins(
+                                                        fontSize: 28,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    if (profileData['isVerified'] == true) // Check if verified
+                                                    const Icon(
+                                                      Icons.verified,
+                                                      color: Color(0xFFFF5722),
+                                                      size: 24,
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '$age years old',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 16,
+                                                    color: Colors.white.withOpacity(
+                                                      0.9,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 12),
+
+                                      // Location
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.location_on,
+                                            color: Color(0xFFFF5722),
+                                            size: 18,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              location.isNotEmpty ? location : 'No location set',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                color: Colors.white.withOpacity(
+                                                  0.8,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 16),
+
+                                      // Tap to view profile hint
+                                      Center(
+                                        child: Text(
+                                          'Tap to view profile',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            color: Colors.white.withOpacity(0.6),
+                                            fontStyle: FontStyle.italic,
+                                          ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 16),
+
+                                      // Edit Profile and More Options Buttons (Same Line)
+                                      Row(
+                                        children: [
+                                          // Edit Profile Button (Embossed Orange Gradient with Shine)
+                                          Expanded(
+                                            child: _ShinyButton(
+                                              onTap: () =>
+                                                  context.push('/complete-profile').then((_) => provider.fetchProfile()),
+                                              text: 'EDIT PROFILE',
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 12),
+
+                                          // More Options Button (3 dots)
+                                          Container(
+                                            width: 52,
+                                            height: 52,
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color: Colors.white.withOpacity(
+                                                  0.5,
+                                                ),
+                                                width: 1.5,
+                                              ),
+                                              borderRadius: BorderRadius.circular(
+                                                14,
+                                              ),
+                                            ),
+                                            child: Material(
+                                              color: Colors.transparent,
+                                              child: InkWell(
+                                                onTap: () =>
+                                                    context.push('/options'),
+                                                borderRadius: BorderRadius.circular(
+                                                  14,
+                                                ),
+                                                splashColor: Colors.white
+                                                    .withOpacity(0.3),
+                                                child: const Icon(
+                                                  Icons.more_horiz,
+                                                  color: Colors.white,
+                                                  size: 24,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 20),
-          ],
-        ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
