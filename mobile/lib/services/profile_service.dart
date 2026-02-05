@@ -11,6 +11,42 @@ class ProfileService {
   );
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
+  /// Helper to handle Dio errors robustly (parses backend Zod errors)
+  String _handleDioError(DioException e, String defaultMessage) {
+    String errorMessage = defaultMessage;
+    if (e.response != null) {
+      // Check for 'message' field
+      if (e.response!.data is Map) {
+        final data = e.response!.data as Map;
+        if (data.containsKey('message')) {
+          errorMessage = data['message'];
+        }
+
+        // Check for 'errors' field (Zod/Backend validation details)
+        if (data.containsKey('errors')) {
+          final errors = data['errors'];
+          if (errors is List) {
+            final errorMessages = errors.map((err) {
+              if (err is Map) {
+                final path = (err['path'] as List?)?.join('.') ?? 'Field';
+                return '$path: ${err['message']}';
+              }
+              return err.toString();
+            }).join('\n');
+            errorMessage = '$errorMessage\n$errorMessages';
+          }
+        }
+      }
+    } else if (e.type == DioExceptionType.connectionTimeout || 
+               e.type == DioExceptionType.receiveTimeout) {
+      errorMessage = 'Connection timeout. Please check your internet.';
+    } else if (e.type == DioExceptionType.connectionError) {
+      errorMessage = 'Connection error. Please check your internet.';
+    }
+    
+    return errorMessage;
+  }
+
   /// Get my profile
   Future<Map<String, dynamic>?> getMyProfile() async {
     final token = await _storage.read(key: 'access_token');
@@ -24,7 +60,7 @@ class ProfileService {
       return response.data;
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return null; // No profile yet
-      throw Exception(e.response?.data['message'] ?? 'Failed to fetch profile');
+      throw Exception(_handleDioError(e, 'Failed to fetch profile'));
     }
   }
 
@@ -41,9 +77,10 @@ class ProfileService {
       );
       return response.data;
     } on DioException catch (e) {
-      throw Exception(
-        e.response?.data['message'] ?? 'Failed to update profile',
-      );
+      // If 404, it might mean the endpoint is wrong OR profile doesn't exist to update
+      // But updateProfile usually creates/updates or we use a separate create.
+      // Backend controller: updateProfile
+      throw Exception(_handleDioError(e, 'Failed to update profile'));
     }
   }
 
@@ -64,7 +101,7 @@ class ProfileService {
       );
       return response.data;
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Failed to upload photo');
+      throw Exception(_handleDioError(e, 'Failed to upload photo'));
     }
   }
 
@@ -75,11 +112,11 @@ class ProfileService {
 
     try {
       await _dio.delete(
-        '${ApiConfig.uploadPhoto}/$photoId',
+        '${ApiConfig.profileBase}/photo/$photoId',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Failed to delete photo');
+      throw Exception(_handleDioError(e, 'Failed to delete photo'));
     }
   }
 
@@ -98,9 +135,7 @@ class ProfileService {
       );
       return response.data;
     } on DioException catch (e) {
-      throw Exception(
-        e.response?.data['message'] ?? 'Failed to save preferences',
-      );
+      throw Exception(_handleDioError(e, 'Failed to save preferences'));
     }
   }
 
@@ -117,9 +152,7 @@ class ProfileService {
       return response.data;
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return null;
-      throw Exception(
-        e.response?.data['message'] ?? 'Failed to get preferences',
-      );
+      throw Exception(_handleDioError(e, 'Failed to get preferences'));
     }
   }
 }

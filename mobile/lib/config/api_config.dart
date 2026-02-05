@@ -5,7 +5,6 @@ class ApiConfig {
 
   // API Endpoints
   static const String authBase = '$baseUrl/auth';
-  static const String profileBase = '$baseUrl/profiles';
   static const String matchBase = '$baseUrl/matches';
   static const String messageBase = '$baseUrl/messages';
   static const String paymentBase = '$baseUrl/payments';
@@ -22,9 +21,10 @@ class ApiConfig {
   static const String checkPasswordStrength = '$authBase/check-password-strength';
 
   // Profile Endpoints
+  static const String profileBase = '$baseUrl/profile';
   static const String myProfile = '$profileBase/me';
-  static const String updateProfile = '$profileBase/me';
-  static const String uploadPhoto = '$profileBase/photos';
+  static const String updateProfile = '$profileBase/update';
+  static const String uploadPhoto = '$profileBase/upload-photo';
   
   // Preferences Endpoints
   static const String preferences = '$baseUrl/preferences';
