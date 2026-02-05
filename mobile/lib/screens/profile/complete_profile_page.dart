@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../../services/profile_service.dart';
 
 class CompleteProfilePage extends StatefulWidget {
@@ -14,9 +16,15 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   final _formKey = GlobalKey<FormState>();
   bool _isFirstLoad = true; // Track if this is the first time loading
 
+  // Photos
+  List<dynamic> _photos = [];
+  final ImagePicker _picker = ImagePicker();
+
   // Quick Introduction
   final _aboutMeCtrl = TextEditingController();
   final _hobbiesCtrl = TextEditingController();
+  
+  // ... (keeping other fields) ...
   String _relationshipStatus = 'Single';
   String _preferredLanguage = 'English';
   String _workStatus = 'Employed';
@@ -218,10 +226,30 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
 
         if (profile != null) {
           setState(() {
-            // Text Controllers
-            _aboutMeCtrl.text = profile['aboutMe'] ?? '';
-            _hobbiesCtrl.text = profile['hobbies'] ?? '';
-            _locationCtrl.text = profile['location'] ?? '';
+             // Photos
+             _photos = (profile['photos'] as List?) ?? [];
+             
+             // Text Controllers
+             _aboutMeCtrl.text = profile['aboutMe'] ?? '';
+             _hobbiesCtrl.text = profile['hobbies'] ?? '';
+             
+             // Location Reconstruction
+             // Map backend city/state/country to location string
+             String loc = '';
+             if (profile['city'] != null && profile['city'].toString().isNotEmpty) {
+               loc += profile['city'];
+             }
+             if (profile['state'] != null && profile['state'].toString().isNotEmpty) {
+               loc += (loc.isEmpty ? '' : ', ') + profile['state'];
+             }
+             if (profile['country'] != null && profile['country'].toString().isNotEmpty) {
+               loc += (loc.isEmpty ? '' : ', ') + profile['country'];
+             }
+             // If constructed location is empty, checking if 'location' field exists just in case
+             if (loc.isEmpty && profile['location'] != null && profile['location'] is String) {
+               loc = profile['location'];
+             }
+             _locationCtrl.text = loc;
 
             // Dropdowns
             // Use ?? to provide default only if null, but if value exists ensure it matches list
@@ -268,6 +296,59 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading profile: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _uploadPhoto() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final response = await _profileService.uploadPhoto(image.path);
+      // Backend returns the created photo object
+      // Assuming response['data'] is the photo object or response IS the photo object
+      // API response structure: { message: "...", data: { ...photo... } } usually? 
+      // Checking uploadPhoto implementation: returns response.data directly.
+      // Need to refresh profile to get updated list OR just append to list if I know the structure.
+      // Safest is to refresh profile photos or append.
+      
+      await _fetchProfileData(); // Refresh data to get updated photos
+      
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text('Photo uploaded successfully')),
+         );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload photo: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _deletePhoto(String photoId) async {
+     setState(() => _isLoading = true);
+    try {
+      await _profileService.deletePhoto(photoId);
+      await _fetchProfileData(); // Refresh list
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           const SnackBar(content: Text('Photo deleted')),
+         );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete photo: $e')),
         );
       }
     } finally {
@@ -421,30 +502,29 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                         ),
                     itemCount: 6,
                     itemBuilder: (context, index) {
-                      final hasPhoto = index == 0;
+                      final hasPhoto = index < _photos.length;
+                      final isNextSlot = index == _photos.length;
+                      final photo = hasPhoto ? _photos[index] : null;
+
                       return GestureDetector(
                         onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Photo picker coming soon!'),
-                            ),
-                          );
+                          if (isNextSlot) {
+                            _uploadPhoto();
+                          }
                         },
                         child: Container(
                           decoration: BoxDecoration(
                             color: Colors.grey[200],
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: hasPhoto
+                              color: (hasPhoto && photo['isPrimary'] == true)
                                   ? const Color(0xFFFF5722)
                                   : Colors.grey[300]!,
-                              width: hasPhoto ? 2 : 1,
+                              width: (hasPhoto && photo['isPrimary'] == true) ? 2 : 1,
                             ),
-                            image: hasPhoto
-                                ? const DecorationImage(
-                                    image: NetworkImage(
-                                      'https://randomuser.me/api/portraits/men/32.jpg',
-                                    ),
+                            image: (hasPhoto && photo != null && photo['url'] != null)
+                                ? DecorationImage(
+                                    image: NetworkImage(photo['url']),
                                     fit: BoxFit.cover,
                                   )
                                 : null,
@@ -468,28 +548,34 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                                       ),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
-                                      onPressed: () {},
+                                      onPressed: () {
+                                        if (photo != null && photo['id'] != null) {
+                                           _deletePhoto(photo['id']);
+                                        }
+                                      },
                                     ),
                                   ),
                                 )
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.add_photo_alternate,
-                                      color: Colors.grey[400],
-                                      size: 28,
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      'Add Photo',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 9,
-                                        color: Colors.grey[500],
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              : isNextSlot 
+                                  ? Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.add_photo_alternate,
+                                          color: Colors.grey[400],
+                                          size: 28,
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          'Add Photo',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 9,
+                                            color: Colors.grey[500],
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : null, // Empty container for future slots
                         ),
                       );
                     },
