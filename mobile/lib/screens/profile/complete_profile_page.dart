@@ -197,38 +197,99 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     'Akwa Ibom': ['Ibibio', 'Annang', 'Oron'],
   };
 
-  void _saveProfile() {
+  bool _isLoading = false;
+  final ProfileService _profileService = ProfileService();
+
+  Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
-      // TODO: Save profile data to backend
+      setState(() => _isLoading = true);
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Profile saved successfully!',
-            style: GoogleFonts.poppins(),
-          ),
-          backgroundColor: const Color(0xFFFF5722),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-      );
+      try {
+        // Map fields to backend schema
+        final profileData = {
+          'aboutMe': _aboutMeCtrl.text,
+          'hobbies': _hobbiesCtrl.text,
+          'relationshipStatus': _relationshipStatus,
+          'language': _preferredLanguage,
+          'workStatus': _workStatus,
+          'education': _educationLevel,
+          
+          // Location (if set)
+          if (_locationCtrl.text.isNotEmpty) 'location': _locationCtrl.text,
+          
+          // Ethnicity
+          if (_ethnicityCountry != null) 'ethnicityCountry': _ethnicityCountry,
+          if (_ethnicityState != null) 'ethnicityState': _ethnicityState,
+          if (_tribe != null) 'tribe': _tribe,
 
-      // Navigate based on first load status
-      if (_isFirstLoad) {
-        setState(() {
-          _isFirstLoad = false;
-        });
+          // Lifestyle
+          'drinkingStatus': _drinkStatus,
+          'smokingStatus': _smokeStatus,
+          'hasChildren': _childrenStatus, // BE schema expects string for hasChildren? No, usually boolean or string. Checking validator... it says z.string().optional()
+          'livingConditions': _livingConditions,
 
-        // Navigate to home/explore page on first save
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) context.go('/home');
-        });
-      } else {
-        // Just update state for subsequent saves
-        setState(() {});
+          // Personality
+          'personalityType': _personalityType,
+          'divorceView': _divorceView,
+
+          // Looks
+          'skinColor': _skinColor,
+          'eyeColor': _eyeColor,
+          'isHairy': _hairyStatus == 'Yes',
+          'hasTribalMarks': _tribalMarks == 'Yes',
+          'bestFeature': _bestFeature,
+
+          // Medical
+          'genotype': _genotype,
+          'bloodGroup': _bloodGroup,
+          'hivPartnerView': _hivPartnerView,
+        };
+
+        // Call backend
+        await _profileService.updateProfile(profileData);
+
+        if (mounted) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Profile saved successfully!',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: const Color(0xFFFF5722),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
+
+          // Navigate based on first load status
+          if (_isFirstLoad) {
+            setState(() {
+              _isFirstLoad = false;
+            });
+
+            // Navigate to home/explore page on first save
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (mounted) context.go('/home');
+            });
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save profile: ${e.toString()}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
