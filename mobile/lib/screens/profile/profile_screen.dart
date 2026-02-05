@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../config/api_config.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -58,26 +59,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
              );
           }
 
-          // Extract Data
           final user = profileData['user'] ?? {};
-          final firstName = user['firstName'] ?? 'User'; // Backend might return firstName in user object or profile? Schema says User has names.
-          // Note: Profile service include: user: { select: ... }. Wait, User model has firstName? 
-          // Schema: User has firstName/lastName. Profile has generated age.
-          // Let's verify if `firstName` is included in the include select in profile.service.ts
-          // Step 1219, lines 132-139: select id, email, phone, isPremium... 
-          // WAIT! firstName/lastName are NOT in the select list in `getProfile` (Step 1219)! 
-          // Schema says User has firstName? Let me check schema again (Step 1131).
-          // 1131 output was truncated. I didn't see firstName in User model lines 17-60. 
-          // Usually they are. Implementation Plan says "firstName ✅ (already in backend)".
-          // But `profile.service.ts` select doesn't include them?
-          // If they are missing, I should update `profile.service.ts` later. 
-          // For now I'll check if `firstName` is in `profile` object key (Step 68 of service.ts shows fields: firstName, lastName... in completeness calculation).
-          // Ah! `createProfile` moves them to Profile table? Or duplicates?
-          // Line 66 in service.ts: calculateProfileCompleteness checks `profile.firstName`. 
-          // So Profile table MUST have firstName/lastName.
-          // Yes, Step 1167 validator has firstName in `createProfileSchema`.
-          // So `profile['firstName']` should work.
-
+          // Assuming firstName is in profileData or user
           final name = '${profileData['firstName'] ?? ''} ${profileData['lastName'] ?? ''}'.trim();
           final age = profileData['age']?.toString() ?? '?';
           final city = profileData['city'] ?? '';
@@ -90,10 +73,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           String? mainPhotoUrl;
           if (photos.isNotEmpty) {
             final primary = photos.firstWhere((p) => p['isPrimary'] == true, orElse: () => photos.first);
-            mainPhotoUrl = primary['url'];
+            if (primary['url'] != null) {
+              mainPhotoUrl = primary['url'];
+              if (mainPhotoUrl != null && !mainPhotoUrl.startsWith('http')) {
+                mainPhotoUrl = '${ApiConfig.socketUrl}$mainPhotoUrl';
+              }
+            }
           }
           // Default fallback
-          mainPhotoUrl ??= 'https://randomuser.me/api/portraits/men/32.jpg'; // Still fallback but dynamic if available
+          mainPhotoUrl ??= 'https://randomuser.me/api/portraits/men/32.jpg';
 
           return SafeArea(
             child: Column(
@@ -512,7 +500,8 @@ class _ShinyButtonState extends State<_ShinyButton>
 
 // Profile Details Modal with Full Screen Image and Info Overlay
 class ProfileDetailsModal extends StatefulWidget {
-  const ProfileDetailsModal({super.key});
+  final Map<String, dynamic> profile;
+  const ProfileDetailsModal({super.key, required this.profile});
 
   @override
   State<ProfileDetailsModal> createState() => _ProfileDetailsModalState();
@@ -522,12 +511,36 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
   int _currentImageIndex = 0;
   bool _showInfo = false;
 
-  final List<String> _images = [
-    'https://i.pravatar.cc/600?img=33',
-    'https://i.pravatar.cc/600?img=12',
-    'https://i.pravatar.cc/600?img=15',
-    'https://i.pravatar.cc/600?img=18',
-  ];
+  List<String> _images = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImages();
+  }
+
+  void _loadImages() {
+    final List photos = widget.profile['photos'] ?? [];
+    if (photos.isNotEmpty) {
+      _images = photos.map((p) {
+        String url = p['url'] ?? '';
+        if (url.isNotEmpty && !url.startsWith('http')) {
+          url = '${ApiConfig.socketUrl}$url';
+        }
+        return url;
+      }).where((u) => u.isNotEmpty).toList();
+    }
+    
+    // Add primary photo to start if not there or ensure order? 
+    // Usually backend returns list. We just use it.
+    // If no photos, fallback
+    if (_images.isEmpty) {
+      _images = ['https://randomuser.me/api/portraits/men/32.jpg'];
+    }
+    
+    // Check if there is a primary photo and if we want it first?
+    // Not strictly necessary but good polish.
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -752,7 +765,7 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          'John Doe, 28',
+                                          '${widget.profile['firstName'] ?? ''} ${widget.profile['lastName'] ?? ''}, ${widget.profile['age'] ?? '?'}',
                                           style: GoogleFonts.poppins(
                                             fontSize: 28,
                                             fontWeight: FontWeight.bold,
@@ -760,6 +773,7 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
                                           ),
                                         ),
                                       ),
+                                      if (widget.profile['isVerified'] == true)
                                       const Icon(
                                         Icons.verified,
                                         color: Color(0xFFFF5722),
@@ -778,7 +792,11 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          'Lagos, Lagos State, Nigeria',
+                                          [
+                                            widget.profile['city'],
+                                            widget.profile['state'],
+                                            widget.profile['country']
+                                          ].where((s) => s != null && s.toString().isNotEmpty).join(', '),
                                           style: GoogleFonts.poppins(
                                             fontSize: 14,
                                             color: Colors.white.withOpacity(
@@ -793,9 +811,10 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
                                   const SizedBox(height: 24),
 
                                   // About Me
+                                  if (widget.profile['aboutMe'] != null && widget.profile['aboutMe'].toString().isNotEmpty)
                                   _buildInfoSection(
                                     'About Me',
-                                    'I\'m a passionate individual looking for a meaningful connection. I enjoy traveling, reading, and spending time with loved ones.',
+                                    widget.profile['aboutMe'],
                                   ),
 
                                   const SizedBox(height: 20),
