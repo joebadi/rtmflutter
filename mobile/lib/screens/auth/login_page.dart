@@ -60,7 +60,8 @@ class _LoginPageState extends State<LoginPage> {
       final user = profileData['data'];
 
       // Check if email/phone is verified
-      if (user['emailVerified'] == false || user['phoneVerified'] == false) {
+      // Check if email is verified (Phone verification is optional/future feature)
+      if (user['emailVerified'] == false) {
         // Need to verify OTP
         if (mounted) {
           context.push(
@@ -79,7 +80,7 @@ class _LoginPageState extends State<LoginPage> {
       // Check if profile is complete
       final profile = user['profile'];
       if (profile == null ||
-          profile['bio'] == null ||
+          profile['aboutMe'] == null || // Corrected field name from bio
           profile['dateOfBirth'] == null ||
           profile['gender'] == null) {
         // Profile incomplete - go to profile setup
