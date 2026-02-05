@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import '../../config/api_config.dart';
 import '../../services/profile_service.dart';
 
 class CompleteProfilePage extends StatefulWidget {
@@ -496,9 +497,9 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 0.75,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.8,
                         ),
                     itemCount: 6,
                     itemBuilder: (context, index) {
@@ -506,76 +507,150 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                       final isNextSlot = index == _photos.length;
                       final photo = hasPhoto ? _photos[index] : null;
 
-                      return GestureDetector(
-                        onTap: () {
-                          if (isNextSlot) {
-                            _uploadPhoto();
-                          }
+                      // Fix URL if relative
+                      String? imageUrl;
+                      if (hasPhoto && photo != null && photo['url'] != null) {
+                        imageUrl = photo['url'];
+                        if (imageUrl != null && !imageUrl.startsWith('http')) {
+                           imageUrl = '${ApiConfig.socketUrl}$imageUrl';
+                        }
+                      }
+
+                      return TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: Duration(milliseconds: 400 + (index * 100)),
+                        curve: Curves.fastOutSlowIn,
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: value,
+                            child: child,
+                          );
                         },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: (hasPhoto && photo['isPrimary'] == true)
-                                  ? const Color(0xFFFF5722)
-                                  : Colors.grey[300]!,
-                              width: (hasPhoto && photo['isPrimary'] == true) ? 2 : 1,
+                        child: GestureDetector(
+                          onTap: () {
+                            if (isNextSlot) {
+                              _uploadPhoto();
+                            }
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
                             ),
-                            image: (hasPhoto && photo != null && photo['url'] != null)
-                                ? DecorationImage(
-                                    image: NetworkImage(photo['url']),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
-                          ),
-                          child: hasPhoto
-                              ? Align(
-                                  alignment: Alignment.topRight,
-                                  child: Container(
-                                    margin: const EdgeInsets.all(3),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.6,
+                            child: Stack(
+                              children: [
+                                // Image or Placeholder
+                                Container(
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(15),
+                                    color: isNextSlot ? const Color(0xFFFFF0EB) : Colors.grey[100],
+                                    border: isNextSlot 
+                                        ? Border.all(color: const Color(0xFFFF5722), width: 1.5, style: BorderStyle.none) // Dashed border simulated with custom painter if needed, but solid is fine for now or use dotted_border package if available (not in deps). I'll use solid accent color.
+                                        : Border.all(color: Colors.transparent),
+                                    image: (imageUrl != null)
+                                        ? DecorationImage(
+                                            image: NetworkImage(imageUrl),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
+                                  ),
+                                  child: isNextSlot
+                                      ? Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFFF5722).withValues(alpha: 0.1),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.add,
+                                                color: Color(0xFFFF5722),
+                                                size: 24,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Add',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w500,
+                                                color: const Color(0xFFFF5722),
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      : !hasPhoto && !isNextSlot
+                                          ? Center(
+                                              child: Icon(
+                                                Icons.photo_library_outlined,
+                                                color: Colors.grey[300],
+                                                size: 24,
+                                              ),
+                                            )
+                                          : null,
+                                ),
+
+                                // Primary Badge
+                                if (hasPhoto && photo['isPrimary'] == true)
+                                  Positioned(
+                                    top: 8,
+                                    left: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFF5722),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
-                                      shape: BoxShape.circle,
+                                      child: Text(
+                                        'Main',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.close,
-                                        color: Colors.white,
-                                        size: 14,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: () {
-                                        if (photo != null && photo['id'] != null) {
+                                  ),
+
+                                // Delete Button
+                                if (hasPhoto)
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                         if (photo != null && photo['id'] != null) {
                                            _deletePhoto(photo['id']);
                                         }
                                       },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withValues(alpha: 0.6),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 12,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                )
-                              : isNextSlot 
-                                  ? Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.add_photo_alternate,
-                                          color: Colors.grey[400],
-                                          size: 28,
-                                        ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          'Add Photo',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 9,
-                                            color: Colors.grey[500],
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  : null, // Empty container for future slots
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },
