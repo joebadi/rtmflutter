@@ -77,13 +77,12 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // Check if profile is complete
+      // Step 2: Basic Profile (DOB/Gender)
+      // Check if firstName/lastName needed? usually in registration
       final profile = user['profile'];
       if (profile == null ||
-          profile['aboutMe'] == null || // Corrected field name from bio
           profile['dateOfBirth'] == null ||
           profile['gender'] == null) {
-        // Profile incomplete - go to profile setup
         if (mounted) {
           context.go(
             '/profile-details',
@@ -93,6 +92,26 @@ class _LoginPageState extends State<LoginPage> {
             },
           );
         }
+        return;
+      }
+
+      // Step 3: Photos
+      final photos = profile['photos'] as List?;
+      if (photos == null || photos.isEmpty) {
+        if (mounted) context.go('/image-upload');
+        return;
+      }
+
+      // Step 4: Verification (Video) - Optional for now or handled elsewhere?
+      // Step 5: Match Preferences
+      // Check if matchPreferences exists on user object
+      // (Backend needs to include it in getMyProfile response, which it does based on verify_db_data output)
+      // However, user['matchPreferences'] might not be in the response of getMyProfile unless included.
+      // let's assume if aboutMe is missing, we go to complete profile first.
+      
+      // Step 6: Complete Profile (Bio/AboutMe)
+      if (profile['aboutMe'] == null) {
+        if (mounted) context.go('/complete-profile');
         return;
       }
 
