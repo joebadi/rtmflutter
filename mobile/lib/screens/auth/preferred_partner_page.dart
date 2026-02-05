@@ -155,7 +155,7 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
 
         // Navigate to home/dashboard
         if (mounted) {
-          context.go('/home');
+          context.go('/video-verification');
         }
       } catch (e) {
         if (mounted) {
