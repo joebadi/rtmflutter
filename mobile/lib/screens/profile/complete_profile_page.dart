@@ -179,26 +179,78 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     'Yobe',
     'Zamfara',
   ];
-  final Map<String, List<String>> _stateTribes = {
-    'Lagos': ['Yoruba', 'Awori', 'Egun'],
-    'Oyo': ['Yoruba'],
-    'Ogun': ['Yoruba', 'Egba', 'Ijebu'],
-    'Kano': ['Hausa', 'Fulani'],
-    'Kaduna': ['Hausa', 'Fulani', 'Gbagyi'],
-    'Rivers': ['Ijaw', 'Ikwerre', 'Ogoni', 'Kalabari'],
-    'Anambra': ['Igbo'],
-    'Enugu': ['Igbo'],
-    'Imo': ['Igbo'],
-    'Abia': ['Igbo'],
-    'Ebonyi': ['Igbo'],
-    'Delta': ['Urhobo', 'Isoko', 'Itsekiri', 'Ijaw'],
-    'Edo': ['Edo', 'Bini', 'Esan'],
-    'Cross River': ['Efik', 'Ibibio', 'Ejagham'],
-    'Akwa Ibom': ['Ibibio', 'Annang', 'Oron'],
-  };
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfileData();
+  }
 
-  bool _isLoading = false;
-  final ProfileService _profileService = ProfileService();
+  Future<void> _fetchProfileData() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await _profileService.getMyProfile();
+      if (response != null && response['data'] != null) {
+        final data = response['data'];
+        final profile = data['profile'];
+
+        if (profile != null) {
+          setState(() {
+            // Text Controllers
+            _aboutMeCtrl.text = profile['aboutMe'] ?? '';
+            _hobbiesCtrl.text = profile['hobbies'] ?? '';
+            _locationCtrl.text = profile['location'] ?? '';
+
+            // Dropdowns
+            // Use ?? to provide default only if null, but if value exists ensure it matches list
+            if (profile['relationshipStatus'] != null) _relationshipStatus = profile['relationshipStatus'];
+            if (profile['language'] != null) _preferredLanguage = profile['language'];
+            if (profile['workStatus'] != null) _workStatus = profile['workStatus'];
+            if (profile['education'] != null) _educationLevel = profile['education'];
+            
+            // Ethnicity
+            // Map backend 'stateOfOrigin' back to frontend '_ethnicityState'
+            _ethnicityCountry = profile['ethnicityCountry'];
+            _ethnicityState = profile['stateOfOrigin']; 
+            _tribe = profile['tribe'];
+
+            // Lifestyle
+            if (profile['drinkingStatus'] != null) _drinkStatus = profile['drinkingStatus'];
+            if (profile['smokingStatus'] != null) _smokeStatus = profile['smokingStatus'];
+            if (profile['hasChildren'] != null) _childrenStatus = profile['hasChildren'];
+            if (profile['livingConditions'] != null) _livingConditions = profile['livingConditions'];
+
+            // Personality
+            if (profile['personalityType'] != null) _personalityType = profile['personalityType'];
+            if (profile['divorceView'] != null) _divorceView = profile['divorceView'];
+            if (profile['hivPartnerView'] != null) _hivPartnerView = profile['hivPartnerView'];
+
+            // Looks
+            if (profile['skinColor'] != null) _skinColor = profile['skinColor'];
+            if (profile['eyeColor'] != null) _eyeColor = profile['eyeColor'];
+            if (profile['isHairy'] != null) _hairyStatus = profile['isHairy'] == true ? 'Yes' : 'No';
+            if (profile['hasTribalMarks'] != null) _tribalMarks = profile['hasTribalMarks'] == true ? 'Yes' : 'No';
+             if (profile['bestFeature'] != null) _bestFeature = profile['bestFeature'];
+
+            // Medical
+            if (profile['genotype'] != null) _genotype = profile['genotype'];
+            if (profile['bloodGroup'] != null) _bloodGroup = profile['bloodGroup'];
+            
+            // If we have data, it's not strictly first load logic for routing, 
+            // but we still want to redirect to home on save if they came from login.
+            // For now, keep _isFirstLoad logic as is or adjust if needed.
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading profile: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
