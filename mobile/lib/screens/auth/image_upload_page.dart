@@ -172,156 +172,169 @@ class _ImageUploadPageState extends State<ImageUploadPage> {
                               width: 1.5,
                             ),
                           ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Upload Area
-                              GestureDetector(
-                                onTap: _pickImage,
-                                child: Container(
-                                  width: 200,
-                                  height: 200,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white.withOpacity(0.1),
-                                    border: Border.all(
-                                      color: const Color(0xFFFF6B35),
-                                      width: 3,
-                                      strokeAlign: BorderSide.strokeAlignInside,
-                                    ),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              return SingleChildScrollView(
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: constraints.maxHeight,
                                   ),
-                                  child: _selectedImagePath == null
-                                      ? Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(
-                                              Icons.add_a_photo,
-                                              size: 50,
-                                              color: Color(0xFFFF6B35),
-                                            ),
-                                            const SizedBox(height: 12),
-                                            Text(
-                                              'Tap to upload',
-                                              style: GoogleFonts.poppins(
-                                                color: Colors.white.withOpacity(
-                                                  0.8,
-                                                ),
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          ],
-                                        )
-                                      : ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            100,
-                                          ),
-                                          child: Image.file(
-                                            File(_selectedImagePath!),
-                                            fit: BoxFit.cover,
+                                  child: IntrinsicHeight(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        // Upload Area
+                                        GestureDetector(
+                                          onTap: _pickImage,
+                                          child: Container(
                                             width: 200,
                                             height: 200,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Colors.white.withOpacity(0.1),
+                                              border: Border.all(
+                                                color: const Color(0xFFFF6B35),
+                                                width: 3,
+                                                strokeAlign: BorderSide.strokeAlignInside,
+                                              ),
+                                            ),
+                                            child: _selectedImagePath == null
+                                                ? Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.center,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.add_a_photo,
+                                                        size: 50,
+                                                        color: Color(0xFFFF6B35),
+                                                      ),
+                                                      const SizedBox(height: 12),
+                                                      Text(
+                                                        'Tap to upload',
+                                                        style: GoogleFonts.poppins(
+                                                          color: Colors.white.withOpacity(
+                                                            0.8,
+                                                          ),
+                                                          fontSize: 14,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  )
+                                                : ClipRRect(
+                                                    borderRadius: BorderRadius.circular(
+                                                      100,
+                                                    ),
+                                                    child: Image.file(
+                                                      File(_selectedImagePath!),
+                                                      fit: BoxFit.cover,
+                                                      width: 200,
+                                                      height: 200,
+                                                    ),
+                                                  ),
                                           ),
                                         ),
-                                ),
-                              ),
 
-                              const SizedBox(height: 30),
+                                        const SizedBox(height: 30),
 
-                              // Instructions
-                              Text(
-                                'Choose your best photo',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Upload a clear photo of yourself.\nThis will be your profile picture.',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  color: Colors.white.withOpacity(0.7),
-                                  height: 1.5,
-                                ),
-                              ),
+                                        // Instructions
+                                        Text(
+                                          'Choose your best photo',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'Upload a clear photo of yourself.\nThis will be your profile picture.',
+                                          textAlign: TextAlign.center,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            color: Colors.white.withOpacity(0.7),
+                                            height: 1.5,
+                                          ),
+                                        ),
 
-                              const SizedBox(height: 40),
+                                        const SizedBox(height: 40),
 
-                              // Tips
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Photo Tips:',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildTip('Use a recent photo'),
-                                    _buildTip('Show your face clearly'),
-                                    _buildTip('Good lighting works best'),
-                                    _buildTip('Smile naturally'),
-                                  ],
-                                ),
-                              ),
+                                        // Tips
+                                        Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Photo Tips:',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              _buildTip('Use a recent photo'),
+                                              _buildTip('Show your face clearly'),
+                                              _buildTip('Good lighting works best'),
+                                              _buildTip('Smile naturally'),
+                                            ],
+                                          ),
+                                        ),
 
-                              const Spacer(),
+                                        const Spacer(),
 
-                              // Continue Button
-                              SizedBox(
-                                width: double.infinity,
-                                height: 50,
-                                child: ElevatedButton(
-                                  onPressed: _continue,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFFF6B35),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 14,
+                                        // Continue Button
+                                        SizedBox(
+                                          width: double.infinity,
+                                          height: 50,
+                                          child: ElevatedButton(
+                                            onPressed: _continue,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFFFF6B35),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                              elevation: 0,
+                                              padding: const EdgeInsets.symmetric(
+                                                vertical: 14,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'Continue',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 12),
+
+                                        // Skip Option
+                                        TextButton(
+                                          onPressed: () =>
+                                              context.push('/preferred-partner'),
+                                          child: Text(
+                                            'Skip for now',
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white.withOpacity(0.6),
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  child: Text(
-                                    'Continue',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
                                 ),
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              // Skip Option
-                              TextButton(
-                                onPressed: () =>
-                                    context.push('/preferred-partner'),
-                                child: Text(
-                                  'Skip for now',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white.withOpacity(0.6),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-                            ],
+                              );
+                            },
                           ),
                         ),
                       ),
