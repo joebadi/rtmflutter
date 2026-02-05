@@ -303,7 +303,7 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
           'ethnicityState': _selectedEthnicityState,
           'tribe': _selectedTribe,
           'dateOfBirth': formattedDob,
-          'gender': _selectedGender,
+          'gender': _selectedGender.toUpperCase(),
           'relationshipStatus': _selectedRelationshipStatus,
           'religion': _selectedReligion,
           'genotype': _selectedGenotype,
