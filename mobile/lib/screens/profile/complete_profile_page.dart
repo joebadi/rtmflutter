@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/profile_service.dart';
 
 class CompleteProfilePage extends StatefulWidget {
   const CompleteProfilePage({super.key});
@@ -179,6 +180,28 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     'Yobe',
     'Zamfara',
   ];
+
+  final Map<String, List<String>> _stateTribes = {
+    'Lagos': ['Yoruba', 'Awori', 'Egun'],
+    'Oyo': ['Yoruba'],
+    'Ogun': ['Yoruba', 'Egba', 'Ijebu'],
+    'Kano': ['Hausa', 'Fulani'],
+    'Kaduna': ['Hausa', 'Fulani', 'Gbagyi'],
+    'Rivers': ['Ijaw', 'Ikwerre', 'Ogoni', 'Kalabari'],
+    'Anambra': ['Igbo'],
+    'Enugu': ['Igbo'],
+    'Imo': ['Igbo'],
+    'Abia': ['Igbo'],
+    'Ebonyi': ['Igbo'],
+    'Delta': ['Urhobo', 'Isoko', 'Itsekiri', 'Ijaw'],
+    'Edo': ['Edo', 'Bini', 'Esan'],
+    'Cross River': ['Efik', 'Ibibio', 'Ejagham'],
+    'Akwa Ibom': ['Ibibio', 'Annang', 'Oron'],
+  };
+
+  bool _isLoading = false;
+  final ProfileService _profileService = ProfileService();
+
   @override
   void initState() {
     super.initState();
