@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../services/api_config.dart';
+import '../config/api_config.dart';
 
 class MatchService {
   final Dio _dio = Dio();
@@ -20,7 +20,7 @@ class MatchService {
     int limit = 20,
   }) async {
     try {
-      final token = await _storage.read(key: 'accessToken');
+      final token = await _storage.read(key: 'access_token');
       _dio.options.headers['Authorization'] = 'Bearer $token';
 
       final response = await _dio.post(
@@ -46,7 +46,7 @@ class MatchService {
   // Get match suggestions (for cards/grid)
   Future<List<dynamic>> getMatchSuggestions({int limit = 10}) async {
     try {
-      final token = await _storage.read(key: 'accessToken');
+      final token = await _storage.read(key: 'access_token');
       _dio.options.headers['Authorization'] = 'Bearer $token';
 
       final response = await _dio.get(
@@ -61,6 +61,51 @@ class MatchService {
       }
     } catch (e) {
       throw Exception('Error fetching suggestions: $e');
+    }
+  }
+  // Get match preferences
+  Future<Map<String, dynamic>> getPreferences() async {
+    try {
+      final token = await _storage.read(key: 'access_token');
+      if (token != null) {
+        _dio.options.headers['Authorization'] = 'Bearer $token'; // Update header logic
+      } else {
+         // Handle case where token might be missing or rely on what's set elsewhere? 
+         // For now, let's just ensure we try to read it.
+      }
+      // Note: check where 'access_token' vs 'accessToken' key consistency. 
+      // AuthService uses 'access_token'. MatchService uses 'accessToken'. 
+      // I MUST FIX THIS KEY MISMATCH FIRST.
+
+      final response = await _dio.get(ApiConfig.preferences);
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'];
+      } else {
+        // If 404, might return empty defaults?
+        return {}; 
+      }
+    } catch (e) {
+      print('Error fetching preferences: $e');
+      return {};
+    }
+  }
+
+  // Update match preferences
+  Future<bool> updatePreferences(Map<String, dynamic> preferences) async {
+    try {
+      final token = await _storage.read(key: 'access_token');
+       _dio.options.headers['Authorization'] = 'Bearer $token';
+
+      final response = await _dio.post(
+        ApiConfig.preferences,
+        data: preferences,
+      );
+
+      return response.statusCode == 200 && response.data['success'] == true;
+    } catch (e) {
+      print('Error updating preferences: $e');
+      return false;
     }
   }
 }

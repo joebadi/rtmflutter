@@ -28,7 +28,7 @@ class ApiConfig {
   static const String uploadPhoto = '$profileBase/upload-photo';
   
   // Preferences Endpoints
-  static const String preferences = '$baseUrl/preferences';
+  static const String preferences = '$matchBase/preferences';
 
   // Match Endpoints
   static const String exploreMatches = '$matchBase/explore';

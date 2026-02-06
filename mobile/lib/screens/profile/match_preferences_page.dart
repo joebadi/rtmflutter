@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../config/theme.dart';
+import '../../services/match_service.dart';
 
 class MatchPreferencesPage extends StatefulWidget {
   const MatchPreferencesPage({super.key});
@@ -12,13 +12,15 @@ class MatchPreferencesPage extends StatefulWidget {
 
 class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
   final _formKey = GlobalKey<FormState>();
+  final _matchService = MatchService();
+  bool _isLoading = false;
 
-  RangeValues _ageRange = const RangeValues(25, 35);
-  final List<String> _selectedRelationshipStatuses = ['Single'];
+  RangeValues _ageRange = const RangeValues(18, 50);
+  final List<String> _selectedRelationshipStatuses = [];
   String _selectedCountry = 'Nigeria';
-  final List<String> _selectedStates = ['Lagos', 'Abuja'];
-  final List<String> _selectedTribes = ['Yoruba'];
-  String? _selectedReligion = 'Christianity';
+  final List<String> _selectedStates = [];
+  final List<String> _selectedTribes = [];
+  String? _selectedReligion;
   String? _selectedZodiac;
   String? _selectedGenotype;
   String? _selectedBloodGroup;
@@ -31,9 +33,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
   final Map<String, bool> _dealBreakers = {
     'relationshipStatus': false,
     'location': false,
-    'religion': true,
+    'religion': false,
     'zodiac': false,
-    'genotype': true,
+    'genotype': false,
     'bloodGroup': false,
     'height': false,
     'bodyType': false,
@@ -56,23 +58,10 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     'UK',
   ];
   final List<String> _nigerianStates = [
-    'Lagos',
-    'Abuja',
-    'Kano',
-    'Rivers',
-    'Oyo',
-    'Ogun',
-    'Edo',
-    'Anambra',
-    'Enugu',
+    'Lagos', 'Abuja', 'Kano', 'Rivers', 'Oyo', 'Ogun', 'Edo', 'Anambra', 'Enugu', 'Delta'
   ];
   final List<String> _tribes = [
-    'Yoruba',
-    'Igbo',
-    'Hausa',
-    'Ijaw',
-    'Fulani',
-    'Edo',
+    'Yoruba', 'Igbo', 'Hausa', 'Ijaw', 'Fulani', 'Edo', 'Urhobo', 'Itsekiri'
   ];
   final List<String> _religions = [
     'Christianity',
@@ -81,61 +70,151 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     'Other',
   ];
   final List<String> _zodiacs = [
-    'Aries',
-    'Taurus',
-    'Gemini',
-    'Cancer',
-    'Leo',
-    'Virgo',
-    'Libra',
-    'Scorpio',
-    'Sagittarius',
-    'Capricorn',
-    'Aquarius',
-    'Pisces',
+    'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 
+    'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
   ];
   final List<String> _genotypes = ['AA', 'AS', 'SS', 'AC'];
   final List<String> _bloodGroups = [
-    'O+',
-    'O-',
-    'A+',
-    'A-',
-    'B+',
-    'B-',
-    'AB+',
-    'AB-',
+    'O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'
   ];
   final List<String> _heights = ['4\'0"', '5\'0"', '5\'6"', '6\'0"', '6\'6"'];
   final List<String> _bodyTypes = [
-    'Slim',
-    'Average',
-    'Athletic',
-    'Curvy',
-    'Plus Size',
+    'Slim', 'Average', 'Athletic', 'Curvy', 'Plus Size',
   ];
 
-  void _savePreferences() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Save to backend
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _matchService.getPreferences();
+      if (data.isNotEmpty) {
+        setState(() {
+          if (data['ageMin'] != null && data['ageMax'] != null) {
+            _ageRange = RangeValues(
+              (data['ageMin'] as num).toDouble(),
+              (data['ageMax'] as num).toDouble(),
+            );
+          }
+          if (data['matchCountry'] != null) _selectedCountry = data['matchCountry']; // Ensure backend uses matchCountry
+          
+          // Helper to safely load lists
+          void loadList(String key, List<String> target) {
+            if (data[key] != null && data[key] is List) {
+              target.clear();
+              target.addAll((data[key] as List).map((e) => e.toString()));
+            }
+          }
+          
+          loadList('relationshipStatus', _selectedRelationshipStatuses);
+          loadList('locationStates', _selectedStates);
+          loadList('tribes', _selectedTribes);
+          
+          _selectedReligion = data['religion'] is List && (data['religion'] as List).isNotEmpty 
+              ? (data['religion'][0] as String) : null;
+              
+          _selectedZodiac = data['zodiac'] is List && (data['zodiac'] as List).isNotEmpty
+              ? (data['zodiac'][0] as String) : null;
+
+          _selectedGenotype = data['genotype'] is List && (data['genotype'] as List).isNotEmpty
+              ? (data['genotype'][0] as String) : null;
+
+          _selectedBloodGroup = data['bloodGroup'] is List && (data['bloodGroup'] as List).isNotEmpty
+              ? (data['bloodGroup'][0] as String) : null;
+              
+          _selectedBodyType = data['bodyType'] is List && (data['bodyType'] as List).isNotEmpty
+              ? (data['bodyType'][0] as String) : null;
+
+          // Deal breakers
+          // Map backend fields to local bools (e.g., ageIsDealBreaker)
+          _dealBreakers['location'] = data['locationIsDealBreaker'] ?? false;
+          _dealBreakers['religion'] = data['religionIsDealBreaker'] ?? false;
+          _dealBreakers['genotype'] = data['genotypeIsDealBreaker'] ?? false;
+          // Add others as needed
+        });
+      }
+    } catch (e) {
+      print('Failed to load preferences: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _savePreferences() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final data = {
+        'ageMin': _ageRange.start.round(),
+        'ageMax': _ageRange.end.round(),
+        'ageIsDealBreaker': false, // Todo UI
+        'matchCountry': _selectedCountry,
+        'locationStates': _selectedStates,
+        'locationIsDealBreaker': _dealBreakers['location'],
+        'distanceRadius': 50,
+        'unit': 'km',
+        'relationshipStatus': _selectedRelationshipStatuses,
+        'religion': _selectedReligion != null ? [_selectedReligion] : [],
+        'religionIsDealBreaker': _dealBreakers['religion'],
+        'zodiac': _selectedZodiac != null ? [_selectedZodiac] : [],
+        'genotype': _selectedGenotype != null ? [_selectedGenotype] : [],
+        'genotypeIsDealBreaker': _dealBreakers['genotype'],
+        'bloodGroup': _selectedBloodGroup != null ? [_selectedBloodGroup] : [],
+        'bodyType': _selectedBodyType != null ? [_selectedBodyType] : [],
+        // Add others
+      };
+
+      final success = await _matchService.updatePreferences(data);
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Match preferences updated successfully!'),
+            backgroundColor: Color(0xFFFF6B35),
+          ),
+        );
+        context.pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update preferences'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Match preferences updated successfully!'),
-          backgroundColor: AppTheme.primary,
-        ),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
-      context.pop();
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.grey[50], // Match Register Page background
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFF6B35), // Orange Header
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -143,7 +222,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: Colors.white,
           ),
         ),
       ),
@@ -158,17 +237,17 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(0.1),
+                    color: const Color(0xFFFF6B35).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppTheme.primary.withOpacity(0.3),
+                      color: const Color(0xFFFF6B35).withOpacity(0.3),
                     ),
                   ),
                   child: Row(
                     children: [
                       const Icon(
                         Icons.info_outline,
-                        color: AppTheme.primary,
+                        color: Color(0xFFFF6B35),
                         size: 24,
                       ),
                       const SizedBox(width: 12),
@@ -177,7 +256,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                           'Toggle "Deal Breaker" for must-have preferences',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
-                            color: Colors.grey[700],
+                            color: Colors.black87,
                           ),
                         ),
                       ),
@@ -192,7 +271,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   Text(
                     '${_ageRange.start.round()} - ${_ageRange.end.round()} years',
                     style: GoogleFonts.poppins(
-                      color: AppTheme.primary,
+                      color: const Color(0xFFFF6B35),
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -203,7 +282,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     min: 18,
                     max: 70,
                     divisions: 52,
-                    activeColor: AppTheme.primary,
+                    activeColor: const Color(0xFFFF6B35),
                     inactiveColor: Colors.grey[300],
                     labels: RangeLabels(
                       _ageRange.start.round().toString(),
@@ -328,33 +407,34 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   ),
                 ]),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 48), // Increased Padding for Floating Button feel
 
                 // Save Button
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
+                  height: 56, // Taller button
                   child: ElevatedButton(
                     onPressed: _savePreferences,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
+                      backgroundColor: const Color(0xFFFF6B35),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      elevation: 0,
+                      elevation: 4,
+                      shadowColor: const Color(0xFFFF6B35).withOpacity(0.4),
                     ),
                     child: Text(
                       'Save Preferences',
                       style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 40), // Safe area buffer
               ],
             ),
           ),
@@ -385,10 +465,10 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withOpacity(0.1),
+                  color: const Color(0xFFFF6B35).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppTheme.primary, size: 22),
+                child: Icon(icon, color: const Color(0xFFFF6B35), size: 22),
               ),
               const SizedBox(width: 12),
               Text(
@@ -408,6 +488,8 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     );
   }
 
+  // ... (Keep simpler helper widgets, but update color to Orange)
+  
   Widget _buildDropdownWithDealBreaker(
     String label,
     String? value,
@@ -445,7 +527,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     value: _dealBreakers[dealBreakerKey]!,
                     onChanged: (v) =>
                         setState(() => _dealBreakers[dealBreakerKey] = v),
-                    activeColor: Colors.red,
+                    activeColor: const Color(0xFFFF6B35),
                   ),
                 ),
               ],
@@ -459,7 +541,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _dealBreakers[dealBreakerKey]!
-                  ? Colors.red
+                  ? const Color(0xFFFF6B35)
                   : Colors.grey[300]!,
               width: _dealBreakers[dealBreakerKey]! ? 2 : 1,
             ),
@@ -530,7 +612,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     value: _dealBreakers[dealBreakerKey]!,
                     onChanged: (v) =>
                         setState(() => _dealBreakers[dealBreakerKey] = v),
-                    activeColor: Colors.red,
+                    activeColor: const Color(0xFFFF6B35),
                   ),
                 ),
               ],
@@ -545,7 +627,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _dealBreakers[dealBreakerKey]!
-                  ? Colors.red
+                  ? const Color(0xFFFF6B35)
                   : Colors.grey[300]!,
               width: _dealBreakers[dealBreakerKey]! ? 2 : 1,
             ),
@@ -571,10 +653,10 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.primary : Colors.white,
+                    color: isSelected ? const Color(0xFFFF6B35) : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSelected ? AppTheme.primary : Colors.grey[300]!,
+                      color: isSelected ? const Color(0xFFFF6B35) : Colors.grey[300]!,
                     ),
                   ),
                   child: Text(
@@ -641,10 +723,10 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.primary : Colors.white,
+                    color: isSelected ? const Color(0xFFFF6B35) : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSelected ? AppTheme.primary : Colors.grey[300]!,
+                      color: isSelected ? const Color(0xFFFF6B35) : Colors.grey[300]!,
                     ),
                   ),
                   child: Text(
@@ -702,7 +784,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     value: _dealBreakers[dealBreakerKey]!,
                     onChanged: (v) =>
                         setState(() => _dealBreakers[dealBreakerKey] = v),
-                    activeColor: Colors.red,
+                    activeColor: const Color(0xFFFF6B35),
                   ),
                 ),
               ],
@@ -717,7 +799,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _dealBreakers[dealBreakerKey]!
-                  ? Colors.red
+                  ? const Color(0xFFFF6B35)
                   : Colors.grey[300]!,
               width: _dealBreakers[dealBreakerKey]! ? 2 : 1,
             ),
@@ -731,7 +813,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: value == true
-                          ? AppTheme.primary
+                          ? const Color(0xFFFF6B35)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -755,7 +837,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: value == false
-                          ? AppTheme.primary
+                          ? const Color(0xFFFF6B35)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -779,7 +861,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: value == null
-                          ? AppTheme.primary
+                          ? const Color(0xFFFF6B35)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
