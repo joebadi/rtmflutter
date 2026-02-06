@@ -280,7 +280,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       mapController: mapController,
       options: MapOptions(
         initialCenter: _currentLocation!, // San Francisco fallback if null logic fails
-        initialZoom: 13.0,
+        initialZoom: 11.0,
         keepAlive: true, // Keep map state when switching tabs
         interactionOptions: const InteractionOptions(
           flags: InteractiveFlag.all & ~InteractiveFlag.rotate, 

@@ -19,6 +19,7 @@ class ApiConfig {
   static const String forgotPassword = '$authBase/forgot-password';
   static const String resetPassword = '$authBase/reset-password';
   static const String checkPasswordStrength = '$authBase/check-password-strength';
+  static const String checkExistence = '$authBase/check-existence';
 
   // Profile Endpoints
   static const String profileBase = '$baseUrl/profile';

@@ -192,6 +192,27 @@ class AuthService {
     }
   }
 
+  /// Check if email or phone exists
+  Future<Map<String, dynamic>> checkExistence({
+    String? email,
+    String? phoneNumber,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConfig.checkExistence,
+        data: {
+          if (email != null) 'email': email,
+          if (phoneNumber != null) 'phoneNumber': phoneNumber,
+        },
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['message'] ?? 'Failed to check existence',
+      );
+    }
+  }
+
   /// Refresh access token
   Future<String?> refreshAccessToken() async {
     try {

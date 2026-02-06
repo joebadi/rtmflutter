@@ -39,6 +39,11 @@ class ProfileProvider extends ChangeNotifier {
       _setLoading(false);
     }
   }
+  
+  void clearProfile() {
+    _profile = null;
+    notifyListeners();
+  }
 
   void _setLoading(bool value) {
     _isLoading = value;

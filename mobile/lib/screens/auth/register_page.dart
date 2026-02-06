@@ -26,6 +26,16 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscureConfirmPassword = true;
   bool _agreedToTerms = false;
   String _selectedCountryCode = 'NG+234'; // Default to Nigeria
+  
+  // Validation state
+  final _emailFocus = FocusNode();
+  final _phoneFocus = FocusNode();
+  String? _emailError;
+  String? _phoneError;
+  bool _isCheckingEmail = false;
+  bool _isCheckingPhone = false;
+  bool _emailTaken = false;
+  bool _phoneTaken = false;
 
   // Country codes list with flags
   final List<Map<String, String>> _countryCodes = [
@@ -44,6 +54,13 @@ class _RegisterPageState extends State<RegisterPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _emailFocus.addListener(_onEmailFocusChange);
+    _phoneFocus.addListener(_onPhoneFocusChange);
+  }
+
+  @override
   void dispose() {
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
@@ -51,7 +68,72 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailCtrl.dispose();
     _passCtrl.dispose();
     _confirmPassCtrl.dispose();
+    
+    _emailFocus.removeListener(_onEmailFocusChange);
+    _phoneFocus.removeListener(_onPhoneFocusChange);
+    _emailFocus.dispose();
+    _phoneFocus.dispose();
+    
     super.dispose();
+  }
+
+  void _onEmailFocusChange() {
+    if (!_emailFocus.hasFocus) {
+      _checkEmailExistence();
+    }
+  }
+
+  void _onPhoneFocusChange() {
+    if (!_phoneFocus.hasFocus) {
+      _checkPhoneExistence();
+    }
+  }
+
+  Future<void> _checkEmailExistence() async {
+    final email = _emailCtrl.text.trim();
+    if (email.isEmpty || !email.contains('@')) return;
+
+    setState(() => _isCheckingEmail = true);
+    
+    final auth = context.read<AuthProvider>();
+    final result = await auth.checkExistence(email: email);
+    
+    if (mounted) {
+      setState(() {
+        _isCheckingEmail = false;
+        _emailTaken = result['emailExists'] == true;
+        _emailError = _emailTaken ? 'Email is already taken' : null;
+      });
+    }
+  }
+
+  Future<void> _checkPhoneExistence() async {
+    final phone = _phoneCtrl.text.trim();
+    if (phone.isEmpty || phone.length < 7) return;
+
+    // Format phone
+    final selectedCountry = _countryCodes.firstWhere(
+      (country) => country['code'] == _selectedCountryCode,
+    );
+    final dialCode = selectedCountry['dialCode']!;
+    String phoneInput = phone;
+    if (phoneInput.startsWith('0')) {
+      phoneInput = phoneInput.substring(1);
+    }
+    final fullPhoneNumber = '$dialCode$phoneInput';
+
+    setState(() => _isCheckingPhone = true);
+    
+    final auth = context.read<AuthProvider>();
+    final result = await auth.checkExistence(phoneNumber: fullPhoneNumber);
+    
+    if (mounted) {
+      setState(() {
+        _isCheckingPhone = false;
+        _phoneTaken = result['phoneExists'] == true;
+        _phoneError = _phoneTaken ? 'Phone number is already registered' : null;
+      });
+    }
   }
 
   Future<void> _submit() async {
@@ -262,6 +344,24 @@ class _RegisterPageState extends State<RegisterPage> {
                                     label: 'Email',
                                     hint: 'john@example.com',
                                     keyboardType: TextInputType.emailAddress,
+                                    focusNode: _emailFocus,
+                                    errorText: _emailError,
+                                    suffixIcon: _isCheckingEmail
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: Padding(
+                                              padding: EdgeInsets.all(12.0),
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            ),
+                                          )
+                                        : _emailTaken // Show X if taken
+                                            ? const Icon(Icons.error, color: Colors.red)
+                                            : (_emailFocus.hasFocus || _emailCtrl.text.isEmpty)
+                                                ? null // Show nothing while typing
+                                                : const Icon(Icons.check_circle, color: Colors.green),
                                   ),
 
                                   const SizedBox(height: 14),
@@ -514,6 +614,9 @@ class _RegisterPageState extends State<RegisterPage> {
     required String hint,
     TextInputType? keyboardType,
     TextCapitalization textCapitalization = TextCapitalization.none,
+    FocusNode? focusNode,
+    String? errorText,
+    Widget? suffixIcon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,11 +632,14 @@ class _RegisterPageState extends State<RegisterPage> {
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
+          focusNode: focusNode,
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
           style: GoogleFonts.poppins(color: Colors.black87, fontSize: 13),
-          validator: (value) =>
-              value == null || value.isEmpty ? 'Required' : null,
+          validator: (value) {
+            if (errorText != null) return errorText;
+            return value == null || value.isEmpty ? 'Required' : null;
+          },
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.poppins(
@@ -549,13 +655,20 @@ class _RegisterPageState extends State<RegisterPage> {
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: Colors.white.withOpacity(0.3),
+                color: errorText != null 
+                    ? Colors.red.shade300 
+                    : Colors.white.withOpacity(0.3),
                 width: 1,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFFF6B35), width: 2),
+              borderSide: BorderSide(
+                color: errorText != null 
+                    ? Colors.red 
+                    : const Color(0xFFFF6B35), 
+                width: 2,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -565,6 +678,8 @@ class _RegisterPageState extends State<RegisterPage> {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Colors.red, width: 2),
             ),
+            errorText: errorText,
+            suffixIcon: suffixIcon,
           ),
         ),
       ],
@@ -720,10 +835,13 @@ class _RegisterPageState extends State<RegisterPage> {
               Expanded(
                 child: TextFormField(
                   controller: _phoneCtrl,
+                  focusNode: _phoneFocus,
                   keyboardType: TextInputType.phone,
                   style: GoogleFonts.poppins(color: Colors.black, fontSize: 13),
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Required' : null,
+                  validator: (value) {
+                    if (_phoneError != null) return _phoneError;
+                    return value == null || value.isEmpty ? 'Required' : null;
+                  },
                   decoration: InputDecoration(
                     hintText: '800 000 0000',
                     hintStyle: GoogleFonts.poppins(
@@ -735,6 +853,21 @@ class _RegisterPageState extends State<RegisterPage> {
                       horizontal: 14,
                       vertical: 14,
                     ),
+                    errorText: _phoneError,
+                    suffixIcon: _isCheckingPhone
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: Padding(
+                              padding: EdgeInsets.all(12.0),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        : _phoneTaken // Show X if taken
+                            ? const Icon(Icons.error, color: Colors.red)
+                            : (_phoneFocus.hasFocus || _phoneCtrl.text.isEmpty)
+                                ? null // Show nothing while typing or empty
+                                : const Icon(Icons.check_circle, color: Colors.green),
                   ),
                 ),
               ),

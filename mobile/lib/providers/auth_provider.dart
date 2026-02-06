@@ -97,6 +97,26 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> checkExistence({
+    String? email,
+    String? phoneNumber,
+  }) async {
+    // Don't set global loading state to avoid blocking UI during typing
+    try {
+      final result = await _authService.checkExistence(
+        email: email,
+        phoneNumber: phoneNumber,
+      );
+      if (result['success'] == true) {
+        return result['data'];
+      }
+      return {};
+    } catch (e) {
+      print('Check existence failed: $e');
+      return {};
+    }
+  }
+
   Future<void> logout() async {
     await _authService.logout();
     _isAuthenticated = false;

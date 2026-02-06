@@ -273,6 +273,10 @@ class _OptionsPageState extends State<OptionsPage> {
                   height: 48,
                   child: OutlinedButton(
                     onPressed: () async {
+                      // Clear profile data first
+                      Provider.of<ProfileProvider>(context, listen: false)
+                          .clearProfile();
+                      
                       await Provider.of<AuthProvider>(
                         context,
                         listen: false,
