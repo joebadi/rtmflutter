@@ -77,6 +77,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
       setState(() => _nearbyUsers = users);
     } catch (e) {
       debugPrint('Error fetching nearby users: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load nearby users. Please try re-logging in.'),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _fetchNearbyUsers,
+            ),
+          ),
+        );
+      }
     }
   }
 
