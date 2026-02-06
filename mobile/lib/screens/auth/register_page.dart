@@ -43,6 +43,17 @@ class _RegisterPageState extends State<RegisterPage> {
     {'code': 'CA+1', 'dialCode': '+1', 'flag': '🇨🇦', 'name': 'Canada'},
   ];
 
+  @override
+  void dispose() {
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmPassCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -267,8 +278,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
 
                                   // Password Strength Indicator
-                                  PasswordStrengthIndicator(
-                                    password: _passCtrl.text,
+                                  ValueListenableBuilder(
+                                    valueListenable: _passCtrl,
+                                    builder: (context, value, child) {
+                                      return PasswordStrengthIndicator(
+                                        password: value.text,
+                                      );
+                                    },
                                   ),
 
                                   const SizedBox(height: 14),
@@ -284,6 +300,53 @@ class _RegisterPageState extends State<RegisterPage> {
                                     ),
                                   ),
 
+                                  // Confirm Password Match Indicator
+                                  AnimatedBuilder(
+                                    animation: Listenable.merge(
+                                        [_passCtrl, _confirmPassCtrl]),
+                                    builder: (context, child) {
+                                      final password = _passCtrl.text;
+                                      final confirm = _confirmPassCtrl.text;
+
+                                      if (confirm.isEmpty) {
+                                        return const SizedBox.shrink();
+                                      }
+
+                                      final isMatch = password == confirm;
+
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                            top: 8, left: 2),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              isMatch
+                                                  ? Icons.check_circle
+                                                  : Icons.cancel,
+                                              color: isMatch
+                                                  ? const Color(0xFF10B981)
+                                                  : const Color(0xFFEF4444),
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              isMatch
+                                                  ? 'Passwords match'
+                                                  : 'Passwords do not match',
+                                              style: GoogleFonts.poppins(
+                                                color: isMatch
+                                                    ? const Color(0xFF10B981)
+                                                    : const Color(0xFFEF4444),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  
                                   const SizedBox(height: 20),
 
                                   // Terms and Conditions

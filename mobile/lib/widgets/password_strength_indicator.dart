@@ -228,175 +228,109 @@ class _PasswordStrengthIndicatorState extends State<PasswordStrengthIndicator>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         
-        // Progress Bar
-        AnimatedBuilder(
-          animation: _progressAnimation,
-          builder: (context, child) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Bar Container
-                Container(
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Animated Progress
-                      FractionallySizedBox(
-                        widthFactor: _progressAnimation.value,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                _getStrengthColor(),
-                                _getStrengthColor().withOpacity(0.8),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(3),
-                            boxShadow: [
-                              BoxShadow(
-                                color: _getStrengthColor().withOpacity(0.5),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+        // Segmented Progress Bar
+        Row(
+          children: List.generate(4, (index) {
+            // Calculate active state for this segment
+            // 0: weak (score > 0)
+            // 1: fair (score >= 30)
+            // 2: good (score >= 70)
+            // 3: strong (score >= 90)
+            
+            // Or simple mapping based on level:
+            // weak: 1 bar
+            // fair: 2 bars
+            // good: 3 bars
+            // strong/very-strong: 4 bars
+            
+            int activeBars = 0;
+            switch (_level) {
+              case 'weak': activeBars = 1; break;
+              case 'fair': activeBars = 2; break;
+              case 'good': activeBars = 3; break;
+              case 'strong': 
+              case 'very-strong': activeBars = 4; break;
+            }
+            
+            final isActive = index < activeBars;
+            
+            return Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                height: 4,
+                margin: EdgeInsets.only(right: index < 3 ? 6.0 : 0.0), // Gap
+                decoration: BoxDecoration(
+                  color: isActive ? _getStrengthColor() : Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: isActive ? [
+                    BoxShadow(
+                      color: _getStrengthColor().withOpacity(0.4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    )
+                  ] : null,
                 ),
-                
-                const SizedBox(height: 6),
-                
-                // Strength Label
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Password Strength: ${_getLevelText()}',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _getStrengthColor(),
-                      ),
-                    ),
-                    Text(
-                      '$_score%',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             );
-          },
+          }),
         ),
         
-        // Feedback
-        if (_feedback.isNotEmpty && !_isValid) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: _getStrengthColor().withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 14,
-                      color: _getStrengthColor(),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Suggestions:',
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                ..._feedback.take(3).map((tip) => Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '• ',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              color: Colors.white.withOpacity(0.7),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              tip,
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                color: Colors.white.withOpacity(0.7),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )),
-              ],
-            ),
-          ),
-        ],
+        const SizedBox(height: 8),
         
-        // Success Indicator
-        if (_isValid) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF10B981).withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: const Color(0xFF10B981).withOpacity(0.3),
-                width: 1,
+        // Strength Label & Score
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _getLevelText(),
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: _getStrengthColor(),
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            if (_isValid)
+            Row(
               children: [
-                const Icon(
-                  Icons.check_circle,
-                  size: 14,
-                  color: Color(0xFF10B981),
-                ),
-                const SizedBox(width: 6),
+                const Icon(Icons.check_circle, size: 14, color: Color(0xFF10B981)),
+                const SizedBox(width: 4),
                 Text(
-                  'Password meets all requirements',
+                  'Great!',
                   style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
                     color: const Color(0xFF10B981),
                   ),
                 ),
               ],
             ),
+          ],
+        ),
+        
+        // Feedback Tips (Collapsible validation list)
+        if (_feedback.isNotEmpty && !_isValid) ...[
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _feedback.take(3).map((tip) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                   Icon(Icons.circle, size: 4, color: Colors.white.withOpacity(0.6)),
+                   const SizedBox(width: 8),
+                   Text(
+                     tip,
+                     style: GoogleFonts.poppins(
+                       fontSize: 11,
+                       color: Colors.white.withOpacity(0.6),
+                     ),
+                   )
+                ],
+              ),
+            )).toList(),
           ),
         ],
       ],
