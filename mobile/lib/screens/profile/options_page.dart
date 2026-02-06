@@ -272,12 +272,14 @@ class _OptionsPageState extends State<OptionsPage> {
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton(
-                    onPressed: () {
-                      Provider.of<AuthProvider>(
+                    onPressed: () async {
+                      await Provider.of<AuthProvider>(
                         context,
                         listen: false,
                       ).logout();
-                      context.go('/login');
+                      if (context.mounted) {
+                        context.go('/login');
+                      }
                     },
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: Colors.grey[300]!, width: 1.5),

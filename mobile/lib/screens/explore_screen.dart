@@ -93,7 +93,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget build(BuildContext context) {
     // Determine background color based on view mode (Map handles its own background)
     Color backgroundColor = Colors.white; 
-    if (_viewMode == 0) backgroundColor = const Color(0xFF242424); // Dark for map container
+    if (_viewMode == 2) backgroundColor = Colors.grey[100]!; // Grid view background
     
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -137,13 +137,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
             style: GoogleFonts.poppins(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: _viewMode == 0 ? Colors.white : Colors.black87,
+              color: Colors.black87,
             ),
           ),
           Row(
             children: [
               IconButton(
-                icon: Icon(Icons.tune, color: _viewMode == 0 ? Colors.white : Colors.black87),
+                icon: const Icon(Icons.tune, color: Colors.black87),
                 onPressed: () {}, // Filter modal
               ),
             ],
@@ -161,9 +161,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.grey[100],
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Colors.grey[300]!),
             ),
             child: Row(
               children: [
@@ -171,7 +171,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 const SizedBox(width: 4),
                 Text(
                   _locationName,
-                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.white),
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
                 ),
               ],
             ),
@@ -198,8 +198,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Widget _buildSwitchButton(String label, IconData icon, int index) {
     final bool isActive = _viewMode == index;
-    // Map view mode uses dark theme for buttons
-    final bool isDarkTheme = _viewMode == 0; 
     
     return GestureDetector(
       onTap: () => setState(() => _viewMode = index),
@@ -213,10 +211,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
               : null,
           color: isActive 
               ? null 
-              : (isDarkTheme ? Colors.white.withOpacity(0.1) : Colors.grey[200]),
+              : Colors.grey[200],
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive ? Colors.transparent : (isDarkTheme ? Colors.white.withOpacity(0.1) : Colors.transparent),
+            color: isActive ? Colors.transparent : Colors.grey[300]!,
           ),
         ),
         child: Row(
@@ -224,7 +222,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             Icon(
               icon, 
               size: 18, 
-              color: isActive ? Colors.white : (isDarkTheme ? Colors.white70 : Colors.grey[700]),
+              color: isActive ? Colors.white : Colors.grey[700],
             ),
             if (isActive) ...[
               const SizedBox(width: 6),
@@ -263,11 +261,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.location_disabled, color: Colors.white54, size: 48),
+            const Icon(Icons.location_disabled, color: Colors.grey, size: 48),
             const SizedBox(height: 12),
             Text(
               'Location unavailable',
-              style: GoogleFonts.poppins(color: Colors.white70),
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
             ),
             TextButton(
               onPressed: _initializeData,
@@ -290,8 +288,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
       ),
       children: [
         TileLayer(
-          // Dark Matter (Free, no API key)
-          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+          // CartoDB Positron (Light) - Friendly, Google Maps-like
+          urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
           subdomains: const ['a', 'b', 'c', 'd'],
           userAgentPackageName: 'com.rtm.mobile',
         ),
