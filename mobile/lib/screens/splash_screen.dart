@@ -106,12 +106,20 @@ class _SplashScreenState extends State<SplashScreen>
 
       // 2. Check basic profile details
       if (profile == null ||
-          profile['bio'] == null ||
+          profile['aboutMe'] == null ||
           profile['dateOfBirth'] == null ||
           profile['gender'] == null) {
+        
+        // Backend stores names in Profile, not User.
+        // If profile is null, we can't get names easily unless provided in user object
+        // by a custom backend projection, but based on schema it's in Profile.
+        // Assuming profile is at least created with names during registration.
+        final fName = profile != null ? profile['firstName'] : user['firstName'];
+        final lName = profile != null ? profile['lastName'] : user['lastName'];
+
         context.go(
           '/profile-details',
-          extra: {'firstName': user['firstName'], 'lastName': user['lastName']},
+          extra: {'firstName': fName, 'lastName': lName},
         );
         return;
       }
