@@ -78,6 +78,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
     } catch (e) {
       debugPrint('Error fetching nearby users: $e');
       if (mounted) {
+        if (e.toString().contains('UNAUTHORIZED')) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Session expired. Please login again.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            // clear navigation stack and go to login
+            context.go('/login'); 
+            return;
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load nearby users. Please try re-logging in.'),

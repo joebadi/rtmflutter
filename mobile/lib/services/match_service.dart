@@ -39,6 +39,11 @@ class MatchService {
         throw Exception(response.data['message'] ?? 'Failed to fetch nearby users');
       }
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 401) {
+        await _storage.delete(key: 'access_token');
+        await _storage.delete(key: 'refresh_token');
+        throw Exception('UNAUTHORIZED');
+      }
       throw Exception('Error fetching nearby users: $e');
     }
   }
