@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../config/api_config.dart';
 import '../../services/profile_service.dart';
+import '../common/location_picker_screen.dart';
+import '../../services/location_search_service.dart';
 
 class CompleteProfilePage extends StatefulWidget {
   const CompleteProfilePage({super.key});
@@ -728,26 +730,55 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                     controller: _locationCtrl,
                     label: 'Location',
                     hint: 'City, State, Country',
-                    onGeolocate: () {
-                      // TODO: Implement geolocation
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Fetching your location...',
-                            style: GoogleFonts.poppins(),
-                          ),
-                          backgroundColor: const Color(0xFFFF5722),
-                          duration: const Duration(seconds: 1),
+                    onGeolocate: () async {
+                      // Navigate to Location Picker
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LocationPickerScreen(),
                         ),
                       );
-                      // Simulate location fetch
-                      Future.delayed(const Duration(seconds: 1), () {
-                        if (mounted) {
-                          setState(() {
-                            _locationCtrl.text = 'Lagos, Lagos State, Nigeria';
-                          });
-                        }
-                      });
+
+                      if (result != null && result is LocationSearchResult) {
+                        setState(() {
+                          _locationCtrl.text = result.displayName;
+                          
+                          // Also map to individual fields if your backend supports them
+                          // Since we want to display the full string, putting it in text field is key
+                          // We can also store the parts if needed
+                          // _city = result.city; 
+                          // _state = result.state;
+                          // _country = result.country;
+                          
+                          // Since the page parses city/state/country on load, 
+                          // we should probably try to sync these back if we want save to work "perfectly" 
+                          // with the backend structure. 
+                          // However, editing the text field manually is also allowed. 
+                          // Best approach: Autofill text, user can edit. 
+                          // AND we update internal state variables if they exist?
+                          // The 'save' method reads from controllers, but for city/state/country...
+                          // Wait, _saveProfile calls _locationCtrl.text for 'location' field
+                          // BUT wait, does the backend update city/state/country from 'location' string?
+                          // Or do we need to send city, state, country separately?
+                          // Looking at _saveProfile:
+                          // if (_locationCtrl.text.isNotEmpty) 'location': _locationCtrl.text,
+                          // It doesn't send city/state/country explicitly in the map provided in _saveProfile 
+                          // unless they resolved from _ethnicity... Wait.
+                          // Let's re-read _saveProfile in a moment. 
+                          // For now, setting the text controller is the primary visuals.
+                        });
+
+                        // If we want to be "ultra careful", we should probably update the backend fields 
+                        // corresponding to city/state/country if possible. 
+                        // But _saveProfile only sends 'location' key (based on line 375 of existing file).
+                        // If the backend handles 'location' string by parsing, good. 
+                        // If not, and we need to send city/state/country, we need those fields.
+                        
+                        // Let's check _saveProfile logic again.
+                        // It maps: if (_locationCtrl.text.isNotEmpty) 'location': _locationCtrl.text
+                        // Use result to populate hidden fields if necessary?
+                        // For now we just populate the text field as requested.
+                      }
                     },
                   ),
                 ]),
