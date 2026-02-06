@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:latlong2/latlong.dart';
 import '../config/theme.dart';
+import '../services/match_service.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -11,455 +16,228 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> {
-  int _viewMode = 0; // 0 = Card Swipe, 1 = Map, 2 = Grid
-  final CardSwiperController controller = CardSwiperController();
+  // 0 = Map (Default), 1 = Cards, 2 = Grid
+  int _viewMode = 0; 
+  final CardSwiperController swipeController = CardSwiperController();
+  final MapController mapController = MapController();
+  final MatchService _matchService = MatchService();
 
-  // Mock Data
-  final List<Map<String, dynamic>> _candidates = [
-    {
-      'name': 'Sophia Williams',
-      'age': 25,
-      'bio':
-          'Book lover, coffee enthusiast, and part-time traveler. Looking for someone to share deep conversations.',
-      'color': Colors.orangeAccent,
-      'distance': '3.5 km',
-    },
-    {
-      'name': 'Mia Kennedy',
-      'age': 23,
-      'bio':
-          'Yoga instructor 🧘‍♀️ and vegan foodie. Let\'s explore the city together!',
-      'color': Colors.blueAccent,
-      'distance': '1.2 km',
-    },
-    {
-      'name': 'Olivia Thompson',
-      'age': 27,
-      'bio':
-          'Artist by day, gamer by night. Swipe right if you can beat me at Mario Kart.',
-      'color': Colors.purpleAccent,
-      'distance': '2.8 km',
-    },
-  ];
+  // State
+  bool _isLoading = true;
+  LatLng? _currentLocation;
+  List<dynamic> _nearbyUsers = [];
+  List<dynamic> _suggestions = [];
+  String _locationName = 'Locating...';
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
+
+  Future<void> _initializeData() async {
+    await _getCurrentLocation();
+    if (_currentLocation != null) {
+      await _fetchNearbyUsers();
+    }
+    await _fetchSuggestions();
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      // Check permissions (simplified for now, ideally reused from a service)
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      
+      if (permission == LocationPermission.whileInUse || 
+          permission == LocationPermission.always) {
+        final position = await Geolocator.getCurrentPosition();
+        setState(() {
+          _currentLocation = LatLng(position.latitude, position.longitude);
+          // TODO: Reverse geocode for _locationName if needed, or pass from previous screen
+          _locationName = 'New York, USA (Approx)'; 
+        });
+      }
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+    }
+  }
+
+  Future<void> _fetchNearbyUsers() async {
+    if (_currentLocation == null) return;
+    try {
+      final users = await _matchService.getNearbyUsers(
+        latitude: _currentLocation!.latitude,
+        longitude: _currentLocation!.longitude,
+        radius: 50, // 50km
+      );
+      setState(() => _nearbyUsers = users);
+    } catch (e) {
+      debugPrint('Error fetching nearby users: $e');
+    }
+  }
+
+  Future<void> _fetchSuggestions() async {
+    try {
+      final users = await _matchService.getMatchSuggestions(limit: 10);
+      setState(() => _suggestions = users);
+    } catch (e) {
+      debugPrint('Error fetching suggestions: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Determine background color based on view mode (Map handles its own background)
+    Color backgroundColor = Colors.white; 
+    if (_viewMode == 0) backgroundColor = const Color(0xFF242424); // Dark for map container
+    
     return Scaffold(
-      backgroundColor: _viewMode == 0 ? Colors.white : Colors.grey[100],
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             // Header
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Explore',
-                    style: GoogleFonts.poppins(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      if (_viewMode != 0)
-                        IconButton(
-                          icon: const Icon(Icons.search),
-                          onPressed: () {},
-                        ),
-                      IconButton(
-                        icon: const Icon(Icons.tune),
-                        onPressed: () {},
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            _buildHeader(),
 
-            // Location Chip (only for Map and Grid views)
-            if (_viewMode != 0)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            'Los Angeles, CA',
-                            style: GoogleFonts.poppins(fontSize: 13),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.keyboard_arrow_down, size: 18),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            // Location Chip
+            if (_viewMode == 0) // Only show on Map for now
+              _buildLocationChip(),
 
             const SizedBox(height: 16),
 
-            // Embossed Pill Filter Buttons (Left-aligned)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  // Cards Button
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeInOut,
-                    decoration: BoxDecoration(
-                      gradient: _viewMode == 0
-                          ? const LinearGradient(
-                              colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
-                            )
-                          : null,
-                      color: _viewMode == 0
-                          ? null
-                          : Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _viewMode == 0
-                            ? Colors.transparent
-                            : Colors.grey[300]!,
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        if (_viewMode == 0)
-                          BoxShadow(
-                            color: const Color(0xFFFF5722).withOpacity(0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => setState(() => _viewMode = 0),
-                        borderRadius: BorderRadius.circular(20),
-                        child: AnimatedPadding(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeInOut,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: _viewMode == 0 ? 12 : 10,
-                            vertical: 8,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.style,
-                                size: 18,
-                                color: _viewMode == 0
-                                    ? Colors.white
-                                    : Colors.grey[700],
-                              ),
-                              AnimatedSize(
-                                duration: const Duration(milliseconds: 250),
-                                curve: Curves.easeInOut,
-                                child: _viewMode == 0
-                                    ? Row(
-                                        children: [
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            'Cards',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // Map Button
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeInOut,
-                    decoration: BoxDecoration(
-                      gradient: _viewMode == 1
-                          ? const LinearGradient(
-                              colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
-                            )
-                          : null,
-                      color: _viewMode == 1
-                          ? null
-                          : Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _viewMode == 1
-                            ? Colors.transparent
-                            : Colors.grey[300]!,
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        if (_viewMode == 1)
-                          BoxShadow(
-                            color: const Color(0xFFFF5722).withOpacity(0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => setState(() => _viewMode = 1),
-                        borderRadius: BorderRadius.circular(20),
-                        child: AnimatedPadding(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeInOut,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: _viewMode == 1 ? 12 : 10,
-                            vertical: 8,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.location_on,
-                                size: 18,
-                                color: _viewMode == 1
-                                    ? Colors.white
-                                    : Colors.grey[700],
-                              ),
-                              AnimatedSize(
-                                duration: const Duration(milliseconds: 250),
-                                curve: Curves.easeInOut,
-                                child: _viewMode == 1
-                                    ? Row(
-                                        children: [
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            'Map',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // Grid Button
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeInOut,
-                    decoration: BoxDecoration(
-                      gradient: _viewMode == 2
-                          ? const LinearGradient(
-                              colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
-                            )
-                          : null,
-                      color: _viewMode == 2
-                          ? null
-                          : Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _viewMode == 2
-                            ? Colors.transparent
-                            : Colors.grey[300]!,
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        if (_viewMode == 2)
-                          BoxShadow(
-                            color: const Color(0xFFFF5722).withOpacity(0.4),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => setState(() => _viewMode = 2),
-                        borderRadius: BorderRadius.circular(20),
-                        child: AnimatedPadding(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeInOut,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: _viewMode == 2 ? 12 : 10,
-                            vertical: 8,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.grid_view,
-                                size: 18,
-                                color: _viewMode == 2
-                                    ? Colors.white
-                                    : Colors.grey[700],
-                              ),
-                              AnimatedSize(
-                                duration: const Duration(milliseconds: 250),
-                                curve: Curves.easeInOut,
-                                child: _viewMode == 2
-                                    ? Row(
-                                        children: [
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            'Grid',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Tab Switcher
+            _buildViewSwitcher(),
 
             const SizedBox(height: 16),
 
-            // Content based on view mode
-            Expanded(child: _buildContent()),
+            // Content
+            Expanded(
+              child: _isLoading 
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF5722))) 
+                : _buildContent(),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSegmentButton({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-    required SegmentPosition position,
-  }) {
-    BorderRadius borderRadius;
-    switch (position) {
-      case SegmentPosition.left:
-        borderRadius = const BorderRadius.only(
-          topLeft: Radius.circular(25),
-          bottomLeft: Radius.circular(25),
-        );
-        break;
-      case SegmentPosition.center:
-        borderRadius = BorderRadius.zero;
-        break;
-      case SegmentPosition.right:
-        borderRadius = const BorderRadius.only(
-          topRight: Radius.circular(25),
-          bottomRight: Radius.circular(25),
-        );
-        break;
-    }
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        margin: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.deepOrange : Colors.grey[200],
-          borderRadius: borderRadius,
-          boxShadow: isActive
-              ? [
-                  // Depressed/inset shadow for active
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                    spreadRadius: -1,
-                  ),
-                  BoxShadow(
-                    color: Colors.deepOrange.shade700.withOpacity(0.5),
-                    blurRadius: 6,
-                    offset: const Offset(0, 1),
-                    spreadRadius: -2,
-                  ),
-                ]
-              : [
-                  // Beveled/raised shadow for inactive
-                  BoxShadow(
-                    color: Colors.white.withOpacity(0.8),
-                    blurRadius: 2,
-                    offset: const Offset(-1, -1),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 2,
-                    offset: const Offset(1, 1),
-                  ),
-                ],
-        ),
-        child: Center(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: ScaleTransition(scale: animation, child: child),
-              );
-            },
-            child: isActive
-                ? Row(
-                    key: ValueKey('active_$label'),
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, size: 20, color: Colors.white),
-                      const SizedBox(width: 6),
-                      Text(
-                        label,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  )
-                : Icon(
-                    key: ValueKey('inactive_$label'),
-                    icon,
-                    size: 20,
-                    color: Colors.grey[600],
-                  ),
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Explore',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: _viewMode == 0 ? Colors.white : Colors.black87,
+            ),
           ),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.tune, color: _viewMode == 0 ? Colors.white : Colors.black87),
+                onPressed: () {}, // Filter modal
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationChip() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.location_on, color: Color(0xFFFF5722), size: 14),
+                const SizedBox(width: 4),
+                Text(
+                  _locationName,
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewSwitcher() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _buildSwitchButton('Map', Icons.map, 0),
+          const SizedBox(width: 10),
+          _buildSwitchButton('Cards', Icons.style, 1),
+          const SizedBox(width: 10),
+          _buildSwitchButton('Grid', Icons.grid_view, 2),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwitchButton(String label, IconData icon, int index) {
+    final bool isActive = _viewMode == index;
+    // Map view mode uses dark theme for buttons
+    final bool isDarkTheme = _viewMode == 0; 
+    
+    return GestureDetector(
+      onTap: () => setState(() => _viewMode = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: EdgeInsets.symmetric(horizontal: isActive ? 16 : 12, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isActive 
+              ? const LinearGradient(colors: [Color(0xFFFF5722), Color(0xFFFF7043)]) 
+              : null,
+          color: isActive 
+              ? null 
+              : (isDarkTheme ? Colors.white.withOpacity(0.1) : Colors.grey[200]),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive ? Colors.transparent : (isDarkTheme ? Colors.white.withOpacity(0.1) : Colors.transparent),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon, 
+              size: 18, 
+              color: isActive ? Colors.white : (isDarkTheme ? Colors.white70 : Colors.grey[700]),
+            ),
+            if (isActive) ...[
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -468,59 +246,231 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget _buildContent() {
     switch (_viewMode) {
       case 0:
-        return _buildCardSwipeView();
-      case 1:
         return _buildMapView();
+      case 1:
+        return _buildCardSwipeView();
       case 2:
         return _buildGridView();
       default:
-        return _buildCardSwipeView();
+        return _buildMapView();
     }
   }
 
-  // Card Swipe View
+  // --- MAP VIEW ---
+  Widget _buildMapView() {
+    if (_currentLocation == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.location_disabled, color: Colors.white54, size: 48),
+            const SizedBox(height: 12),
+            Text(
+              'Location unavailable',
+              style: GoogleFonts.poppins(color: Colors.white70),
+            ),
+            TextButton(
+              onPressed: _initializeData,
+              child: const Text('Retry', style: TextStyle(color: Color(0xFFFF5722))),
+            )
+          ],
+        ),
+      );
+    }
+
+    return FlutterMap(
+      mapController: mapController,
+      options: MapOptions(
+        initialCenter: _currentLocation!, // San Francisco fallback if null logic fails
+        initialZoom: 13.0,
+        keepAlive: true, // Keep map state when switching tabs
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.all & ~InteractiveFlag.rotate, 
+        ),
+      ),
+      children: [
+        TileLayer(
+          // Dark Matter (Free, no API key)
+          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
+          userAgentPackageName: 'com.rtm.mobile',
+        ),
+        MarkerLayer(
+          markers: [
+            // User's own location
+            Marker(
+              point: _currentLocation!,
+              width: 60,
+              height: 60,
+              child: _buildPulsingUserMarker(),
+            ),
+            ..._nearbyUsers.map((user) {
+              // Parse backend user to marker
+               // Add safety check/defaults
+              final lat = (user['latitude'] as num?)?.toDouble() ?? 0.0;
+              final lng = (user['longitude'] as num?)?.toDouble() ?? 0.0;
+              final profile = user['profile'];
+              final photoUrl = (profile?['photos'] as List?)?.firstWhere(
+                (p) => p['isPrimary'] == true,
+                orElse: () => null,
+              )?['url'];
+
+              return Marker(
+                point: LatLng(lat, lng),
+                width: 50,
+                height: 50,
+                child: GestureDetector(
+                  onTap: () => _showUserPreview(user),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      backgroundImage: photoUrl != null 
+                        ? NetworkImage(photoUrl) 
+                        : const AssetImage('assets/images/placeholder_avatar.png') as ImageProvider,
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPulsingUserMarker() {
+     // TODO: Add complex animation if desired
+     return Container(
+       decoration: BoxDecoration(
+         color: const Color(0xFFFF5722).withOpacity(0.3),
+         shape: BoxShape.circle,
+       ),
+       child: Center(
+         child: Container(
+           width: 20,
+           height: 20,
+           decoration: BoxDecoration(
+             color: const Color(0xFFFF5722),
+             shape: BoxShape.circle,
+             border: Border.all(color: Colors.white, width: 2),
+             boxShadow: const [
+               BoxShadow(color: Colors.black26, blurRadius: 4),
+             ],
+           ),
+         ),
+       ),
+     );
+  }
+
+  void _showUserPreview(dynamic user) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final profile = user['profile'];
+        final firstName = profile?['firstName'] ?? 'User';
+        final age = profile?['dateOfBirth'] != null 
+            ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year).toString()
+            : '??';
+        final photoUrl = (profile?['photos'] as List?)?.firstWhere(
+                (p) => p['isPrimary'] == true,
+                orElse: () => null,
+              )?['url'];
+
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+               CircleAvatar(
+                 radius: 30,
+                 backgroundImage: photoUrl != null 
+                    ? NetworkImage(photoUrl) 
+                    : const AssetImage('assets/images/placeholder_avatar.png') as ImageProvider,
+               ),
+               const SizedBox(width: 16),
+               Expanded(
+                 child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text(
+                       '$firstName, $age',
+                       style: GoogleFonts.poppins(
+                         fontWeight: FontWeight.bold,
+                         fontSize: 18,
+                       ),
+                     ),
+                     Text(
+                       user['address'] ?? 'Nearby', // Fallback address
+                       style: GoogleFonts.poppins(
+                         color: Colors.grey[600],
+                         fontSize: 14,
+                       ),
+                     ),
+                   ],
+                 ),
+               ),
+               IconButton(
+                 icon: const Icon(Icons.arrow_forward_ios, color: Color(0xFFFF5722)),
+                 onPressed: () {
+                    context.pop(); // Close modal
+                    // Navigate to full profile if route exists
+                    // context.push('/profile-view', extra: user);
+                 },
+               )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- CARDS VIEW ---
   Widget _buildCardSwipeView() {
+    if (_suggestions.isEmpty) {
+       return _buildEmptyState('No active matches nearby.', Icons.explore_off);
+    }
+
     return Column(
       children: [
         Expanded(
           child: CardSwiper(
-            controller: controller,
-            cardsCount: _candidates.length,
+            controller: swipeController,
+            cardsCount: _suggestions.length,
             numberOfCardsDisplayed: 3,
             backCardOffset: const Offset(0, 40),
             padding: const EdgeInsets.all(16),
             cardBuilder: (context, index, horizontalOffset, verticalOffset) {
-              final candidate = _candidates[index];
-              return _buildSwipeCard(candidate);
+              final user = _suggestions[index];
+              return _buildSwipeCard(user);
             },
           ),
         ),
+        // Action Buttons
         Padding(
           padding: const EdgeInsets.only(bottom: 20),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildActionButton(
-                Icons.refresh,
-                Colors.orange,
-                () => controller.undo(),
-              ),
-              _buildActionButton(
-                Icons.close,
-                Colors.red,
-                () => controller.swipe(CardSwiperDirection.left),
-              ),
-              _buildActionButton(
-                Icons.star,
-                Colors.blue,
-                () => controller.swipe(CardSwiperDirection.top),
-              ),
-              _buildActionButton(
-                Icons.favorite,
-                Colors.green,
-                () => controller.swipe(CardSwiperDirection.right),
-              ),
-              _buildActionButton(Icons.flash_on, Colors.purple, () {}),
+              _buildActionButton(Icons.refresh, Colors.orange, () => swipeController.undo()),
+              _buildActionButton(Icons.close, Colors.red, () => swipeController.swipe(CardSwiperDirection.left)),
+              _buildActionButton(Icons.star, Colors.blue, () => swipeController.swipe(CardSwiperDirection.top)),
+              _buildActionButton(Icons.favorite, Colors.green, () => swipeController.swipe(CardSwiperDirection.right)),
             ],
           ),
         ),
@@ -528,11 +478,25 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  Widget _buildSwipeCard(Map<String, dynamic> candidate) {
+  Widget _buildSwipeCard(dynamic user) {
+      final profile = user['profile'];
+      final name = profile?['firstName'] ?? 'User';
+      final age = profile?['dateOfBirth'] != null 
+          ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year).toString()
+          : '';
+      final bio = profile?['aboutMe'] ?? 'No bio yet.';
+      final photoUrl = (profile?['photos'] as List?)?.firstWhere(
+              (p) => p['isPrimary'] == true,
+              orElse: () => null,
+            )?['url'];
+
     return Container(
       decoration: BoxDecoration(
-        color: candidate['color'],
+        color: Colors.grey[900],
         borderRadius: BorderRadius.circular(20),
+        image: photoUrl != null 
+            ? DecorationImage(image: NetworkImage(photoUrl), fit: BoxFit.cover)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -540,17 +504,24 @@ class _ExploreScreenState extends State<ExploreScreen> {
             offset: const Offset(0, 5),
           ),
         ],
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            candidate['color'].withOpacity(0.8),
-            Colors.black.withOpacity(0.9),
-          ],
-        ),
       ),
       child: Stack(
         children: [
+           // Gradient Overlay
+           Container(
+             decoration: BoxDecoration(
+               borderRadius: BorderRadius.circular(20),
+               gradient: LinearGradient(
+                 begin: Alignment.topCenter,
+                 end: Alignment.bottomCenter,
+                 colors: [
+                   Colors.transparent,
+                   Colors.black.withOpacity(0.9),
+                 ],
+                 stops: const [0.6, 1.0],
+               ),
+             ),
+           ),
           Positioned(
             bottom: 20,
             left: 20,
@@ -561,10 +532,10 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 Row(
                   children: [
                     Text(
-                      '${candidate['name']}, ${candidate['age']}',
-                      style: const TextStyle(
+                      '$name, $age',
+                      style: GoogleFonts.poppins(
                         color: Colors.white,
-                        fontSize: 28,
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -574,36 +545,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  candidate['bio'],
-                  style: const TextStyle(color: Colors.white70, fontSize: 14),
-                  maxLines: 3,
+                  bio,
+                  style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
-            ),
-          ),
-          Positioned(
-            top: 20,
-            left: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.location_on, color: Colors.white, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${candidate['distance']} away',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ],
@@ -611,11 +558,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  Widget _buildActionButton(
-    IconData icon,
-    Color color,
-    VoidCallback onPressed,
-  ) {
+   Widget _buildActionButton(IconData icon, Color color, VoidCallback onPressed) {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -637,295 +580,82 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  // Map View
-  Widget _buildMapView() {
-    return Stack(
-      children: [
-        Container(
-          color: Colors.grey[200],
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.map, size: 80, color: Colors.grey[400]),
-                const SizedBox(height: 16),
-                Text(
-                  'Map View',
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          top: 100,
-          left: 100,
-          child: _buildUserMarker('https://i.pravatar.cc/150?img=47', true),
-        ),
-        Positioned(
-          top: 200,
-          right: 80,
-          child: _buildUserMarker('https://i.pravatar.cc/150?img=23', false),
-        ),
-        Positioned(
-          bottom: 20,
-          left: 16,
-          right: 16,
-          child: SizedBox(
-            height: 200,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                _buildUserCard(
-                  'Charlotte Martin, 24',
-                  'Los Angeles, CA',
-                  '1.6 Km',
-                  'https://i.pravatar.cc/300?img=47',
-                ),
-                const SizedBox(width: 12),
-                _buildUserCard(
-                  'Lily Foster, 26',
-                  'Los Angeles, CA',
-                  '1.2 Km',
-                  'https://i.pravatar.cc/300?img=23',
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUserMarker(String imageUrl, bool isActive) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: isActive ? AppTheme.primary : Colors.white,
-          width: 3,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: CircleAvatar(backgroundImage: NetworkImage(imageUrl)),
-    );
-  }
-
-  Widget _buildUserCard(
-    String name,
-    String location,
-    String distance,
-    String imageUrl,
-  ) {
-    return Container(
-      width: 160,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(imageUrl, fit: BoxFit.cover),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
-                ),
-              ),
-            ),
-            Positioned(
-              top: 12,
-              left: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  distance,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 12,
-              left: 12,
-              right: 12,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    location,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white70,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Grid View
+  // --- GRID VIEW ---
   Widget _buildGridView() {
+    if (_suggestions.isEmpty) {
+       return _buildEmptyState('No one around yet.', Icons.people_outline);
+    }
+
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
         childAspectRatio: 0.75,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
       ),
-      itemCount: 6,
+      itemCount: _suggestions.length,
       itemBuilder: (context, index) {
-        final names = [
-          'Charlotte Martin, 24',
-          'Lily Foster, 26',
-          'Emma Wilson, 23',
-          'Sophia Davis, 25',
-          'Olivia Brown, 27',
-          'Mia Johnson, 24',
-        ];
-        final distances = [
-          '1.6 Km',
-          '1.2 Km',
-          '2.3 Km',
-          '0.8 Km',
-          '3.1 Km',
-          '1.9 Km',
-        ];
-        final images = [47, 23, 32, 28, 45, 9];
+        final user = _suggestions[index];
+        final profile = user['profile'];
+        final photoUrl = (profile?['photos'] as List?)?.firstWhere(
+                (p) => p['isPrimary'] == true,
+                orElse: () => null,
+              )?['url'];
+        final name = profile?['firstName'] ?? 'User';
 
-        return _buildGridCard(
-          names[index],
-          'Los Angeles, CA',
-          distances[index],
-          'https://i.pravatar.cc/300?img=${images[index]}',
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+             color: Colors.grey[200],
+             image: photoUrl != null 
+                ? DecorationImage(image: NetworkImage(photoUrl), fit: BoxFit.cover)
+                : null,
+          ),
+          child: Stack(
+            children: [
+              Container(
+                 decoration: BoxDecoration(
+                   borderRadius: BorderRadius.circular(16),
+                   gradient: LinearGradient(
+                     begin: Alignment.topCenter,
+                     end: Alignment.bottomCenter,
+                     colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                   ),
+                 ),
+               ),
+               Positioned(
+                 bottom: 12,
+                 left: 12,
+                 child: Text(
+                   name,
+                   style: GoogleFonts.poppins(
+                     color: Colors.white,
+                     fontWeight: FontWeight.bold,
+                     fontSize: 16,
+                   ),
+                 ),
+               ),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildGridCard(
-    String name,
-    String location,
-    String distance,
-    String imageUrl,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+  Widget _buildEmptyState(String message, IconData icon) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 60, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
           ),
         ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(imageUrl, fit: BoxFit.cover),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
-                ),
-              ),
-            ),
-            Positioned(
-              top: 8,
-              left: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  distance,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 8,
-              left: 8,
-              right: 8,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    location,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white70,
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 }
-
-enum SegmentPosition { left, center, right }
