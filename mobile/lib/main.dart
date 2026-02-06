@@ -105,7 +105,11 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/complete-profile',
-      builder: (context, state) => const CompleteProfilePage(),
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        final isEditing = extra?['isEditing'] ?? false;
+        return CompleteProfilePage(isEditing: isEditing);
+      },
     ),
     GoRoute(
       path: '/personal-information',

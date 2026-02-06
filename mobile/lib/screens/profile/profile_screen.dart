@@ -299,7 +299,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           Expanded(
                                             child: _ShinyButton(
                                               onTap: () =>
-                                                  context.push('/complete-profile').then((_) => provider.fetchProfile()),
+                                                  context.push('/complete-profile', extra: {'isEditing': true}).then((_) => provider.fetchProfile()),
                                               text: 'EDIT PROFILE',
                                             ),
                                           ),

@@ -9,7 +9,9 @@ import '../common/location_picker_screen.dart';
 import '../../services/location_search_service.dart';
 
 class CompleteProfilePage extends StatefulWidget {
-  const CompleteProfilePage({super.key});
+  final bool isEditing;
+
+  const CompleteProfilePage({super.key, this.isEditing = false});
 
   @override
   State<CompleteProfilePage> createState() => _CompleteProfilePageState();
@@ -17,7 +19,7 @@ class CompleteProfilePage extends StatefulWidget {
 
 class _CompleteProfilePageState extends State<CompleteProfilePage> {
   final _formKey = GlobalKey<FormState>();
-  bool _isFirstLoad = true; // Track if this is the first time loading
+  late bool _isFirstLoad; // Track if this is the first time loading
 
   // Photos
   List<dynamic> _photos = [];
@@ -216,6 +218,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   @override
   void initState() {
     super.initState();
+    _isFirstLoad = !widget.isEditing;
     _fetchProfileData();
   }
 
@@ -1107,9 +1110,9 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                       elevation: 2,
                     ),
                     child: Text(
-                      _isFirstLoad
-                          ? 'Complete Profile & Start Exploring'
-                          : 'Save Profile',
+                      widget.isEditing
+                          ? 'Save Profile'
+                          : 'Complete Profile & Start Exploring',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
