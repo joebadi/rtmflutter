@@ -67,11 +67,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Future<void> _fetchNearbyUsers() async {
-    if (_currentLocation == null) return;
+    // Default to 0,0 (Atlantic Ocean) if location unavailable, just to fetch users!
+    final double lat = _currentLocation?.latitude ?? 0.0;
+    final double lng = _currentLocation?.longitude ?? 0.0;
+
     try {
       final users = await _matchService.getNearbyUsers(
-        latitude: _currentLocation!.latitude,
-        longitude: _currentLocation!.longitude,
+        latitude: lat,
+        longitude: lng,
         radius: 50, // 50km
       );
       setState(() => _nearbyUsers = users);
