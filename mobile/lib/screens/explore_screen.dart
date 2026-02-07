@@ -474,6 +474,30 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ],
         ),
 
+        // Top Gradient Overlay for Visual Separation
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: Container(
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.15),
+                    Colors.black.withOpacity(0.08),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+              ),
+            ),
+          ),
+        ),
+
         // Horizontal Scrollable User Cards at Bottom
         if (_nearbyUsers.isNotEmpty)
           Positioned(
