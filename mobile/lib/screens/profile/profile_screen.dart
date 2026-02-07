@@ -510,13 +510,21 @@ class ProfileDetailsModal extends StatefulWidget {
 class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
   int _currentImageIndex = 0;
   bool _showInfo = false;
+  late PageController _pageController;
 
   List<String> _images = [];
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     _loadImages();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   void _loadImages() {
@@ -559,6 +567,7 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
           children: [
             // Full Screen Image Viewer
             PageView.builder(
+              controller: _pageController,
               itemCount: _images.length,
               onPageChanged: (index) =>
                   setState(() => _currentImageIndex = index),
@@ -649,7 +658,14 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
                     itemCount: _images.length,
                     itemBuilder: (context, index) {
                       return GestureDetector(
-                        onTap: () => setState(() => _currentImageIndex = index),
+                        onTap: () {
+                          setState(() => _currentImageIndex = index);
+                          _pageController.animateToPage(
+                            index,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        },
                         child: Container(
                           width: 60,
                           margin: const EdgeInsets.only(right: 12),
