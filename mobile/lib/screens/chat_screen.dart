@@ -119,7 +119,10 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       setState(() => _isSending = false);
       
-      if (mounted) {
+      // Handle match required error
+      if (e.toString().contains('MATCH_REQUIRED')) {
+        _showMatchRequiredDialog();
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to send message: ${e.toString()}'),
@@ -128,6 +131,61 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     }
+  }
+
+  void _showMatchRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.favorite, color: Color(0xFFFF5722), size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Match Required',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'You\'ve sent your intro message! To continue chatting, you need to match with ${widget.receiverName}.',
+          style: GoogleFonts.poppins(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'OK',
+              style: GoogleFonts.poppins(color: Colors.grey[600]),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Navigate back to profile to like
+              context.pop();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(0xFFFF5722),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'View Profile',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

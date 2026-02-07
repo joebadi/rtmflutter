@@ -87,6 +87,13 @@ class MessageService {
         await _storage.delete(key: 'refresh_token');
         throw Exception('UNAUTHORIZED');
       }
+      
+      // Parse match requirement error
+      final errorMessage = e.toString();
+      if (errorMessage.contains('need to match') || errorMessage.contains('match with this user')) {
+        throw Exception('MATCH_REQUIRED');
+      }
+      
       throw Exception('Error sending message: $e');
     }
   }
