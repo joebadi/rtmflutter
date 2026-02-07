@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import '../config/theme.dart';
+import '../config/api_config.dart';
 import '../services/match_service.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -126,6 +127,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
       // Optionally fetch users at new location
       // _fetchNearbyUsersAtLocation(center);
     }
+  }
+
+  // Helper method to construct full photo URLs
+  String _getFullPhotoUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    if (url.startsWith('http')) return url;
+    return '${ApiConfig.socketUrl}$url';
   }
 
   Future<void> _fetchNearbyUsers() async {
@@ -440,12 +448,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   
                   // Backend returns photos at root level now
                   final photos = user['photos'] as List? ?? [];
-                  final photoUrl = photos.isNotEmpty
+                  final rawUrl = photos.isNotEmpty
                       ? (photos.firstWhere(
                           (p) => p['isPrimary'] == true,
                           orElse: () => photos.first,
                         )['url'] ?? '')
                       : '';
+                  final photoUrl = _getFullPhotoUrl(rawUrl);
 
                   return Marker(
                     point: LatLng(lat, lng),
@@ -554,12 +563,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
         : user['age']?.toString() ?? '??';
     
     // Get primary photo or first photo
-    final photoUrl = photos.isNotEmpty
+    final rawUrl = photos.isNotEmpty
         ? (photos.firstWhere(
             (p) => p['isPrimary'] == true,
             orElse: () => photos.first,
           )['url'] ?? '')
         : '';
+    final photoUrl = _getFullPhotoUrl(rawUrl);
     
     final distance = user['distance']?.toString() ?? '0';
     final isOnline = userObj['isOnline'] ?? false;
@@ -801,12 +811,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
             : user['age']?.toString() ?? '??';
         
         // Get primary photo or first photo
-        final photoUrl = photos.isNotEmpty
+        final rawUrl = photos.isNotEmpty
             ? (photos.firstWhere(
                 (p) => p['isPrimary'] == true,
                 orElse: () => photos.first,
               )['url'] ?? '')
             : '';
+        final photoUrl = _getFullPhotoUrl(rawUrl);
         
         final distance = user['distance']?.toString() ?? '0';
         final isOnline = userObj['isOnline'] ?? false;
