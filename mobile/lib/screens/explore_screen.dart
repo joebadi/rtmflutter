@@ -435,11 +435,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ),
                 ..._nearbyUsers.map((user) {
                   // Parse backend user to marker
-                   // Add safety check/defaults
                   final lat = (user['latitude'] as num?)?.toDouble() ?? 0.0;
                   final lng = (user['longitude'] as num?)?.toDouble() ?? 0.0;
-                  final profile = user['profile'];
-                  final photos = profile?['photos'] as List? ?? [];
+                  
+                  // Backend returns photos at root level now
+                  final photos = user['photos'] as List? ?? [];
                   final photoUrl = photos.isNotEmpty
                       ? (photos.firstWhere(
                           (p) => p['isPrimary'] == true,
@@ -544,15 +544,14 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Widget _buildHorizontalUserCard(dynamic user) {
-    // Better data extraction with fallbacks
-    final profile = user['profile'] ?? user;
-    final photos = profile['photos'] as List? ?? [];
-    final userObj = profile['user'] ?? {};
+    // Backend now returns data at root level, not nested under 'profile'
+    final photos = user['photos'] as List? ?? [];
+    final userObj = user['user'] ?? {};
     
-    final firstName = profile['firstName'] ?? 'User';
-    final age = profile['dateOfBirth'] != null 
-        ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year).toString()
-        : profile['age']?.toString() ?? '??';
+    final firstName = user['firstName'] ?? 'User';
+    final age = user['dateOfBirth'] != null 
+        ? (DateTime.now().year - DateTime.parse(user['dateOfBirth']).year).toString()
+        : user['age']?.toString() ?? '??';
     
     // Get primary photo or first photo
     final photoUrl = photos.isNotEmpty
@@ -791,16 +790,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        // Better data extraction with fallbacks
-        final profile = user['profile'] ?? user;
-        final photos = profile['photos'] as List? ?? [];
-        final userObj = profile['user'] ?? {};
+        // Backend returns data at root level now
+        final photos = user['photos'] as List? ?? [];
+        final userObj = user['user'] ?? {};
         
-        final firstName = profile['firstName'] ?? 'User';
-        final lastName = profile['lastName'] ?? '';
-        final age = profile['dateOfBirth'] != null 
-            ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year).toString()
-            : profile['age']?.toString() ?? '??';
+        final firstName = user['firstName'] ?? 'User';
+        final lastName = user['lastName'] ?? '';
+        final age = user['dateOfBirth'] != null 
+            ? (DateTime.now().year - DateTime.parse(user['dateOfBirth']).year).toString()
+            : user['age']?.toString() ?? '??';
         
         // Get primary photo or first photo
         final photoUrl = photos.isNotEmpty
