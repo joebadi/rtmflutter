@@ -114,4 +114,31 @@ class MessageService {
       debugPrint('Error marking conversation as read: $e');
     }
   }
+
+  /// Get or create a conversation with a specific user
+  Future<String> getOrCreateConversation(String receiverId) async {
+    try {
+      final token = await _storage.read(key: 'access_token');
+      _dio.options.headers['Authorization'] = 'Bearer $token';
+
+      // First, try to find existing conversation
+      final conversations = await getConversations();
+      for (var conv in conversations) {
+        final otherUser = conv['otherUser'];
+        if (otherUser != null && otherUser['id'].toString() == receiverId) {
+          return conv['id'].toString();
+        }
+      }
+
+      // If no conversation exists, send a message to create one
+      // The backend will create a conversation when we send the first message
+      // For now, we'll use the receiverId as a temporary conversationId
+      // and let the chat screen handle the first message send
+      return receiverId;
+    } catch (e) {
+      debugPrint('Error getting/creating conversation: $e');
+      // Return receiverId as fallback
+      return receiverId;
+    }
+  }
 }

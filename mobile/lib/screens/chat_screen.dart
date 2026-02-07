@@ -60,19 +60,29 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       });
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      // If conversation doesn't exist yet (404), just show empty messages
+      // This happens when starting a new chat with someone
+      if (e.toString().contains('404') || e.toString().contains('not found')) {
+        setState(() {
+          _messages = [];
+          _isLoading = false;
+          _error = null; // Don't show error for new conversations
+        });
+      } else {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
 
-      if (mounted && e.toString().contains('UNAUTHORIZED')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Session expired. Please login again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        context.go('/login');
+        if (mounted && e.toString().contains('UNAUTHORIZED')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Session expired. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          context.go('/login');
+        }
       }
     }
   }
