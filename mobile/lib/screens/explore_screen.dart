@@ -17,11 +17,12 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> {
+class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateMixin {
   // 0 = Map (Default), 1 = Cards, 2 = Grid
   int _viewMode = 0; 
   final CardSwiperController swipeController = CardSwiperController();
   final MapController mapController = MapController();
+  final ScrollController _horizontalScrollController = ScrollController();
   final MatchService _matchService = MatchService();
 
   // State
@@ -30,6 +31,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
   List<dynamic> _nearbyUsers = [];
   List<dynamic> _suggestions = [];
   String _locationName = 'Locating...';
+
+  // Two-tap interaction state
+  String? _selectedUserId;
+  int? _selectedCardIndex;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   // Filter State
   RangeValues _ageRange = const RangeValues(18, 100);
@@ -50,7 +57,22 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize pulse animation for selected marker
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
     _initializeData();
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _horizontalScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeData() async {
@@ -134,6 +156,63 @@ class _ExploreScreenState extends State<ExploreScreen> {
     if (url == null || url.isEmpty) return '';
     if (url.startsWith('http')) return url;
     return '${ApiConfig.socketUrl}$url';
+  }
+
+  // Two-tap interaction helpers
+  void _handleUserTap(dynamic user, {bool fromCard = false}) {
+    final userId = (user['user']?['id'] ?? user['userId'])?.toString();
+    if (userId == null) return;
+
+    // Check if this is the second tap on the same user
+    if (_selectedUserId == userId) {
+      // Second tap - open profile
+      context.push('/user-profile', extra: user);
+      return;
+    }
+
+    // First tap - select user and sync
+    setState(() {
+      _selectedUserId = userId;
+      _selectedCardIndex = _nearbyUsers.indexWhere((u) {
+        final uId = (u['user']?['id'] ?? u['userId'])?.toString();
+        return uId == userId;
+      });
+    });
+
+    if (fromCard) {
+      // Tapped from card - center map on marker
+      final lat = user['latitude'] ?? user['lat'];
+      final lng = user['longitude'] ?? user['lng'];
+      if (lat != null && lng != null) {
+        _centerMapOnUser(lat.toDouble(), lng.toDouble());
+      }
+    } else {
+      // Tapped from marker - scroll to card
+      if (_selectedCardIndex != null && _selectedCardIndex! >= 0) {
+        _scrollToCard(_selectedCardIndex!);
+      }
+    }
+  }
+
+  void _centerMapOnUser(double lat, double lng) {
+    mapController.move(
+      LatLng(lat, lng),
+      mapController.camera.zoom,
+    );
+  }
+
+  void _scrollToCard(int index) {
+    if (!_horizontalScrollController.hasClients) return;
+    
+    final cardWidth = 280.0; // Card width (260) + margin (20)
+    final screenWidth = MediaQuery.of(context).size.width;
+    final targetOffset = (index * cardWidth) - (screenWidth / 2) + (cardWidth / 2);
+    
+    _horizontalScrollController.animateTo(
+      targetOffset.clamp(0.0, _horizontalScrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   Future<void> _fetchNearbyUsers() async {
@@ -445,6 +524,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   // Parse backend user to marker
                   final lat = (user['latitude'] as num?)?.toDouble() ?? 0.0;
                   final lng = (user['longitude'] as num?)?.toDouble() ?? 0.0;
+                  final userId = (user['user']?['id'] ?? user['userId'])?.toString();
+                  final isSelected = userId == _selectedUserId;
                   
                   // Backend returns photos at root level now
                   final photos = user['photos'] as List? ?? [];
@@ -461,31 +542,45 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     width: 50,
                     height: 50,
                     child: GestureDetector(
-                      onTap: () => _showUserPreview(user),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: photoUrl.isNotEmpty
-                          ? CircleAvatar(
-                              backgroundImage: NetworkImage(photoUrl),
-                            )
-                          : CircleAvatar(
-                              backgroundColor: const Color(0xFFFF5722).withOpacity(0.2),
-                              child: const Icon(
-                                Icons.person,
-                                color: Color(0xFFFF5722),
-                                size: 30,
+                      onTap: () => _handleUserTap(user, fromCard: false),
+                      child: AnimatedBuilder(
+                        animation: _pulseAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: isSelected ? _pulseAnimation.value : 1.0,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFFFF5722) : Colors.white,
+                                  width: isSelected ? 3 : 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isSelected 
+                                        ? const Color(0xFFFF5722).withOpacity(0.6)
+                                        : Colors.black.withOpacity(0.3),
+                                    blurRadius: isSelected ? 12 : 4,
+                                    offset: const Offset(0, 2),
+                                    spreadRadius: isSelected ? 2 : 0,
+                                  ),
+                                ],
                               ),
+                              child: photoUrl.isNotEmpty
+                                ? CircleAvatar(
+                                    backgroundImage: NetworkImage(photoUrl),
+                                  )
+                                : CircleAvatar(
+                                    backgroundColor: const Color(0xFFFF5722).withOpacity(0.2),
+                                    child: const Icon(
+                                      Icons.person,
+                                      color: Color(0xFFFF5722),
+                                      size: 30,
+                                    ),
+                                  ),
                             ),
+                          );
+                        },
                       ),
                     ),
                   );
@@ -538,12 +633,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ),
               ),
               child: ListView.builder(
+                controller: _horizontalScrollController,
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 itemCount: _nearbyUsers.length,
                 itemBuilder: (context, index) {
                   final user = _nearbyUsers[index];
-                  return _buildHorizontalUserCard(user);
+                  final userId = (user['user']?['id'] ?? user['userId'])?.toString();
+                  final isSelected = userId == _selectedUserId;
+                  return _buildHorizontalUserCard(user, isSelected: isSelected);
                 },
               ),
             ),
@@ -552,7 +650,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
-  Widget _buildHorizontalUserCard(dynamic user) {
+  Widget _buildHorizontalUserCard(dynamic user, {bool isSelected = false}) {
     // Backend now returns data at root level, not nested under 'profile'
     final photos = user['photos'] as List? ?? [];
     final userObj = user['user'] ?? {};
@@ -576,16 +674,23 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final isPremium = userObj['isPremium'] ?? false;
 
     return GestureDetector(
-      onTap: () => _showUserPreview(user),
-      child: Container(
+      onTap: () => _handleUserTap(user, fromCard: true),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: Matrix4.identity()..scale(isSelected ? 1.05 : 1.0),
         width: 140,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
+          border: isSelected 
+              ? Border.all(color: const Color(0xFFFF5722), width: 3)
+              : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 10,
+              color: isSelected 
+                  ? const Color(0xFFFF5722).withOpacity(0.4)
+                  : Colors.black.withOpacity(0.15),
+              blurRadius: isSelected ? 15 : 10,
               offset: const Offset(0, 4),
             ),
           ],
@@ -1547,7 +1652,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final isPremium = userObj['isPremium'] ?? false;
 
     return GestureDetector(
-      onTap: () => _showUserPreview(user),
+      onTap: () => context.push('/user-profile', extra: user),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
