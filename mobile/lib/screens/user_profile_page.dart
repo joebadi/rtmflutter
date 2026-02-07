@@ -173,6 +173,7 @@ class _UserProfilePageState extends State<UserProfilePage>
     final firstName = _user['firstName'] ?? 'User';
     final photoUrl = _images.isNotEmpty ? _images[0] : null;
     
+    // Use userId as conversationId for now - backend will handle conversation creation
     context.push('/chat/$userId', extra: {
       'receiverId': userId,
       'receiverName': firstName,
@@ -818,6 +819,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                     child: TabBar(
                                       controller: _tabController,
                                       indicatorSize: TabBarIndicatorSize.tab,
+                                      dividerColor: Colors.transparent,
                                       indicator: BoxDecoration(
                                         gradient: const LinearGradient(
                                           colors: [
@@ -1153,7 +1155,7 @@ class _UserProfilePageState extends State<UserProfilePage>
           // Action Buttons at bottom
           _buildActionButtons(),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 80),
         ],
       ),
     );
@@ -1212,7 +1214,7 @@ class _UserProfilePageState extends State<UserProfilePage>
           // Action Buttons at bottom
           _buildActionButtons(),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 80),
         ],
       ),
     );
