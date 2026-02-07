@@ -21,6 +21,7 @@ class _UserProfilePageState extends State<UserProfilePage>
   late AnimationController _menuAnimationController;
   late Animation<double> _menuAnimation;
   late TabController _tabController;
+  late PageController _pageController;
 
   List<String> _images = [];
   late Map<String, dynamic> _user;
@@ -38,6 +39,7 @@ class _UserProfilePageState extends State<UserProfilePage>
       curve: Curves.easeInOut,
     );
     _tabController = TabController(length: 2, vsync: this);
+    _pageController = PageController();
     
     // Extract user data
     _user = widget.userData;
@@ -96,6 +98,7 @@ class _UserProfilePageState extends State<UserProfilePage>
   void dispose() {
     _menuAnimationController.dispose();
     _tabController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -204,6 +207,7 @@ class _UserProfilePageState extends State<UserProfilePage>
           children: [
             // Full Screen Image Viewer
             PageView.builder(
+              controller: _pageController,
               itemCount: _images.length,
               onPageChanged: (index) =>
                   setState(() => _currentImageIndex = index),
@@ -632,9 +636,14 @@ class _UserProfilePageState extends State<UserProfilePage>
                                 itemCount: _images.length,
                                 itemBuilder: (context, index) {
                                   return GestureDetector(
-                                    onTap: () => setState(
-                                      () => _currentImageIndex = index,
-                                    ),
+                                    onTap: () {
+                                      setState(() => _currentImageIndex = index);
+                                      _pageController.animateToPage(
+                                        index,
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      );
+                                    },
                                     child: Container(
                                       width: 60,
                                       margin: const EdgeInsets.only(right: 12),
