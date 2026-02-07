@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
@@ -46,7 +47,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   Future<void> _getCurrentLocation() async {
     try {
-      // Check permissions (simplified for now, ideally reused from a service)
+      // Check permissions
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -57,12 +58,57 @@ class _ExploreScreenState extends State<ExploreScreen> {
         final position = await Geolocator.getCurrentPosition();
         setState(() {
           _currentLocation = LatLng(position.latitude, position.longitude);
-          // TODO: Reverse geocode for _locationName if needed, or pass from previous screen
-          _locationName = 'New York, USA (Approx)'; 
         });
+        // Reverse geocode to get location name
+        await _updateLocationName(_currentLocation!);
       }
     } catch (e) {
       debugPrint('Error getting location: $e');
+      setState(() => _locationName = 'Location unavailable');
+    }
+  }
+
+  Future<void> _updateLocationName(LatLng location) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        location.latitude,
+        location.longitude,
+      );
+      
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        final city = place.locality ?? place.subAdministrativeArea ?? '';
+        final state = place.administrativeArea ?? '';
+        final country = place.country ?? '';
+        
+        String locationText = '';
+        if (city.isNotEmpty) {
+          locationText = city;
+          if (state.isNotEmpty) locationText += ', $state';
+        } else if (state.isNotEmpty) {
+          locationText = state;
+          if (country.isNotEmpty) locationText += ', $country';
+        } else if (country.isNotEmpty) {
+          locationText = country;
+        } else {
+          locationText = 'Unknown location';
+        }
+        
+        setState(() => _locationName = locationText);
+      }
+    } catch (e) {
+      debugPrint('Error reverse geocoding: $e');
+      setState(() => _locationName = 'Location found');
+    }
+  }
+
+  void _onMapEvent(MapEvent event) {
+    // Update location when map stops moving
+    if (event is MapEventMoveEnd) {
+      final center = mapController.camera.center;
+      _updateLocationName(center);
+      // Optionally fetch users at new location
+      // _fetchNearbyUsersAtLocation(center);
     }
   }
 
@@ -186,22 +232,48 @@ class _ExploreScreenState extends State<ExploreScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.location_on, color: Color(0xFFFF5722), size: 14),
-                const SizedBox(width: 4),
-                Text(
-                  _locationName,
-                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
+          GestureDetector(
+            onTap: _showLocationSearch,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white,
+                    Colors.grey[50]!,
+                  ],
                 ),
-              ],
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFFF5722).withOpacity(0.3), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.location_on, color: Color(0xFFFF5722), size: 16),
+                  const SizedBox(width: 6),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 200),
+                    child: Text(
+                      _locationName,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(Icons.keyboard_arrow_down, color: Colors.grey[600], size: 16),
+                ],
+              ),
             ),
           ),
         ],
@@ -306,10 +378,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
     return FlutterMap(
       mapController: mapController,
+      onMapEvent: _onMapEvent,
       options: MapOptions(
-        initialCenter: _currentLocation!, // San Francisco fallback if null logic fails
+        initialCenter: _currentLocation!,
         initialZoom: 11.0,
-        keepAlive: true, // Keep map state when switching tabs
+        keepAlive: true,
         interactionOptions: const InteractionOptions(
           flags: InteractiveFlag.all & ~InteractiveFlag.rotate, 
         ),
@@ -795,81 +868,290 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Widget _buildSwipeCard(dynamic user) {
-      final profile = user['profile'];
-      final name = profile?['firstName'] ?? 'User';
-      final age = profile?['dateOfBirth'] != null 
-          ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year).toString()
-          : '';
-      final bio = profile?['aboutMe'] ?? 'No bio yet.';
-      final photoUrl = (profile?['photos'] as List?)?.firstWhere(
-              (p) => p['isPrimary'] == true,
-              orElse: () => null,
-            )?['url'];
+    // Better data extraction with fallbacks
+    final profile = user['profile'] ?? user;
+    final photos = profile['photos'] as List? ?? [];
+    final userObj = profile['user'] ?? {};
+    
+    final firstName = profile['firstName'] ?? 'User';
+    final age = profile['dateOfBirth'] != null 
+        ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year).toString()
+        : profile['age']?.toString() ?? '??';
+    
+    final bio = profile['aboutMe'] ?? 'No bio yet.';
+    final city = profile['city'] ?? '';
+    final state = profile['state'] ?? '';
+    final location = city.isNotEmpty ? (state.isNotEmpty ? '$city, $state' : city) : 'Nearby';
+    
+    // Get primary photo or first photo
+    final photoUrl = photos.isNotEmpty
+        ? (photos.firstWhere(
+            (p) => p['isPrimary'] == true,
+            orElse: () => photos.first,
+          )['url'] ?? '')
+        : '';
+    
+    final distance = user['distance']?.toString() ?? '0';
+    final isOnline = userObj['isOnline'] ?? false;
+    final isPremium = userObj['isPremium'] ?? false;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(20),
-        image: photoUrl != null 
-            ? DecorationImage(image: NetworkImage(photoUrl), fit: BoxFit.cover)
-            : null,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Stack(
-        children: [
-           // Gradient Overlay
-           Container(
-             decoration: BoxDecoration(
-               borderRadius: BorderRadius.circular(20),
-               gradient: LinearGradient(
-                 begin: Alignment.topCenter,
-                 end: Alignment.bottomCenter,
-                 colors: [
-                   Colors.transparent,
-                   Colors.black.withOpacity(0.9),
-                 ],
-                 stops: const [0.6, 1.0],
-               ),
-             ),
-           ),
-          Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '$name, $age',
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.verified, color: Colors.blue, size: 24),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            // Background Image
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFFFF5722).withOpacity(0.1),
+                    const Color(0xFFFF5722).withOpacity(0.05),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  bio,
-                  style: GoogleFonts.poppins(color: Colors.white70, fontSize: 13),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+              ),
+              child: photoUrl.isNotEmpty
+                  ? Image.network(
+                      photoUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildPlaceholderImage();
+                      },
+                    )
+                  : _buildPlaceholderImage(),
             ),
-          ),
-        ],
+
+            // Gradient Overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.85),
+                  ],
+                  stops: const [0.5, 1.0],
+                ),
+              ),
+            ),
+
+            // Top Badges
+            Positioned(
+              top: 20,
+              right: 20,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (isPremium)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFFD700).withOpacity(0.4),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.diamond,
+                            color: Colors.white,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'PREMIUM',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (isOnline) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF4CAF50).withOpacity(0.4),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Online',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // Bottom Content
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Name and Age
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '$firstName, $age',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              height: 1.2,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4CAF50),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF4CAF50).withOpacity(0.4),
+                                blurRadius: 8,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Location and Distance
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          color: Color(0xFFFF5722),
+                          size: 18,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${distance}km away',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        if (location.isNotEmpty) ...[
+                          Text(
+                            ' • ',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white70,
+                              fontSize: 15,
+                            ),
+                          ),
+                          Flexible(
+                            child: Text(
+                              location,
+                              style: GoogleFonts.poppins(
+                                color: Colors.white70,
+                                fontSize: 15,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Bio
+                    Text(
+                      bio,
+                      style: GoogleFonts.poppins(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -881,8 +1163,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
-            blurRadius: 10,
+            color: color.withOpacity(0.3),
+            blurRadius: 12,
             spreadRadius: 2,
           ),
         ],
@@ -890,72 +1172,268 @@ class _ExploreScreenState extends State<ExploreScreen> {
       child: IconButton(
         onPressed: onPressed,
         icon: Icon(icon, color: color),
-        iconSize: 28,
-        padding: const EdgeInsets.all(12),
+        iconSize: 30,
+        padding: const EdgeInsets.all(16),
       ),
     );
   }
 
   // --- GRID VIEW ---
   Widget _buildGridView() {
-    if (_suggestions.isEmpty) {
-       return _buildEmptyState('No one around yet.', Icons.people_outline);
+    if (_nearbyUsers.isEmpty) {
+       return _buildEmptyState('No users nearby yet.', Icons.people_outline);
     }
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
         childAspectRatio: 0.75,
       ),
-      itemCount: _suggestions.length,
+      itemCount: _nearbyUsers.length,
       itemBuilder: (context, index) {
-        final user = _suggestions[index];
-        final profile = user['profile'];
-        final photoUrl = (profile?['photos'] as List?)?.firstWhere(
-                (p) => p['isPrimary'] == true,
-                orElse: () => null,
-              )?['url'];
-        final name = profile?['firstName'] ?? 'User';
+        final user = _nearbyUsers[index];
+        return _buildGridItem(user);
+      },
+    );
+  }
 
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-             color: Colors.grey[200],
-             image: photoUrl != null 
-                ? DecorationImage(image: NetworkImage(photoUrl), fit: BoxFit.cover)
-                : null,
-          ),
+  Widget _buildGridItem(dynamic user) {
+    // Better data extraction with fallbacks
+    final profile = user['profile'] ?? user;
+    final photos = profile['photos'] as List? ?? [];
+    final userObj = profile['user'] ?? {};
+    
+    final firstName = profile['firstName'] ?? 'User';
+    final age = profile['dateOfBirth'] != null 
+        ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year).toString()
+        : profile['age']?.toString() ?? '??';
+    
+    // Get primary photo or first photo
+    final photoUrl = photos.isNotEmpty
+        ? (photos.firstWhere(
+            (p) => p['isPrimary'] == true,
+            orElse: () => photos.first,
+          )['url'] ?? '')
+        : '';
+    
+    final distance = user['distance']?.toString() ?? '0';
+    final isOnline = userObj['isOnline'] ?? false;
+    final isPremium = userObj['isPremium'] ?? false;
+
+    return GestureDetector(
+      onTap: () => _showUserPreview(user),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
           child: Stack(
             children: [
+              // Background Image
               Container(
-                 decoration: BoxDecoration(
-                   borderRadius: BorderRadius.circular(16),
-                   gradient: LinearGradient(
-                     begin: Alignment.topCenter,
-                     end: Alignment.bottomCenter,
-                     colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
-                   ),
-                 ),
-               ),
-               Positioned(
-                 bottom: 12,
-                 left: 12,
-                 child: Text(
-                   name,
-                   style: GoogleFonts.poppins(
-                     color: Colors.white,
-                     fontWeight: FontWeight.bold,
-                     fontSize: 16,
-                   ),
-                 ),
-               ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFFFF5722).withOpacity(0.2),
+                      const Color(0xFFFF7043).withOpacity(0.2),
+                    ],
+                  ),
+                ),
+                child: photoUrl.isNotEmpty
+                    ? Image.network(
+                        photoUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Icon(
+                              Icons.person,
+                              size: 50,
+                              color: Colors.white.withOpacity(0.7),
+                            ),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Icon(
+                          Icons.person,
+                          size: 50,
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+              ),
+
+              // Gradient Overlay
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.75),
+                    ],
+                    stops: const [0.5, 1.0],
+                  ),
+                ),
+              ),
+
+              // Top Right Badges
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (isPremium)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFFD700).withOpacity(0.4),
+                              blurRadius: 6,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.diamond,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                      ),
+                    if (isOnline) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4CAF50),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF4CAF50).withOpacity(0.5),
+                              blurRadius: 6,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Distance Badge
+              Positioned(
+                top: 8,
+                left: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        color: Color(0xFFFF5722),
+                        size: 12,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${distance}km',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Bottom Info
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              '$firstName, $age',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                height: 1.2,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF4CAF50),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 10,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -971,6 +1449,186 @@ class _ExploreScreenState extends State<ExploreScreen> {
             style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showLocationSearch() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Location',
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Search input
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search city or location...',
+                    hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                    prefixIcon: const Icon(Icons.search, color: Color(0xFFFF5722)),
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  onSubmitted: (value) async {
+                    if (value.isNotEmpty) {
+                      try {
+                        final locations = await locationFromAddress(value);
+                        if (locations.isNotEmpty) {
+                          final loc = locations.first;
+                          final newLocation = LatLng(loc.latitude, loc.longitude);
+                          mapController.move(newLocation, 11.0);
+                          await _updateLocationName(newLocation);
+                          await _fetchNearbyUsers();
+                          if (mounted) Navigator.pop(context);
+                        }
+                      } catch (e) {
+                        debugPrint('Error searching location: $e');
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Location not found'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Popular locations
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
+                    Text(
+                      'Popular Locations',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildLocationItem('New York, USA', 40.7128, -74.0060),
+                    _buildLocationItem('London, UK', 51.5074, -0.1278),
+                    _buildLocationItem('Paris, France', 48.8566, 2.3522),
+                    _buildLocationItem('Tokyo, Japan', 35.6762, 139.6503),
+                    _buildLocationItem('Dubai, UAE', 25.2048, 55.2708),
+                    _buildLocationItem('Sydney, Australia', -33.8688, 151.2093),
+                    _buildLocationItem('Lagos, Nigeria', 6.5244, 3.3792),
+                    _buildLocationItem('Mumbai, India', 19.0760, 72.8777),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLocationItem(String name, double lat, double lng) {
+    return GestureDetector(
+      onTap: () async {
+        final newLocation = LatLng(lat, lng);
+        mapController.move(newLocation, 11.0);
+        setState(() {
+          _currentLocation = newLocation;
+          _locationName = name;
+        });
+        await _fetchNearbyUsers();
+        if (mounted) Navigator.pop(context);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF5722).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.location_city,
+                color: Color(0xFFFF5722),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                name,
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+          ],
+        ),
       ),
     );
   }
