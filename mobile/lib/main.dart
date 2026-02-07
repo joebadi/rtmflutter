@@ -123,10 +123,17 @@ final _router = GoRouter(
     GoRoute(path: '/premium', builder: (context, state) => const PremiumPage()),
     GoRoute(path: '/wallet', builder: (context, state) => const WalletPage()),
     GoRoute(
-      path: '/chat/:userName',
+      path: '/chat/:conversationId',
       builder: (context, state) {
-        final userName = state.pathParameters['userName'] ?? 'User';
-        return ChatScreen(userName: userName);
+        final conversationId = state.pathParameters['conversationId'] ?? '';
+        final extra = state.extra as Map<String, dynamic>?;
+        
+        return ChatScreen(
+          conversationId: conversationId,
+          receiverId: extra?['receiverId'] ?? '',
+          receiverName: extra?['receiverName'] ?? 'User',
+          receiverPhoto: extra?['receiverPhoto'],
+        );
       },
     ),
     GoRoute(

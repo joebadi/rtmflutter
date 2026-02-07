@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import '../services/message_service.dart';
 
 class ChatScreen extends StatefulWidget {
-  final String userName;
+  final String conversationId;
+  final String receiverId;
+  final String receiverName;
+  final String? receiverPhoto;
 
-  const ChatScreen({super.key, required this.userName});
+  const ChatScreen({
+    super.key,
+    required this.conversationId,
+    required this.receiverId,
+    required this.receiverName,
+    this.receiverPhoto,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -14,48 +24,100 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final MessageService _messageService = MessageService();
 
-  // Sample messages
-  final List<Map<String, dynamic>> _messages = [
-    {'text': 'Hi Karen, Ciara here!!', 'time': '9:25 am', 'isSent': false},
-    {
-      'text': 'Hey, Jana, Nice to meet you!',
-      'time': '10:15 am',
-      'isSent': true,
-    },
-    {
-      'text': 'Nice to meet you too! How are you doing?',
-      'time': '10:25 pm',
-      'isSent': false,
-    },
-    {
-      'text': 'Thanks, I am going to Market for Jewelry product.',
-      'time': '10:45 am',
-      'isSent': true,
-    },
-    {'type': 'audio', 'duration': '2:25', 'time': '10:50 am', 'isSent': false},
-  ];
+  bool _isLoading = true;
+  bool _isSending = false;
+  List<dynamic> _messages = [];
+  String? _error;
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+  }
 
+  Future<void> _loadMessages() async {
     setState(() {
-      _messages.add({
-        'text': _messageController.text,
-        'time': TimeOfDay.now().format(context),
-        'isSent': true,
-      });
-      _messageController.clear();
+      _isLoading = true;
+      _error = null;
     });
 
-    // Scroll to bottom
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+    try {
+      final messages = await _messageService.getMessages(widget.conversationId);
+      setState(() {
+        _messages = messages.reversed.toList(); // Reverse to show oldest first
+        _isLoading = false;
+      });
+
+      // Mark conversation as read
+      await _messageService.markConversationAsRead(widget.conversationId);
+
+      // Scroll to bottom
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+
+      if (mounted && e.toString().contains('UNAUTHORIZED')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Session expired. Please login again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        context.go('/login');
+      }
+    }
+  }
+
+  Future<void> _sendMessage() async {
+    if (_messageController.text.trim().isEmpty || _isSending) return;
+
+    final content = _messageController.text.trim();
+    _messageController.clear();
+
+    setState(() => _isSending = true);
+
+    try {
+      final message = await _messageService.sendMessage(
+        receiverId: widget.receiverId,
+        content: content,
       );
-    });
+
+      setState(() {
+        _messages.add(message);
+        _isSending = false;
+      });
+
+      // Scroll to bottom
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    } catch (e) {
+      setState(() => _isSending = false);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send message: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -84,29 +146,21 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                   child: ClipOval(
-                    child: Image.network(
-                      'https://i.pravatar.cc/150?img=1',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.person, size: 20),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
+                    child: widget.receiverPhoto != null
+                        ? Image.network(
+                            widget.receiverPhoto!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.person, size: 20),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.person, size: 20),
+                          ),
                   ),
                 ),
               ],
@@ -117,19 +171,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hi, ${widget.userName}',
+                    widget.receiverName,
                     style: GoogleFonts.poppins(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
-                    ),
-                  ),
-                  Text(
-                    'Online',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color: Colors.green,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -139,143 +185,182 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.call, color: Colors.black87),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.videocam, color: Colors.black87),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black87),
-            onPressed: () {},
+            icon: const Icon(Icons.refresh, color: Colors.black87),
+            onPressed: _loadMessages,
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Date Divider
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Today',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
-                ),
-              ),
-            ),
-          ),
-
-          // Messages List
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return _buildMessageBubble(message);
-              },
-            ),
-          ),
-
-          // Message Input
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  // Emoji Button
-                  IconButton(
-                    icon: Icon(
-                      Icons.emoji_emotions_outlined,
-                      color: Colors.grey[600],
-                    ),
-                    onPressed: () {},
-                  ),
-
-                  // Text Input
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.grey[300]!),
-                      ),
-                      child: TextField(
-                        controller: _messageController,
-                        style: GoogleFonts.poppins(fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText: 'Message',
-                          hintStyle: GoogleFonts.poppins(
-                            color: Colors.grey[400],
-                            fontSize: 14,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+            )
+          : _error != null
+              ? _buildErrorState()
+              : Column(
+                  children: [
+                    // Date Divider
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Today',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[700],
                           ),
                         ),
-                        maxLines: null,
-                        textCapitalization: TextCapitalization.sentences,
                       ),
                     ),
-                  ),
 
-                  // Attachment Button
-                  IconButton(
-                    icon: Icon(Icons.attach_file, color: Colors.grey[600]),
-                    onPressed: () {},
-                  ),
-
-                  // Send Button
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFF5722),
-                      shape: BoxShape.circle,
+                    // Messages List
+                    Expanded(
+                      child: _messages.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No messages yet. Say hi!',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _messages.length,
+                              itemBuilder: (context, index) {
+                                final message = _messages[index];
+                                return _buildMessageBubble(message);
+                              },
+                            ),
                     ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.send,
+
+                    // Message Input
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
                         color: Colors.white,
-                        size: 20,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, -2),
+                          ),
+                        ],
                       ),
-                      onPressed: _sendMessage,
+                      child: SafeArea(
+                        child: Row(
+                          children: [
+                            // Text Input
+                            Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(color: Colors.grey[300]!),
+                                ),
+                                child: TextField(
+                                  controller: _messageController,
+                                  style: GoogleFonts.poppins(fontSize: 14),
+                                  decoration: InputDecoration(
+                                    hintText: 'Message',
+                                    hintStyle: GoogleFonts.poppins(
+                                      color: Colors.grey[400],
+                                      fontSize: 14,
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                  maxLines: null,
+                                  textCapitalization: TextCapitalization.sentences,
+                                  onSubmitted: (_) => _sendMessage(),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 8),
+
+                            // Send Button
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: _isSending
+                                    ? Colors.grey
+                                    : const Color(0xFFFF5722),
+                                shape: BoxShape.circle,
+                              ),
+                              child: _isSending
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : IconButton(
+                                      icon: const Icon(
+                                        Icons.send,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      onPressed: _sendMessage,
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                  ],
+                ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 60, color: Colors.red),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load messages',
+            style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _loadMessages,
+            child: const Text('Retry', style: TextStyle(color: Color(0xFFFF5722))),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMessageBubble(Map<String, dynamic> message) {
-    final isSent = message['isSent'] ?? false;
-    final isAudio = message['type'] == 'audio';
+  Widget _buildMessageBubble(dynamic message) {
+    final isSent = message['senderId'] != widget.receiverId;
+    final content = message['content'] ?? '';
+    final createdAt = message['createdAt'] ?? '';
+
+    // Format time
+    String formattedTime = '';
+    if (createdAt.isNotEmpty) {
+      try {
+        final dateTime = DateTime.parse(createdAt);
+        formattedTime = '${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+      } catch (e) {
+        formattedTime = '';
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -285,7 +370,7 @@ class _ChatScreenState extends State<ChatScreen> {
             : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!isSent) ...[
+          if (!isSent) ...[ 
             Container(
               width: 32,
               height: 32,
@@ -294,16 +379,21 @@ class _ChatScreenState extends State<ChatScreen> {
                 border: Border.all(color: const Color(0xFFFF5722), width: 1.5),
               ),
               child: ClipOval(
-                child: Image.network(
-                  'https://i.pravatar.cc/150?img=1',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.person, size: 16),
-                    );
-                  },
-                ),
+                child: widget.receiverPhoto != null
+                    ? Image.network(
+                        widget.receiverPhoto!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.person, size: 16),
+                          );
+                        },
+                      )
+                    : Container(
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.person, size: 16),
+                      ),
               ),
             ),
             const SizedBox(width: 8),
@@ -336,25 +426,25 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ],
                   ),
-                  child: isAudio
-                      ? _buildAudioMessage(message)
-                      : Text(
-                          message['text'],
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: isSent ? Colors.black87 : Colors.black87,
-                            height: 1.4,
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  message['time'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: Colors.grey[500],
+                  child: Text(
+                    content,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      height: 1.4,
+                    ),
                   ),
                 ),
+                if (formattedTime.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    formattedTime,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -362,52 +452,6 @@ class _ChatScreenState extends State<ChatScreen> {
           if (isSent) const SizedBox(width: 8),
         ],
       ),
-    );
-  }
-
-  Widget _buildAudioMessage(Map<String, dynamic> message) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.play_arrow, color: Colors.black87, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 150,
-              height: 3,
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: FractionallySizedBox(
-                alignment: Alignment.centerLeft,
-                widthFactor: 0.4,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              message['duration'],
-              style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54),
-            ),
-          ],
-        ),
-      ],
     );
   }
 
