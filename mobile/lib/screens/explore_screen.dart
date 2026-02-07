@@ -139,6 +139,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
         longitude: lng,
         radius: 50, // 50km
       );
+      
+      // DEBUG: Print full response to see data structure
+      debugPrint('=== NEARBY USERS DEBUG ===');
+      debugPrint('Total users: ${users.length}');
+      if (users.isNotEmpty) {
+        debugPrint('First user data: ${users[0]}');
+        final firstUser = users[0];
+        debugPrint('Profile: ${firstUser['profile']}');
+        debugPrint('Photos: ${firstUser['profile']?['photos']}');
+      }
+      debugPrint('=========================');
+      
       setState(() => _nearbyUsers = users);
     } catch (e) {
       debugPrint('Error fetching nearby users: $e');
