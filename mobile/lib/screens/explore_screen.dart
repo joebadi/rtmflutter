@@ -392,81 +392,336 @@ class _ExploreScreenState extends State<ExploreScreen> {
       );
     }
 
-    return FlutterMap(
-      mapController: mapController,
-      onMapEvent: _onMapEvent,
-      options: MapOptions(
-        initialCenter: _currentLocation!,
-        initialZoom: 11.0,
-        keepAlive: true,
-        interactionOptions: const InteractionOptions(
-          flags: InteractiveFlag.all & ~InteractiveFlag.rotate, 
-        ),
-      ),
+    return Stack(
       children: [
-        TileLayer(
-          // CartoDB Positron (Light) - Friendly, Google Maps-like
-          urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-          subdomains: const ['a', 'b', 'c', 'd'],
-          userAgentPackageName: 'com.rtm.mobile',
-        ),
-        MarkerLayer(
-          markers: [
-            // User's own location
-            Marker(
-              point: _currentLocation!,
-              width: 60,
-              height: 60,
-              child: _buildPulsingUserMarker(),
+        // Map Layer
+        FlutterMap(
+          mapController: mapController,
+          options: MapOptions(
+            initialCenter: _currentLocation!,
+            initialZoom: 11.0,
+            keepAlive: true,
+            interactionOptions: const InteractionOptions(
+              flags: InteractiveFlag.all & ~InteractiveFlag.rotate, 
             ),
-            ..._nearbyUsers.map((user) {
-              // Parse backend user to marker
-               // Add safety check/defaults
-              final lat = (user['latitude'] as num?)?.toDouble() ?? 0.0;
-              final lng = (user['longitude'] as num?)?.toDouble() ?? 0.0;
-              final profile = user['profile'];
-              final photoUrl = (profile?['photos'] as List?)?.firstWhere(
-                (p) => p['isPrimary'] == true,
-                orElse: () => null,
-              )?['url'];
+          ),
+          children: [
+            TileLayer(
+              // CartoDB Positron (Light) - Friendly, Google Maps-like
+              urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
+              subdomains: const ['a', 'b', 'c', 'd'],
+              userAgentPackageName: 'com.rtm.mobile',
+            ),
+            MarkerLayer(
+              markers: [
+                // User's own location
+                Marker(
+                  point: _currentLocation!,
+                  width: 60,
+                  height: 60,
+                  child: _buildPulsingUserMarker(),
+                ),
+                ..._nearbyUsers.map((user) {
+                  // Parse backend user to marker
+                   // Add safety check/defaults
+                  final lat = (user['latitude'] as num?)?.toDouble() ?? 0.0;
+                  final lng = (user['longitude'] as num?)?.toDouble() ?? 0.0;
+                  final profile = user['profile'];
+                  final photos = profile?['photos'] as List? ?? [];
+                  final photoUrl = photos.isNotEmpty
+                      ? (photos.firstWhere(
+                          (p) => p['isPrimary'] == true,
+                          orElse: () => photos.first,
+                        )['url'] ?? '')
+                      : '';
 
-              return Marker(
-                point: LatLng(lat, lng),
-                width: 50,
-                height: 50,
-                child: GestureDetector(
-                  onTap: () => _showUserPreview(user),
+                  return Marker(
+                    point: LatLng(lat, lng),
+                    width: 50,
+                    height: 50,
+                    child: GestureDetector(
+                      onTap: () => _showUserPreview(user),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: photoUrl.isNotEmpty
+                          ? CircleAvatar(
+                              backgroundImage: NetworkImage(photoUrl),
+                            )
+                          : CircleAvatar(
+                              backgroundColor: const Color(0xFFFF5722).withOpacity(0.2),
+                              child: const Icon(
+                                Icons.person,
+                                color: Color(0xFFFF5722),
+                                size: 30,
+                              ),
+                            ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ],
+        ),
+
+        // Horizontal Scrollable User Cards at Bottom
+        if (_nearbyUsers.isNotEmpty)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              height: 180,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.1),
+                  ],
+                ),
+              ),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                itemCount: _nearbyUsers.length,
+                itemBuilder: (context, index) {
+                  final user = _nearbyUsers[index];
+                  return _buildHorizontalUserCard(user);
+                },
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHorizontalUserCard(dynamic user) {
+    // Better data extraction with fallbacks
+    final profile = user['profile'] ?? user;
+    final photos = profile['photos'] as List? ?? [];
+    final userObj = profile['user'] ?? {};
+    
+    final firstName = profile['firstName'] ?? 'User';
+    final age = profile['dateOfBirth'] != null 
+        ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year).toString()
+        : profile['age']?.toString() ?? '??';
+    
+    // Get primary photo or first photo
+    final photoUrl = photos.isNotEmpty
+        ? (photos.firstWhere(
+            (p) => p['isPrimary'] == true,
+            orElse: () => photos.first,
+          )['url'] ?? '')
+        : '';
+    
+    final distance = user['distance']?.toString() ?? '0';
+    final isOnline = userObj['isOnline'] ?? false;
+    final isPremium = userObj['isPremium'] ?? false;
+
+    return GestureDetector(
+      onTap: () => _showUserPreview(user),
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              // Background Image
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFFFF5722).withOpacity(0.2),
+                      const Color(0xFFFF7043).withOpacity(0.2),
+                    ],
+                  ),
+                ),
+                child: photoUrl.isNotEmpty
+                    ? Image.network(
+                        photoUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Icon(
+                              Icons.person,
+                              size: 40,
+                              color: Colors.white.withOpacity(0.7),
+                            ),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Icon(
+                          Icons.person,
+                          size: 40,
+                          color: Colors.white.withOpacity(0.7),
+                        ),
+                      ),
+              ),
+
+              // Gradient Overlay
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                    stops: const [0.5, 1.0],
+                  ),
+                ),
+              ),
+
+              // Premium Badge
+              if (isPremium)
+                Positioned(
+                  top: 8,
+                  right: 8,
                   child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
+                          color: const Color(0xFFFFD700).withOpacity(0.4),
                           blurRadius: 4,
-                          offset: const Offset(0, 2),
+                          spreadRadius: 1,
                         ),
                       ],
                     ),
-                    child: photoUrl != null 
-                      ? CircleAvatar(
-                          backgroundImage: NetworkImage(photoUrl),
-                        )
-                      : CircleAvatar(
-                          backgroundColor: const Color(0xFFFF5722).withOpacity(0.2),
-                          child: const Icon(
-                            Icons.person,
-                            color: Color(0xFFFF5722),
-                            size: 30,
-                          ),
-                        ),
+                    child: const Icon(
+                      Icons.diamond,
+                      color: Colors.white,
+                      size: 10,
+                    ),
                   ),
                 ),
-              );
-            }),
-          ],
+
+              // Online Indicator
+              if (isOnline)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4CAF50),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF4CAF50).withOpacity(0.5),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // User Info at Bottom
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              '$firstName, $age',
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                height: 1.2,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF4CAF50),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 8,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            color: Color(0xFFFF5722),
+                            size: 12,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${distance}km away',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
