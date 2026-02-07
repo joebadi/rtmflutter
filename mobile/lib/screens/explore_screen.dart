@@ -448,11 +448,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         ),
                       ],
                     ),
-                    child: CircleAvatar(
-                      backgroundImage: photoUrl != null 
-                        ? NetworkImage(photoUrl) 
-                        : const AssetImage('assets/images/placeholder_avatar.png') as ImageProvider,
-                    ),
+                    child: photoUrl != null 
+                      ? CircleAvatar(
+                          backgroundImage: NetworkImage(photoUrl),
+                        )
+                      : CircleAvatar(
+                          backgroundColor: const Color(0xFFFF5722).withOpacity(0.2),
+                          child: const Icon(
+                            Icons.person,
+                            color: Color(0xFFFF5722),
+                            size: 30,
+                          ),
+                        ),
                   ),
                 ),
               );
