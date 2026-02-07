@@ -2,11 +2,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import '../config/api_config.dart';
 
 class UserProfilePage extends StatefulWidget {
-  final String userName;
+  final Map<String, dynamic> userData;
 
-  const UserProfilePage({super.key, required this.userName});
+  const UserProfilePage({super.key, required this.userData});
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -21,12 +22,9 @@ class _UserProfilePageState extends State<UserProfilePage>
   late Animation<double> _menuAnimation;
   late TabController _tabController;
 
-  final List<String> _images = [
-    'https://i.pravatar.cc/600?img=13',
-    'https://i.pravatar.cc/600?img=12',
-    'https://i.pravatar.cc/600?img=14',
-    'https://i.pravatar.cc/600?img=15',
-  ];
+  List<String> _images = [];
+  late Map<String, dynamic> _user;
+  late Map<String, dynamic> _userObj;
 
   @override
   void initState() {
@@ -40,6 +38,58 @@ class _UserProfilePageState extends State<UserProfilePage>
       curve: Curves.easeInOut,
     );
     _tabController = TabController(length: 2, vsync: this);
+    
+    // Extract user data
+    _user = widget.userData;
+    _userObj = _user['user'] ?? {};
+    
+    // Load images
+    _loadImages();
+  }
+
+  void _loadImages() {
+    final List photos = _user['photos'] ?? [];
+    if (photos.isNotEmpty) {
+      _images = photos.map((p) {
+        String url = p['url'] ?? '';
+        if (url.isNotEmpty && !url.startsWith('http')) {
+          url = '${ApiConfig.socketUrl}$url';
+        }
+        return url;
+      }).where((u) => u.isNotEmpty).toList();
+    }
+    
+    // Fallback to placeholder if no photos
+    if (_images.isEmpty) {
+      _images = ['https://ui-avatars.com/api/?name=${_getFullName()}&size=600&background=FF5722&color=fff'];
+    }
+  }
+
+  String _getFullName() {
+    final firstName = _user['firstName'] ?? 'User';
+    final lastName = _user['lastName'] ?? '';
+    return '$firstName $lastName'.trim();
+  }
+
+  int _getAge() {
+    if (_user['dateOfBirth'] != null) {
+      try {
+        final dob = DateTime.parse(_user['dateOfBirth']);
+        return DateTime.now().year - dob.year;
+      } catch (e) {
+        return _user['age'] ?? 0;
+      }
+    }
+    return _user['age'] ?? 0;
+  }
+
+  String _getLocation() {
+    final parts = [
+      _user['city'],
+      _user['state'],
+      _user['country'],
+    ].where((s) => s != null && s.toString().isNotEmpty);
+    return parts.join(', ');
   }
 
   @override
@@ -109,7 +159,7 @@ class _UserProfilePageState extends State<UserProfilePage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'You liked ${widget.userName}!',
+          'You liked ${_user['firstName']}!',
           style: GoogleFonts.poppins(),
         ),
         backgroundColor: const Color(0xFFFF5722),
@@ -118,8 +168,27 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
+  void _startChat() {
+    final userId = _userObj['id'] ?? _user['userId'];
+    final firstName = _user['firstName'] ?? 'User';
+    final photoUrl = _images.isNotEmpty ? _images[0] : null;
+    
+    context.push('/chat/$userId', extra: {
+      'receiverId': userId,
+      'receiverName': firstName,
+      'receiverPhoto': photoUrl,
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final fullName = _getFullName();
+    final age = _getAge();
+    final location = _getLocation();
+    final isOnline = _userObj['isOnline'] ?? false;
+    final isPremium = _userObj['isPremium'] ?? false;
+    final isVerified = _user['isVerified'] ?? false;
+
     return GestureDetector(
       onVerticalDragUpdate: (details) {
         if (details.primaryDelta! < -10) {
@@ -150,6 +219,21 @@ class _UserProfilePageState extends State<UserProfilePage>
                         Icons.person,
                         size: 100,
                         color: Colors.white,
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[900],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                          color: const Color(0xFFFF5722),
+                        ),
                       ),
                     );
                   },
@@ -297,7 +381,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               ),
             ),
 
-            // Bottom Gradient with User Info (No dark background card)
+            // Bottom Gradient with User Info
             if (!_showInfo)
               Positioned(
                 bottom: 0,
@@ -324,80 +408,80 @@ class _UserProfilePageState extends State<UserProfilePage>
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Name, Age, Verification, and Match Score
+                          // Name, Age, Verification, and Badges
                           Row(
                             children: [
                               Expanded(
-                                child: Text(
-                                  'John Doe, 28',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black.withOpacity(0.5),
-                                        offset: const Offset(0, 2),
-                                        blurRadius: 4,
+                                child: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        '$fullName, $age',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          shadows: [
+                                            Shadow(
+                                              color: Colors.black.withOpacity(0.5),
+                                              offset: const Offset(0, 2),
+                                              blurRadius: 4,
+                                            ),
+                                          ],
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (isVerified) ...[
+                                      const SizedBox(width: 8),
+                                      const Icon(
+                                        Icons.verified,
+                                        color: Color(0xFFFF5722),
+                                        size: 24,
                                       ),
                                     ],
-                                  ),
+                                  ],
                                 ),
-                              ),
-                              const Icon(
-                                Icons.verified,
-                                color: Color(0xFFFF5722),
-                                size: 28,
                               ),
                               const SizedBox(width: 8),
-                              // Match Score Badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Color(0xFFFF5722),
-                                      Color(0xFFFF7043),
+                              // Status Badges
+                              if (isPremium)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.diamond,
+                                        color: Colors.white,
+                                        size: 12,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'PRO',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
                                     ],
                                   ),
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFFFF5722,
-                                      ).withOpacity(0.4),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.favorite,
-                                      color: Colors.white,
-                                      size: 14,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '92%',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                             ],
                           ),
                           const SizedBox(height: 8),
-                          // Location
+                          // Location and Online Status
                           Row(
                             children: [
                               const Icon(
@@ -408,7 +492,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
-                                  'Lagos, Lagos State, Nigeria',
+                                  location.isNotEmpty ? location : 'Location not set',
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
                                     color: Colors.white.withOpacity(0.9),
@@ -420,8 +504,49 @@ class _UserProfilePageState extends State<UserProfilePage>
                                       ),
                                     ],
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              if (isOnline) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF4CAF50).withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFF4CAF50),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF4CAF50),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Online',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF4CAF50),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 20),
@@ -452,13 +577,11 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
-                                      onTap: () => context.push(
-                                        '/chat/${widget.userName}',
-                                      ),
+                                      onTap: _startChat,
                                       borderRadius: BorderRadius.circular(12),
                                       child: Center(
                                         child: Text(
-                                          'CHAT WITH ${widget.userName.toUpperCase()}',
+                                          'CHAT WITH ${_user['firstName']?.toString().toUpperCase() ?? 'USER'}',
                                           style: GoogleFonts.poppins(
                                             fontSize: 13,
                                             fontWeight: FontWeight.bold,
@@ -500,54 +623,55 @@ class _UserProfilePageState extends State<UserProfilePage>
                           ),
                           const SizedBox(height: 20),
                           // Thumbnail Strip
-                          SizedBox(
-                            height: 70,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: _images.length,
-                              itemBuilder: (context, index) {
-                                return GestureDetector(
-                                  onTap: () => setState(
-                                    () => _currentImageIndex = index,
-                                  ),
-                                  child: Container(
-                                    width: 60,
-                                    margin: const EdgeInsets.only(right: 12),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: index == _currentImageIndex
-                                            ? const Color(0xFFFF5722)
-                                            : Colors.white.withOpacity(0.5),
-                                        width: index == _currentImageIndex
-                                            ? 3
-                                            : 2,
+                          if (_images.length > 1)
+                            SizedBox(
+                              height: 70,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: _images.length,
+                                itemBuilder: (context, index) {
+                                  return GestureDetector(
+                                    onTap: () => setState(
+                                      () => _currentImageIndex = index,
+                                    ),
+                                    child: Container(
+                                      width: 60,
+                                      margin: const EdgeInsets.only(right: 12),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: index == _currentImageIndex
+                                              ? const Color(0xFFFF5722)
+                                              : Colors.white.withOpacity(0.5),
+                                          width: index == _currentImageIndex
+                                              ? 3
+                                              : 2,
+                                        ),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.network(
+                                          _images[index],
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return Container(
+                                              color: Colors.grey[700],
+                                              child: const Icon(
+                                                Icons.person,
+                                                size: 30,
+                                                color: Colors.white,
+                                              ),
+                                            );
+                                          },
+                                        ),
                                       ),
                                     ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.network(
-                                        _images[index],
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                              return Container(
-                                                color: Colors.grey[700],
-                                                child: const Icon(
-                                                  Icons.person,
-                                                  size: 30,
-                                                  color: Colors.white,
-                                                ),
-                                              );
-                                            },
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 16),
+                          if (_images.length > 1) const SizedBox(height: 16),
                           // Swipe Up Indicator
                           Center(
                             child: Column(
@@ -558,7 +682,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   size: 32,
                                 ),
                                 Text(
-                                  'Swipe up for profile',
+                                  'Swipe up for full profile',
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
                                     color: Colors.white,
@@ -637,7 +761,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                     children: [
                                       Expanded(
                                         child: Text(
-                                          'John Doe, 28',
+                                          '$fullName, $age',
                                           style: GoogleFonts.poppins(
                                             fontSize: 28,
                                             fontWeight: FontWeight.bold,
@@ -645,49 +769,12 @@ class _UserProfilePageState extends State<UserProfilePage>
                                           ),
                                         ),
                                       ),
-                                      const Icon(
-                                        Icons.verified,
-                                        color: Color(0xFFFF5722),
-                                        size: 28,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      // Match Score Badge
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 6,
+                                      if (isVerified)
+                                        const Icon(
+                                          Icons.verified,
+                                          color: Color(0xFFFF5722),
+                                          size: 28,
                                         ),
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(
-                                            colors: [
-                                              Color(0xFFFF5722),
-                                              Color(0xFFFF7043),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(
-                                              Icons.favorite,
-                                              color: Colors.white,
-                                              size: 14,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              '92%',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
@@ -701,7 +788,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          'Lagos, Lagos State, Nigeria',
+                                          location.isNotEmpty ? location : 'Location not set',
                                           style: GoogleFonts.poppins(
                                             fontSize: 14,
                                             color: Colors.white.withOpacity(
@@ -715,7 +802,7 @@ class _UserProfilePageState extends State<UserProfilePage>
 
                                   const SizedBox(height: 24),
 
-                                  // Embossed Pill Tabs - Right after location
+                                  // Embossed Pill Tabs
                                   Container(
                                     decoration: BoxDecoration(
                                       color: Colors.white.withOpacity(0.1),
@@ -759,7 +846,6 @@ class _UserProfilePageState extends State<UserProfilePage>
                                       labelPadding: EdgeInsets.zero,
                                       indicatorPadding: EdgeInsets.zero,
                                       tabs: [
-                                        // User's Profile - extends to left, padding on right
                                         Container(
                                           padding: const EdgeInsets.only(
                                             left: 20,
@@ -768,9 +854,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             bottom: 12,
                                           ),
                                           alignment: Alignment.centerLeft,
-                                          child: const Text('User\'s Profile'),
+                                          child: const Text('Profile'),
                                         ),
-                                        // Preferred Partner - extends to right, padding on left
                                         Container(
                                           padding: const EdgeInsets.only(
                                             left: 24,
@@ -780,7 +865,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                           ),
                                           alignment: Alignment.centerRight,
                                           child: const Text(
-                                            'Preferred Partner',
+                                            'Preferences',
                                           ),
                                         ),
                                       ],
@@ -828,7 +913,9 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
-  Widget _buildInfoSection(String title, String content) {
+  Widget _buildInfoSection(String title, String? content) {
+    if (content == null || content.isEmpty) return const SizedBox.shrink();
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -853,7 +940,9 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
-  Widget _buildDetailItem(IconData icon, String label, String value) {
+  Widget _buildDetailItem(IconData icon, String label, String? value) {
+    if (value == null || value.isEmpty) return const SizedBox.shrink();
+    
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -869,12 +958,15 @@ class _UserProfilePageState extends State<UserProfilePage>
               ),
             ),
           ),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+          Flexible(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+              textAlign: TextAlign.right,
             ),
           ),
         ],
@@ -905,7 +997,7 @@ class _UserProfilePageState extends State<UserProfilePage>
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: () => context.push('/chat/${widget.userName}'),
+                onTap: _startChat,
                 borderRadius: BorderRadius.circular(10),
                 child: Center(
                   child: Row(
@@ -918,7 +1010,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Chat with ${widget.userName}',
+                        'Chat',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -984,12 +1076,9 @@ class _UserProfilePageState extends State<UserProfilePage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // About Me
-          _buildInfoSection(
-            'About Me',
-            'I\'m a passionate individual looking for a meaningful connection. I enjoy traveling, reading, and spending time with loved ones.',
-          ),
-
-          const SizedBox(height: 20),
+          _buildInfoSection('About Me', _user['aboutMe']),
+          if (_user['aboutMe'] != null && _user['aboutMe'].toString().isNotEmpty)
+            const SizedBox(height: 20),
 
           // Personal Details
           Text(
@@ -1001,11 +1090,31 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ),
           const SizedBox(height: 10),
-          _buildDetailItem(Icons.height, 'Height', '5\'6"'),
-          _buildDetailItem(Icons.church, 'Religion', 'Christianity'),
-          _buildDetailItem(Icons.school, 'Education', 'Bachelor\'s Degree'),
-          _buildDetailItem(Icons.work, 'Work', 'Employed'),
-          _buildDetailItem(Icons.favorite, 'Status', 'Single'),
+          _buildDetailItem(Icons.height, 'Height', _user['height']),
+          _buildDetailItem(Icons.church, 'Religion', _user['religion']),
+          _buildDetailItem(Icons.school, 'Education', _user['education']),
+          _buildDetailItem(Icons.work, 'Work Status', _user['workStatus']),
+          _buildDetailItem(Icons.favorite, 'Relationship', _user['relationshipStatus']),
+          _buildDetailItem(Icons.language, 'Language', _user['language']),
+          _buildDetailItem(Icons.star, 'Zodiac Sign', _user['zodiacSign']),
+          _buildDetailItem(Icons.psychology, 'Personality', _user['personalityType']),
+
+          const SizedBox(height: 20),
+
+          // Physical Attributes
+          Text(
+            'Physical Attributes',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFFFF5722),
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildDetailItem(Icons.fitness_center, 'Body Type', _user['bodyType']),
+          _buildDetailItem(Icons.palette, 'Skin Color', _user['skinColor']),
+          _buildDetailItem(Icons.remove_red_eye, 'Eye Color', _user['eyeColor']),
+          _buildDetailItem(Icons.auto_awesome, 'Best Feature', _user['bestFeature']),
 
           const SizedBox(height: 20),
 
@@ -1019,8 +1128,8 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ),
           const SizedBox(height: 10),
-          _buildDetailItem(Icons.medical_services, 'Genotype', 'AA'),
-          _buildDetailItem(Icons.bloodtype, 'Blood Group', 'O+'),
+          _buildDetailItem(Icons.medical_services, 'Genotype', _user['genotype']),
+          _buildDetailItem(Icons.bloodtype, 'Blood Group', _user['bloodGroup']),
 
           const SizedBox(height: 20),
 
@@ -1034,10 +1143,10 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ),
           const SizedBox(height: 10),
-          _buildDetailItem(Icons.local_bar, 'Drinking', 'Socially'),
-          _buildDetailItem(Icons.smoking_rooms, 'Smoking', 'No'),
-          _buildDetailItem(Icons.child_care, 'Children', 'No'),
-          _buildDetailItem(Icons.psychology, 'Personality', 'Extrovert'),
+          _buildDetailItem(Icons.local_bar, 'Drinking', _user['drinkingStatus']),
+          _buildDetailItem(Icons.smoking_rooms, 'Smoking', _user['smokingStatus']),
+          _buildDetailItem(Icons.child_care, 'Has Children', _user['hasChildren']),
+          _buildDetailItem(Icons.home, 'Living Conditions', _user['livingConditions']),
 
           const SizedBox(height: 24),
 
@@ -1051,6 +1160,8 @@ class _UserProfilePageState extends State<UserProfilePage>
   }
 
   Widget _buildPreferredPartnerTab() {
+    // Note: This would need match preferences data from the user
+    // For now, showing a placeholder
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1074,7 +1185,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'These are ${widget.userName}\'s partner preferences',
+                    'Partner preferences for ${_user['firstName']}',
                     style: GoogleFonts.poppins(
                       fontSize: 13,
                       color: Colors.white.withOpacity(0.9),
@@ -1086,57 +1197,15 @@ class _UserProfilePageState extends State<UserProfilePage>
           ),
           const SizedBox(height: 20),
 
-          // Basic Preferences
-          Text(
-            'Basic Preferences',
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFFFF5722),
+          Center(
+            child: Text(
+              'Partner preferences not available',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.6),
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          _buildDetailItem(Icons.calendar_today, 'Age Range', '25-32'),
-          _buildDetailItem(Icons.location_on, 'Location', 'Lagos, Abuja'),
-          _buildDetailItem(Icons.school, 'Education', 'Bachelor\'s or higher'),
-          _buildDetailItem(Icons.work, 'Work', 'Employed'),
-          _buildDetailItem(Icons.favorite, 'Status', 'Single'),
-
-          const SizedBox(height: 16),
-
-          // Physical Preferences
-          Text(
-            'Physical Preferences',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFFFF5722),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildDetailItem(Icons.height, 'Height', '5\'8" - 6\'2"'),
-          _buildDetailItem(
-            Icons.fitness_center,
-            'Body Type',
-            'Athletic or Average',
-          ),
-
-          const SizedBox(height: 16),
-
-          // Lifestyle Preferences
-          Text(
-            'Lifestyle Preferences',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFFFF5722),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildDetailItem(Icons.child_care, 'Children', 'No'),
-          _buildDetailItem(Icons.smoking_rooms, 'Smoking', 'No'),
-          _buildDetailItem(Icons.local_bar, 'Drinking', 'Socially or No'),
-          _buildDetailItem(Icons.church, 'Religion', 'Christianity'),
 
           const SizedBox(height: 24),
 

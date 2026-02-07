@@ -1078,7 +1078,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           onTap: () {
                             context.pop();
                             // Navigate to full profile
-                            // context.push('/user-profile', extra: user);
+                            context.push('/user-profile', extra: user);
                           },
                           child: Container(
                             width: double.infinity,

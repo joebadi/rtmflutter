@@ -137,10 +137,27 @@ final _router = GoRouter(
       },
     ),
     GoRoute(
-      path: '/user/:userName',
+      path: '/user-profile',
       builder: (context, state) {
-        final userName = state.pathParameters['userName'] ?? 'User';
-        return UserProfilePage(userName: userName);
+        final userData = state.extra as Map<String, dynamic>?;
+        if (userData == null) {
+          // Fallback if no data provided
+          return Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('No user data provided'),
+                  ElevatedButton(
+                    onPressed: () => context.go('/home'),
+                    child: const Text('Go Back'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return UserProfilePage(userData: userData);
       },
     ),
 
