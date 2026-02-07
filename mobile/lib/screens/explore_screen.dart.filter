@@ -1,0 +1,451 @@
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.9,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(32),
+                topRight: Radius.circular(32),
+              ),
+            ),
+            child: Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Filter Users',
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setModalState(() {
+                            _ageRange = const RangeValues(18, 100);
+                            _distance = 50;
+                            _genderFilter = null;
+                            _heightRange = const RangeValues(140, 220);
+                            _bodyTypeFilter = null;
+                            _religionFilter = null;
+                            _smokingFilter = null;
+                            _drinkingFilter = null;
+                            _educationFilter = null;
+                            _hasChildrenFilter = null;
+                            _relationshipStatusFilter = null;
+                            _showOnlyVerified = false;
+                            _showOnlyPremium = false;
+                            _showOnlyOnline = false;
+                          });
+                        },
+                        child: Text(
+                          'Clear All',
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFFFF5722),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Scrollable Filters
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    children: [
+                      // Age Range
+                      _buildFilterSection(
+                        'Age Range',
+                        Column(
+                          children: [
+                            RangeSlider(
+                              values: _ageRange,
+                              min: 18,
+                              max: 100,
+                              divisions: 82,
+                              activeColor: const Color(0xFFFF5722),
+                              labels: RangeLabels(
+                                _ageRange.start.round().toString(),
+                                _ageRange.end.round().toString(),
+                              ),
+                              onChanged: (values) {
+                                setModalState(() => _ageRange = values);
+                              },
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('${_ageRange.start.round()} years',
+                                    style: GoogleFonts.poppins(fontSize: 13)),
+                                Text('${_ageRange.end.round()} years',
+                                    style: GoogleFonts.poppins(fontSize: 13)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Distance
+                      _buildFilterSection(
+                        'Distance',
+                        Column(
+                          children: [
+                            Slider(
+                              value: _distance,
+                              min: 1,
+                              max: 500,
+                              divisions: 499,
+                              activeColor: const Color(0xFFFF5722),
+                              label: '${_distance.round()} km',
+                              onChanged: (value) {
+                                setModalState(() => _distance = value);
+                              },
+                            ),
+                            Text('${_distance.round()} km away',
+                                style: GoogleFonts.poppins(fontSize: 13)),
+                          ],
+                        ),
+                      ),
+
+                      // Gender
+                      _buildFilterSection(
+                        'Gender',
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            _buildChip('Male', _genderFilter == 'MALE', () {
+                              setModalState(() => _genderFilter =
+                                  _genderFilter == 'MALE' ? null : 'MALE');
+                            }),
+                            _buildChip('Female', _genderFilter == 'FEMALE', () {
+                              setModalState(() => _genderFilter =
+                                  _genderFilter == 'FEMALE' ? null : 'FEMALE');
+                            }),
+                          ],
+                        ),
+                      ),
+
+                      // Height Range
+                      _buildFilterSection(
+                        'Height Range (cm)',
+                        Column(
+                          children: [
+                            RangeSlider(
+                              values: _heightRange,
+                              min: 140,
+                              max: 220,
+                              divisions: 80,
+                              activeColor: const Color(0xFFFF5722),
+                              labels: RangeLabels(
+                                _heightRange.start.round().toString(),
+                                _heightRange.end.round().toString(),
+                              ),
+                              onChanged: (values) {
+                                setModalState(() => _heightRange = values);
+                              },
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('${_heightRange.start.round()} cm',
+                                    style: GoogleFonts.poppins(fontSize: 13)),
+                                Text('${_heightRange.end.round()} cm',
+                                    style: GoogleFonts.poppins(fontSize: 13)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Body Type
+                      _buildFilterSection(
+                        'Body Type',
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildChip('Slim', _bodyTypeFilter == 'Slim', () {
+                              setModalState(() => _bodyTypeFilter =
+                                  _bodyTypeFilter == 'Slim' ? null : 'Slim');
+                            }),
+                            _buildChip('Athletic', _bodyTypeFilter == 'Athletic',
+                                () {
+                              setModalState(() => _bodyTypeFilter =
+                                  _bodyTypeFilter == 'Athletic'
+                                      ? null
+                                      : 'Athletic');
+                            }),
+                            _buildChip('Average', _bodyTypeFilter == 'Average',
+                                () {
+                              setModalState(() => _bodyTypeFilter =
+                                  _bodyTypeFilter == 'Average'
+                                      ? null
+                                      : 'Average');
+                            }),
+                            _buildChip('Curvy', _bodyTypeFilter == 'Curvy', () {
+                              setModalState(() => _bodyTypeFilter =
+                                  _bodyTypeFilter == 'Curvy' ? null : 'Curvy');
+                            }),
+                          ],
+                        ),
+                      ),
+
+                      // Religion
+                      _buildFilterSection(
+                        'Religion',
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildChip(
+                                'Christianity', _religionFilter == 'Christianity',
+                                () {
+                              setModalState(() => _religionFilter =
+                                  _religionFilter == 'Christianity'
+                                      ? null
+                                      : 'Christianity');
+                            }),
+                            _buildChip('Islam', _religionFilter == 'Islam', () {
+                              setModalState(() => _religionFilter =
+                                  _religionFilter == 'Islam' ? null : 'Islam');
+                            }),
+                            _buildChip('Hindu', _religionFilter == 'Hindu', () {
+                              setModalState(() => _religionFilter =
+                                  _religionFilter == 'Hindu' ? null : 'Hindu');
+                            }),
+                            _buildChip('Other', _religionFilter == 'Other', () {
+                              setModalState(() => _religionFilter =
+                                  _religionFilter == 'Other' ? null : 'Other');
+                            }),
+                          ],
+                        ),
+                      ),
+
+                      // Smoking
+                      _buildFilterSection(
+                        'Smoking',
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            _buildChip('Yes', _smokingFilter == 'Yes', () {
+                              setModalState(() => _smokingFilter =
+                                  _smokingFilter == 'Yes' ? null : 'Yes');
+                            }),
+                            _buildChip('No', _smokingFilter == 'No', () {
+                              setModalState(() => _smokingFilter =
+                                  _smokingFilter == 'No' ? null : 'No');
+                            }),
+                            _buildChip(
+                                'Occasionally', _smokingFilter == 'Occasionally',
+                                () {
+                              setModalState(() => _smokingFilter =
+                                  _smokingFilter == 'Occasionally'
+                                      ? null
+                                      : 'Occasionally');
+                            }),
+                          ],
+                        ),
+                      ),
+
+                      // Drinking
+                      _buildFilterSection(
+                        'Drinking',
+                        Wrap(
+                          spacing: 8,
+                          children: [
+                            _buildChip('Yes', _drinkingFilter == 'Yes', () {
+                              setModalState(() => _drinkingFilter =
+                                  _drinkingFilter == 'Yes' ? null : 'Yes');
+                            }),
+                            _buildChip('No', _drinkingFilter == 'No', () {
+                              setModalState(() => _drinkingFilter =
+                                  _drinkingFilter == 'No' ? null : 'No');
+                            }),
+                            _buildChip('Socially', _drinkingFilter == 'Socially',
+                                () {
+                              setModalState(() => _drinkingFilter =
+                                  _drinkingFilter == 'Socially'
+                                      ? null
+                                      : 'Socially');
+                            }),
+                          ],
+                        ),
+                      ),
+
+                      // Toggles Section
+                      _buildFilterSection(
+                        'Show Only',
+                        Column(
+                          children: [
+                            _buildToggle('Verified Users', _showOnlyVerified,
+                                (value) {
+                              setModalState(() => _showOnlyVerified = value);
+                            }),
+                            _buildToggle('Premium Users', _showOnlyPremium,
+                                (value) {
+                              setModalState(() => _showOnlyPremium = value);
+                            }),
+                            _buildToggle('Online Users', _showOnlyOnline,
+                                (value) {
+                              setModalState(() => _showOnlyOnline = value);
+                            }),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 100),
+                    ],
+                  ),
+                ),
+
+                // Apply Button
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        // Apply filters to state
+                      });
+                      Navigator.pop(context);
+                      _fetchNearbyUsers();
+                      _fetchSuggestions();
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF5722).withOpacity(0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'Apply Filters',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFilterSection(String title, Widget content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 12),
+        content,
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildChip(String label, bool isSelected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                )
+              : null,
+          color: isSelected ? null : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : Colors.grey[300]!,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: isSelected ? Colors.white : Colors.black87,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggle(String label, bool value, Function(bool) onChanged) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              color: Colors.black87,
+            ),
+          ),
+          Switch(
+            value: value,
+            activeColor: const Color(0xFFFF5722),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
