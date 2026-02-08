@@ -1318,8 +1318,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   // --- CARDS VIEW ---
   Widget _buildCardSwipeView() {
-    if (_suggestions.isEmpty) {
-       return _buildEmptyState('No active matches nearby.', Icons.explore_off);
+    // Fallback to nearby users if suggestions are empty
+    final users = _suggestions.isNotEmpty ? _suggestions : _nearbyUsers;
+
+    if (users.isEmpty) {
+       return _buildEmptyState('No active people nearby.', Icons.explore_off);
     }
 
     return Column(
@@ -1327,12 +1330,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         Expanded(
           child: CardSwiper(
             controller: swipeController,
-            cardsCount: _suggestions.length,
+            cardsCount: users.length,
             numberOfCardsDisplayed: 3,
             backCardOffset: const Offset(0, 40),
             padding: const EdgeInsets.all(16),
             cardBuilder: (context, index, horizontalOffset, verticalOffset) {
-              final user = _suggestions[index];
+              final user = users[index];
               return _buildSwipeCard(user);
             },
           ),
@@ -1371,12 +1374,15 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     final location = city.isNotEmpty ? (state.isNotEmpty ? '$city, $state' : city) : 'Nearby';
     
     // Get primary photo or first photo
-    final photoUrl = photos.isNotEmpty
+    String photoUrl = photos.isNotEmpty
         ? (photos.firstWhere(
             (p) => p['isPrimary'] == true,
             orElse: () => photos.first,
           )['url'] ?? '')
         : '';
+    
+    // Ensure full URL
+    photoUrl = _getFullPhotoUrl(photoUrl);
     
     final distance = user['distance']?.toString() ?? '0';
     final isOnline = userObj['isOnline'] ?? false;
@@ -1699,12 +1705,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         : profile['age']?.toString() ?? '??';
     
     // Get primary photo or first photo
-    final photoUrl = photos.isNotEmpty
+    String photoUrl = photos.isNotEmpty
         ? (photos.firstWhere(
             (p) => p['isPrimary'] == true,
             orElse: () => photos.first,
           )['url'] ?? '')
         : '';
+
+    photoUrl = _getFullPhotoUrl(photoUrl);
     
     final distance = user['distance']?.toString() ?? '0';
     final isOnline = userObj['isOnline'] ?? false;

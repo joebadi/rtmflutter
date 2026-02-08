@@ -359,39 +359,47 @@ class _ChatScreenState extends State<ChatScreen> {
                         ],
                       ),
                       child: SafeArea(
-                        child: Row(
-                          children: [
-                            // Text Input - PREMIUM GRADIENT DESIGN
-                            Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Colors.white,
-                                      const Color(0xFFFF5722).withOpacity(0.02),
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(30),
-                                  border: Border.all(
-                                    color: const Color(0xFFFF5722).withOpacity(0.6),
-                                    width: 2.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFFFF5722).withOpacity(0.2),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 3),
-                                      spreadRadius: 1,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(35),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 20,
+                                offset: const Offset(0, 5),
+                              ),
+                              BoxShadow(
+                                color: const Color(0xFFFF5722).withOpacity(0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, -2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              // Attachment Button
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    // Handle attachments (future feature)
+                                  },
+                                  borderRadius: BorderRadius.circular(50),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Icon(
+                                      Icons.add_circle_outline_rounded,
+                                      color: const Color(0xFFFF5722).withOpacity(0.8),
+                                      size: 26,
                                     ),
-                                    BoxShadow(
-                                      color: Colors.white.withOpacity(0.8),
-                                      blurRadius: 8,
-                                      offset: const Offset(-2, -2),
-                                    ),
-                                  ],
+                                  ),
                                 ),
+                              ),
+
+                              // Text Input
+                              Expanded(
                                 child: TextField(
                                   controller: _messageController,
                                   style: GoogleFonts.poppins(
@@ -401,75 +409,81 @@ class _ChatScreenState extends State<ChatScreen> {
                                     letterSpacing: 0.2,
                                   ),
                                   decoration: InputDecoration(
-                                    hintText: 'Type your message...',
+                                    hintText: 'Type a message...',
                                     hintStyle: GoogleFonts.poppins(
-                                      color: Colors.grey[500],
+                                      color: Colors.grey[400],
                                       fontSize: 15,
                                       fontWeight: FontWeight.w400,
-                                      letterSpacing: 0.2,
-                                    ),
-                                    prefixIcon: Icon(
-                                      Icons.chat_bubble_outline,
-                                      color: const Color(0xFFFF5722).withOpacity(0.5),
-                                      size: 20,
                                     ),
                                     border: InputBorder.none,
                                     contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 16,
+                                      horizontal: 8,
+                                      vertical: 12,
                                     ),
+                                    isDense: true,
                                   ),
                                   maxLines: null,
                                   textCapitalization: TextCapitalization.sentences,
                                   onSubmitted: (_) => _sendMessage(),
                                 ),
                               ),
-                            ),
 
-                            const SizedBox(width: 12),
-
-                            // Send Button - Enhanced Design
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                gradient: _isSending
-                                    ? null
-                                    : const LinearGradient(
-                                        colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
+                              // Send Button
+                              Container(
+                                margin: const EdgeInsets.all(4),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: _isSending ? null : _sendMessage,
+                                    borderRadius: BorderRadius.circular(50),
+                                    child: Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        gradient: _isSending
+                                            ? null
+                                            : const LinearGradient(
+                                                colors: [
+                                                  Color(0xFFFF5722),
+                                                  Color(0xFFFF8A65)
+                                                ],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                              ),
+                                        color: _isSending ? Colors.grey[200] : null,
+                                        shape: BoxShape.circle,
+                                        boxShadow: _isSending
+                                            ? null
+                                            : [
+                                                BoxShadow(
+                                                  color: const Color(0xFFFF5722).withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ],
                                       ),
-                                color: _isSending ? Colors.grey[300] : null,
-                                shape: BoxShape.circle,
-                                boxShadow: _isSending
-                                    ? null
-                                    : [
-                                        BoxShadow(
-                                          color: const Color(0xFFFF5722).withOpacity(0.4),
-                                          blurRadius: 12,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
-                              ),
-                              child: _isSending
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(14),
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2.5,
-                                      ),
-                                    )
-                                  : IconButton(
-                                      icon: const Icon(
-                                        Icons.send_rounded,
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                      onPressed: _sendMessage,
+                                      child: _isSending
+                                          ? const Padding(
+                                              padding: EdgeInsets.all(12),
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.grey,
+                                              ),
+                                            )
+                                          : Transform.translate(
+                                              offset: const Offset(1, 0),
+                                              child: const Icon(
+                                                Icons.send_rounded,
+                                                color: Colors.white,
+                                                size: 20,
+                                              ),
+                                            ),
                                     ),
-                            ),
-                          ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
