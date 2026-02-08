@@ -68,6 +68,8 @@ class MessageService {
       final token = await _storage.read(key: 'access_token');
       _dio.options.headers['Authorization'] = 'Bearer $token';
 
+      debugPrint('[MessageService] Sending message to $receiverId');
+
       final response = await _dio.post(
         '/messages/send',
         data: {
@@ -76,19 +78,46 @@ class MessageService {
         },
       );
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      debugPrint('[MessageService] Response status: ${response.statusCode}');
+      debugPrint('[MessageService] Response data: ${response.data}');
+
+      // Accept both 200 and 201 status codes
+      if ((response.statusCode == 200 || response.statusCode == 201) && 
+          response.data['success'] == true) {
         return response.data['data']['message'];
       } else {
         throw Exception(response.data['message'] ?? 'Failed to send message');
       }
     } catch (e) {
-      if (e is DioException && e.response?.statusCode == 401) {
-        await _storage.delete(key: 'access_token');
-        await _storage.delete(key: 'refresh_token');
-        throw Exception('UNAUTHORIZED');
+      debugPrint('[MessageService] Error: $e');
+      
+      if (e is DioException) {
+        // Handle 401 Unauthorized
+        if (e.response?.statusCode == 401) {
+          await _storage.delete(key: 'access_token');
+          await _storage.delete(key: 'refresh_token');
+          throw Exception('UNAUTHORIZED');
+        }
+        
+        // Extract error message from response
+        if (e.response?.data != null) {
+          final errorData = e.response!.data;
+          if (errorData is Map && errorData['message'] != null) {
+            final errorMessage = errorData['message'].toString();
+            
+            // Check for match requirement error
+            if (errorMessage.contains('need to match') || 
+                errorMessage.contains('match with this user')) {
+              throw Exception('MATCH_REQUIRED');
+            }
+            
+            // Throw the actual backend error message
+            throw Exception(errorMessage);
+          }
+        }
       }
       
-      // Parse match requirement error
+      // Parse match requirement error from string
       final errorMessage = e.toString();
       if (errorMessage.contains('need to match') || errorMessage.contains('match with this user')) {
         throw Exception('MATCH_REQUIRED');
