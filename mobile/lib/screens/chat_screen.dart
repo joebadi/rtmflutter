@@ -43,8 +43,12 @@ class _ChatScreenState extends State<ChatScreen> {
       _error = null;
     });
 
+    debugPrint('[ChatScreen] Loading messages for conversation: ${widget.conversationId}');
+
     try {
       final messages = await _messageService.getMessages(widget.conversationId);
+      debugPrint('[ChatScreen] Loaded ${messages.length} messages');
+      
       setState(() {
         _messages = messages.reversed.toList(); // Reverse to show oldest first
         _isLoading = false;
@@ -60,6 +64,8 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       });
     } catch (e) {
+      debugPrint('[ChatScreen] Error loading messages: $e');
+      
       // If conversation doesn't exist yet (404), just show empty messages
       // This happens when starting a new chat with someone
       if (e.toString().contains('404') || e.toString().contains('not found')) {
@@ -95,28 +101,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
     setState(() => _isSending = true);
 
+    debugPrint('[ChatScreen] Sending message to ${widget.receiverId}');
+
     try {
       final message = await _messageService.sendMessage(
         receiverId: widget.receiverId,
         content: content,
       );
 
-      setState(() {
-        _messages.add(message);
-        _isSending = false;
-      });
+      debugPrint('[ChatScreen] Message sent successfully');
 
-      // Scroll to bottom
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
+      // Reload messages from server to get the actual conversation
+      await _loadMessages();
+
+      setState(() => _isSending = false);
     } catch (e) {
+      debugPrint('[ChatScreen] Error sending message: $e');
       setState(() => _isSending = false);
       
       // Handle match required error
