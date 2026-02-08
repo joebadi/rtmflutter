@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import '../services/like_service.dart';
+import '../config/api_config.dart';
 
 class LikesScreen extends StatefulWidget {
   const LikesScreen({super.key});
@@ -12,91 +14,144 @@ class LikesScreen extends StatefulWidget {
 class _LikesScreenState extends State<LikesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final LikeService _likeService = LikeService();
 
-  // Sample data
-  final List<Map<String, dynamic>> _receivedLikes = [
-    {
-      'name': 'Emma Wilson',
-      'age': 28,
-      'location': 'Lagos',
-      'imageUrl': 'https://i.pravatar.cc/300?img=1',
-      'compatibility': 92,
-      'isNew': true,
-    },
-    {
-      'name': 'Sophia Chen',
-      'age': 26,
-      'location': 'Abuja',
-      'imageUrl': 'https://i.pravatar.cc/300?img=5',
-      'compatibility': 88,
-      'isNew': true,
-    },
-    {
-      'name': 'Olivia Brown',
-      'age': 29,
-      'location': 'Port Harcourt',
-      'imageUrl': 'https://i.pravatar.cc/300?img=9',
-      'compatibility': 85,
-      'isNew': false,
-    },
-    {
-      'name': 'Ava Martinez',
-      'age': 27,
-      'location': 'Ibadan',
-      'imageUrl': 'https://i.pravatar.cc/300?img=16',
-      'compatibility': 90,
-      'isNew': false,
-    },
-  ];
+  // Real data from API
+  List<dynamic> _receivedLikes = [];
+  List<dynamic> _sentLikes = [];
+  List<dynamic> _matches = [];
+  
+  bool _isLoadingReceived = true;
+  bool _isLoadingSent = true;
+  bool _isLoadingMatches = true;
 
-  final List<Map<String, dynamic>> _sentLikes = [
-    {
-      'name': 'Isabella Davis',
-      'age': 25,
-      'location': 'Lagos',
-      'imageUrl': 'https://i.pravatar.cc/300?img=10',
-      'status': 'Pending',
-    },
-    {
-      'name': 'Mia Johnson',
-      'age': 30,
-      'location': 'Abuja',
-      'imageUrl': 'https://i.pravatar.cc/300?img=20',
-      'status': 'Seen',
-    },
-  ];
-
-  final List<Map<String, dynamic>> _matches = [
-    {
-      'name': 'Charlotte',
-      'age': 27,
-      'location': 'Lagos',
-      'imageUrl': 'https://i.pravatar.cc/300?img=1',
-      'matchDate': '2 days ago',
-      'isOnline': true,
-    },
-    {
-      'name': 'Amelia',
-      'age': 26,
-      'location': 'Abuja',
-      'imageUrl': 'https://i.pravatar.cc/300?img=5',
-      'matchDate': '5 days ago',
-      'isOnline': false,
-    },
-    {
-      'name': 'Harper',
-      'age': 28,
-      'location': 'Port Harcourt',
-      'imageUrl': 'https://i.pravatar.cc/300?img=9',
-      'matchDate': '1 week ago',
-      'isOnline': true,
-    },
-  ];
+  // Helper function to convert relative URLs to full URLs
+  String _getFullPhotoUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    if (url.startsWith('http')) return url;
+    return '${ApiConfig.socketUrl}$url';
+  }
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadAllData();
+  }
+
+  Future<void> _loadAllData() async {
+    await Future.wait([
+      _loadReceivedLikes(),
+      _loadSentLikes(),
+      _loadMatches(),
+    ]);
+  }
+
+  Future<void> _loadReceivedLikes() async {
+    try {
+      setState(() => _isLoadingReceived = true);
+      final likes = await _likeService.getReceivedLikes();
+      if (mounted) {
+        setState(() {
+          _receivedLikes = likes;
+          _isLoadingReceived = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[LikesScreen] Error loading received likes: $e');
+      if (mounted) {
+        setState(() => _isLoadingReceived = false);
+      }
+    }
+  }
+
+  Future<void> _loadSentLikes() async {
+    try {
+      setState(() => _isLoadingSent = true);
+      final likes = await _likeService.getSentLikes();
+      if (mounted) {
+        setState(() {
+          _sentLikes = likes;
+          _isLoadingSent = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[LikesScreen] Error loading sent likes: $e');
+      if (mounted) {
+        setState(() => _isLoadingSent = false);
+      }
+    }
+  }
+
+  Future<void> _loadMatches() async {
+    try {
+      setState(() => _isLoadingMatches = true);
+      final matches = await _likeService.getMutualLikes();
+      if (mounted) {
+        setState(() {
+          _matches = matches;
+          _isLoadingMatches = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[LikesScreen] Error loading matches: $e');
+      if (mounted) {
+        setState(() => _isLoadingMatches = false);
+      }
+    }
+  }
+
+  Future<void> _handleLikeBack(String userId) async {
+    try {
+      await _likeService.sendLike(userId);
+      // Reload data to reflect changes
+      await _loadAllData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Liked back! 💕'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[LikesScreen] Error liking back: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to send like'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleUnlike(String userId) async {
+    try {
+      await _likeService.unlikeUser(userId);
+      // Reload data to reflect changes
+      await _loadAllData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unliked'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[LikesScreen] Error unliking: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to unlike'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -216,6 +271,12 @@ class _LikesScreenState extends State<LikesScreen>
   }
 
   Widget _buildReceivedLikesGrid() {
+    if (_isLoadingReceived) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+      );
+    }
+
     if (_receivedLikes.isEmpty) {
       return _buildEmptyState(
         icon: Icons.favorite_border,
@@ -241,6 +302,12 @@ class _LikesScreenState extends State<LikesScreen>
   }
 
   Widget _buildSentLikesGrid() {
+    if (_isLoadingSent) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+      );
+    }
+
     if (_sentLikes.isEmpty) {
       return _buildEmptyState(
         icon: Icons.send,
@@ -266,6 +333,12 @@ class _LikesScreenState extends State<LikesScreen>
   }
 
   Widget _buildMatchesGrid() {
+    if (_isLoadingMatches) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+      );
+    }
+
     if (_matches.isEmpty) {
       return _buildEmptyState(
         icon: Icons.favorite,
