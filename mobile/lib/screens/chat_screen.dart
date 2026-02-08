@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../services/message_service.dart';
+import '../config/api_config.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;
@@ -31,6 +32,13 @@ class _ChatScreenState extends State<ChatScreen> {
   List<dynamic> _messages = [];
   String? _error;
 
+  // Helper function to convert relative URLs to full URLs
+  String _getFullPhotoUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    if (url.startsWith('http')) return url;
+    return '${ApiConfig.socketUrl}$url';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -59,8 +67,13 @@ class _ChatScreenState extends State<ChatScreen> {
         _isLoading = false;
       });
 
-      // Mark conversation as read
-      await _messageService.markConversationAsRead(widget.conversationId);
+      // Mark conversation as read (only if conversation exists)
+      try {
+        await _messageService.markConversationAsRead(widget.conversationId);
+      } catch (e) {
+        // Ignore 404 errors for new conversations that don't exist yet
+        debugPrint('[ChatScreen] Could not mark as read (conversation may not exist yet): $e');
+      }
 
       // Scroll to bottom
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -221,7 +234,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: ClipOval(
                     child: widget.receiverPhoto != null && widget.receiverPhoto!.isNotEmpty
                         ? Image.network(
-                            widget.receiverPhoto!,
+                            _getFullPhotoUrl(widget.receiverPhoto),
                             fit: BoxFit.cover,
                             loadingBuilder: (context, child, loadingProgress) {
                               if (loadingProgress == null) return child;
@@ -241,7 +254,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             },
                             errorBuilder: (context, error, stackTrace) {
                               debugPrint('[ChatScreen] Header avatar error: $error');
-                              debugPrint('[ChatScreen] Photo URL: ${widget.receiverPhoto}');
+                              debugPrint('[ChatScreen] Photo URL: ${_getFullPhotoUrl(widget.receiverPhoto)}');
                               return Container(
                                 color: Colors.grey[300],
                                 child: const Icon(Icons.person, size: 20, color: Colors.grey),
@@ -348,21 +361,34 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: SafeArea(
                         child: Row(
                           children: [
-                            // Text Input - Enhanced Design with BETTER VISIBILITY
+                            // Text Input - PREMIUM GRADIENT DESIGN
                             Expanded(
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(28),
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.white,
+                                      const Color(0xFFFF5722).withOpacity(0.02),
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(30),
                                   border: Border.all(
-                                    color: const Color(0xFFFF5722).withOpacity(0.5), // Darker border
-                                    width: 2, // Thicker border
+                                    color: const Color(0xFFFF5722).withOpacity(0.6),
+                                    width: 2.5,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFFFF5722).withOpacity(0.15),
+                                      color: const Color(0xFFFF5722).withOpacity(0.2),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 3),
+                                      spreadRadius: 1,
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.white.withOpacity(0.8),
                                       blurRadius: 8,
-                                      offset: const Offset(0, 2),
+                                      offset: const Offset(-2, -2),
                                     ),
                                   ],
                                 ),
@@ -371,19 +397,26 @@ class _ChatScreenState extends State<ChatScreen> {
                                   style: GoogleFonts.poppins(
                                     fontSize: 15,
                                     color: Colors.black87,
-                                    fontWeight: FontWeight.w500, // Bolder text
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: 0.2,
                                   ),
                                   decoration: InputDecoration(
-                                    hintText: 'Type a message...',
+                                    hintText: 'Type your message...',
                                     hintStyle: GoogleFonts.poppins(
-                                      color: Colors.grey[600], // Darker hint text
+                                      color: Colors.grey[500],
                                       fontSize: 15,
                                       fontWeight: FontWeight.w400,
+                                      letterSpacing: 0.2,
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.chat_bubble_outline,
+                                      color: const Color(0xFFFF5722).withOpacity(0.5),
+                                      size: 20,
                                     ),
                                     border: InputBorder.none,
                                     contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 20,
-                                      vertical: 14,
+                                      vertical: 16,
                                     ),
                                   ),
                                   maxLines: null,
@@ -518,7 +551,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: ClipOval(
                 child: widget.receiverPhoto != null && widget.receiverPhoto!.isNotEmpty
                     ? Image.network(
-                        widget.receiverPhoto!,
+                        _getFullPhotoUrl(widget.receiverPhoto),
                         fit: BoxFit.cover,
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;
@@ -638,7 +671,7 @@ class _ChatScreenState extends State<ChatScreen> {
               child: ClipOval(
                 child: senderPhoto != null && senderPhoto.isNotEmpty
                     ? Image.network(
-                        senderPhoto,
+                        _getFullPhotoUrl(senderPhoto),
                         fit: BoxFit.cover,
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;

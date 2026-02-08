@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../services/message_service.dart';
+import '../config/api_config.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -17,6 +18,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
   bool _isLoading = true;
   List<dynamic> _conversations = [];
   String? _error;
+
+  // Helper function to convert relative URLs to full URLs
+  String _getFullPhotoUrl(String? url) {
+    if (url == null || url.isEmpty) return '';
+    if (url.startsWith('http')) return url;
+    return '${ApiConfig.socketUrl}$url';
+  }
 
   @override
   void initState() {
@@ -296,18 +304,32 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   child: ClipOval(
                     child: photoUrl != null
                         ? Image.network(
-                            photoUrl,
+                            _getFullPhotoUrl(photoUrl),
                             fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: Colors.grey[200],
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFFFF5722),
+                                  ),
+                                ),
+                              );
+                            },
                             errorBuilder: (context, error, stackTrace) {
+                              debugPrint('[MessagesScreen] Avatar error: $error');
+                              debugPrint('[MessagesScreen] Photo URL: ${_getFullPhotoUrl(photoUrl)}');
                               return Container(
                                 color: Colors.grey[300],
-                                child: const Icon(Icons.person, size: 28),
+                                child: const Icon(Icons.person, size: 28, color: Colors.grey),
                               );
                             },
                           )
                         : Container(
                             color: Colors.grey[300],
-                            child: const Icon(Icons.person, size: 28),
+                            child: const Icon(Icons.person, size: 28, color: Colors.grey),
                           ),
                   ),
                 ),
