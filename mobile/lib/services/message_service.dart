@@ -154,9 +154,17 @@ class MessageService {
       final token = await _storage.read(key: 'access_token');
       _dio.options.headers['Authorization'] = 'Bearer $token';
 
-      await _dio.patch('/messages/conversation/$conversationId/read');
+      await _dio.post(
+        '/messages/mark-read',
+        data: {'conversationId': conversationId},
+      );
     } catch (e) {
       debugPrint('Error marking conversation as read: $e');
+      // If error is 404 (conversation not found), ignore it as it might be a new conversation
+      if (e is DioException && e.response?.statusCode != 404) {
+        // Rethrow other errors for debugging
+        rethrow;
+      }
     }
   }
 

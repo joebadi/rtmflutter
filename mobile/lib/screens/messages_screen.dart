@@ -33,10 +33,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _loadConversations() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    // Only show loading spinner if we don't have data yet
+    if (_conversations.isEmpty) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    } else {
+      // For silent refresh, just clear error
+      setState(() {
+        _error = null;
+      });
+    }
 
     try {
       final conversations = await _messageService.getConversations();
@@ -45,10 +53,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      debugPrint('[MessagesScreen] Error loading conversations: $e');
+      if (_conversations.isEmpty) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      } else {
+        // If we have data, just stop loading and keep the old data
+        // Maybe show a snackbar in a real app, but for now just log it
+        setState(() {
+          _isLoading = false;
+        });
+      }
+
 
       if (mounted && e.toString().contains('UNAUTHORIZED')) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -258,9 +276,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         // Navigate to chat screen
-        context.push(
+        // Navigate to chat screen and wait for result
+        await context.push(
           '/chat/${conversation['id']}',
           extra: {
             'conversationId': conversation['id'],
@@ -269,6 +288,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
             'receiverPhoto': photoUrl,
           },
         );
+        // Refresh conversations when returning from chat
+        if (mounted) {
+          _loadConversations();
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
