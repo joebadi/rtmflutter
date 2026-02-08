@@ -34,6 +34,11 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint('[ChatScreen] Initialized with:');
+    debugPrint('[ChatScreen] - conversationId: ${widget.conversationId}');
+    debugPrint('[ChatScreen] - receiverId: ${widget.receiverId}');
+    debugPrint('[ChatScreen] - receiverName: ${widget.receiverName}');
+    debugPrint('[ChatScreen] - receiverPhoto: ${widget.receiverPhoto}');
     _loadMessages();
   }
 
@@ -214,20 +219,38 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                   child: ClipOval(
-                    child: widget.receiverPhoto != null
+                    child: widget.receiverPhoto != null && widget.receiverPhoto!.isNotEmpty
                         ? Image.network(
                             widget.receiverPhoto!,
                             fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: Colors.grey[200],
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                    strokeWidth: 2,
+                                    color: const Color(0xFFFF5722),
+                                  ),
+                                ),
+                              );
+                            },
                             errorBuilder: (context, error, stackTrace) {
+                              debugPrint('[ChatScreen] Header avatar error: $error');
+                              debugPrint('[ChatScreen] Photo URL: ${widget.receiverPhoto}');
                               return Container(
                                 color: Colors.grey[300],
-                                child: const Icon(Icons.person, size: 20),
+                                child: const Icon(Icons.person, size: 20, color: Colors.grey),
                               );
                             },
                           )
                         : Container(
                             color: Colors.grey[300],
-                            child: const Icon(Icons.person, size: 20),
+                            child: const Icon(Icons.person, size: 20, color: Colors.grey),
                           ),
                   ),
                 ),
@@ -325,19 +348,19 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: SafeArea(
                         child: Row(
                           children: [
-                            // Text Input - Enhanced Design
+                            // Text Input - Enhanced Design with BETTER VISIBILITY
                             Expanded(
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(28),
                                   border: Border.all(
-                                    color: const Color(0xFFFF5722).withOpacity(0.3),
-                                    width: 1.5,
+                                    color: const Color(0xFFFF5722).withOpacity(0.5), // Darker border
+                                    width: 2, // Thicker border
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFFFF5722).withOpacity(0.1),
+                                      color: const Color(0xFFFF5722).withOpacity(0.15),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
@@ -348,12 +371,12 @@ class _ChatScreenState extends State<ChatScreen> {
                                   style: GoogleFonts.poppins(
                                     fontSize: 15,
                                     color: Colors.black87,
-                                    fontWeight: FontWeight.w400,
+                                    fontWeight: FontWeight.w500, // Bolder text
                                   ),
                                   decoration: InputDecoration(
                                     hintText: 'Type a message...',
                                     hintStyle: GoogleFonts.poppins(
-                                      color: Colors.grey[400],
+                                      color: Colors.grey[600], // Darker hint text
                                       fontSize: 15,
                                       fontWeight: FontWeight.w400,
                                     ),
@@ -493,11 +516,28 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
               child: ClipOval(
-                child: widget.receiverPhoto != null
+                child: widget.receiverPhoto != null && widget.receiverPhoto!.isNotEmpty
                     ? Image.network(
                         widget.receiverPhoto!,
                         fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFFFF5722),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                         errorBuilder: (context, error, stackTrace) {
+                          debugPrint('[ChatScreen] Receiver bubble avatar error: $error');
                           return Container(
                             color: Colors.grey[300],
                             child: const Icon(Icons.person, size: 18, color: Colors.grey),
@@ -596,11 +636,29 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
               child: ClipOval(
-                child: senderPhoto != null
+                child: senderPhoto != null && senderPhoto.isNotEmpty
                     ? Image.network(
                         senderPhoto,
                         fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFFFF5722),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                         errorBuilder: (context, error, stackTrace) {
+                          debugPrint('[ChatScreen] Sender bubble avatar error: $error');
+                          debugPrint('[ChatScreen] Sender photo URL: $senderPhoto');
                           return Container(
                             color: Colors.grey[300],
                             child: const Icon(Icons.person, size: 18, color: Colors.grey),
