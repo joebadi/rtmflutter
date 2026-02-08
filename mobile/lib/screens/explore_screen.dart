@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -195,10 +196,68 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   void _centerMapOnUser(double lat, double lng) {
-    mapController.move(
+    final camera = mapController.camera;
+    final currentZoom = camera.zoom;
+    
+    // Use animated rotation with custom curve for smooth, natural movement
+    mapController.moveAndRotate(
       LatLng(lat, lng),
-      mapController.camera.zoom,
+      currentZoom,
+      0.0,
     );
+    
+    // For even smoother transition, we can use a custom animation
+    // This simulates finger-dragging movement
+    final currentCenter = camera.center;
+    final targetCenter = LatLng(lat, lng);
+    
+    // Calculate distance to determine animation duration
+    final distance = const Distance().as(
+      LengthUnit.Kilometer,
+      currentCenter,
+      targetCenter,
+    );
+    
+    // Longer distances = longer animation (max 1.5 seconds)
+    final duration = Duration(
+      milliseconds: (distance * 100).clamp(300, 1500).toInt(),
+    );
+    
+    // Animate with easeInOutCubic curve for natural feel
+    _animateMapCamera(currentCenter, targetCenter, currentZoom, duration);
+  }
+  
+  void _animateMapCamera(
+    LatLng start,
+    LatLng end,
+    double zoom,
+    Duration duration,
+  ) {
+    final startTime = DateTime.now();
+    
+    void animate() {
+      final elapsed = DateTime.now().difference(startTime);
+      final progress = (elapsed.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
+      
+      if (progress >= 1.0) {
+        mapController.move(end, zoom);
+        return;
+      }
+      
+      // Cubic easing for smooth deceleration
+      final t = progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - pow(-2 * progress + 2, 3) / 2;
+      
+      final lat = start.latitude + (end.latitude - start.latitude) * t;
+      final lng = start.longitude + (end.longitude - start.longitude) * t;
+      
+      mapController.move(LatLng(lat, lng), zoom);
+      
+      Future.delayed(const Duration(milliseconds: 16), animate);
+    }
+    
+    animate();
   }
 
   void _scrollToCard(int index) {
