@@ -42,14 +42,23 @@ class MessageService {
       final token = await _storage.read(key: 'access_token');
       _dio.options.headers['Authorization'] = 'Bearer $token';
 
-      final response = await _dio.get('/messages/conversation/$conversationId');
+      debugPrint('[MessageService] Getting messages for conversation: $conversationId');
+
+      // FIX: Correct endpoint is /messages/:conversationId NOT /messages/conversation/:conversationId
+      final response = await _dio.get('/messages/$conversationId');
+
+      debugPrint('[MessageService] Response status: ${response.statusCode}');
 
       if (response.statusCode == 200 && response.data['success'] == true) {
-        return response.data['data']['messages'] ?? [];
+        final messages = response.data['data']['messages'] ?? [];
+        debugPrint('[MessageService] Loaded ${messages.length} messages');
+        return messages;
       } else {
         throw Exception(response.data['message'] ?? 'Failed to fetch messages');
       }
     } catch (e) {
+      debugPrint('[MessageService] Error getting messages: $e');
+      
       if (e is DioException && e.response?.statusCode == 401) {
         await _storage.delete(key: 'access_token');
         await _storage.delete(key: 'refresh_token');
