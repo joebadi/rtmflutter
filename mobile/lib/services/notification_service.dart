@@ -27,7 +27,7 @@ class NotificationService extends ChangeNotifier {
 
   Future<void> _fetchInitialCount() async {
     try {
-      final token = await _storage.read(key: 'accessToken');
+      final token = await _storage.read(key: 'access_token');
       if (token == null) return;
       
       final response = await _dio.get(
@@ -45,7 +45,7 @@ class NotificationService extends ChangeNotifier {
   }
 
   Future<void> _connectSocket() async {
-    final token = await _storage.read(key: 'accessToken');
+    final token = await _storage.read(key: 'access_token');
     if (token == null) return;
 
     // Initialize socket
@@ -74,7 +74,7 @@ class NotificationService extends ChangeNotifier {
   
   Future<void> markAllRead() async {
     try {
-      final token = await _storage.read(key: 'accessToken');
+      final token = await _storage.read(key: 'access_token');
       if (token == null) return;
 
       await _dio.patch(

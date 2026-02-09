@@ -1,12 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/message_provider.dart';
+import '../services/notification_service.dart';
 import 'package:go_router/go_router.dart';
 
-class MainShell extends StatelessWidget {
+class MainShell extends StatefulWidget {
   final Widget child;
 
   const MainShell({super.key, required this.child});
+
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize services that require auth token when the shell loads (post-login)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MessageProvider>().init();
+      context.read<NotificationService>().init();
+    });
+  }
 
   /// Helper to calculate current index based on route location
   int _calculateSelectedIndex(BuildContext context) {
@@ -42,7 +58,7 @@ class MainShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: child,
+      body: widget.child,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
