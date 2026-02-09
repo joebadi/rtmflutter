@@ -15,6 +15,7 @@ class MessageProvider extends ChangeNotifier {
 
   int get unreadCount => _unreadCount;
   bool get isLoading => _isLoading;
+  IO.Socket? get socket => _socket;
 
   MessageProvider() {
     _dio.options.baseUrl = ApiConfig.baseUrl;

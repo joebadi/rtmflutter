@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../services/message_service.dart';
 import '../config/api_config.dart';
+import 'package:provider/provider.dart';
+import '../providers/message_provider.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;
@@ -47,7 +49,41 @@ class _ChatScreenState extends State<ChatScreen> {
     debugPrint('[ChatScreen] - receiverId: ${widget.receiverId}');
     debugPrint('[ChatScreen] - receiverName: ${widget.receiverName}');
     debugPrint('[ChatScreen] - receiverPhoto: ${widget.receiverPhoto}');
+    debugPrint('[ChatScreen] - receiverPhoto: ${widget.receiverPhoto}');
+    _setupSocketListener();
     _loadMessages();
+  }
+
+  void _setupSocketListener() {
+    final messageProvider = context.read<MessageProvider>();
+    final socket = messageProvider.socket;
+
+    if (socket != null && socket.connected) {
+      debugPrint('[ChatScreen] Setting up socket listener');
+      
+      socket.on('new_message', (data) {
+        if (!mounted) return;
+        debugPrint('[ChatScreen] New message received via socket: $data');
+        
+        // check if this message belongs to the current conversation
+        // The data structure might vary, check how backend emits it
+        final conversationId = data['conversationId'];
+        
+        if (conversationId == widget.conversationId) {
+          final message = data['message'];
+          
+          setState(() {
+            // Add to list (at start since reversed)
+            _messages.insert(0, message);
+          });
+          
+          // Mark as read immediately since user is looking at it
+          _messageService.markAsRead(message['id']);
+        }
+      });
+    } else {
+      debugPrint('[ChatScreen] Socket not connected, cannot listen for messages');
+    }
   }
 
   Future<void> _loadMessages() async {
@@ -726,6 +762,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    // Remove listener to prevent memory leaks or unwanted updates
+    final messageProvider = context.read<MessageProvider>();
+    final socket = messageProvider.socket;
+    socket?.off('new_message');
+    
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
