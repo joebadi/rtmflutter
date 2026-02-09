@@ -27,6 +27,7 @@ import 'screens/chat_screen.dart';
 import 'screens/user_profile_page.dart';
 import 'screens/main_shell.dart';
 import 'providers/profile_provider.dart';
+import 'providers/message_provider.dart';
 import 'config/theme.dart';
 
 void main() {
@@ -202,6 +203,7 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => NotificationService()..init()),
+        ChangeNotifierProvider(create: (_) => MessageProvider()..init()),
       ],
       child: MaterialApp.router(
         title: 'Ready to Marry',
