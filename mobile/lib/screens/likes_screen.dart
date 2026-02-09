@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../services/like_service.dart';
 import '../config/api_config.dart';
+import '../widgets/notification_badge.dart';
 
 class LikesScreen extends StatefulWidget {
   const LikesScreen({super.key});
@@ -177,6 +178,12 @@ class _LikesScreenState extends State<LikesScreen>
           ),
         ),
         centerTitle: true,
+        actions: const [
+          Padding(
+            padding: EdgeInsets.only(right: 8.0),
+            child: NotificationBadge(),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: Container(

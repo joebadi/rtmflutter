@@ -201,6 +201,7 @@ class MyApp extends StatelessWidget {
           create: (_) => AuthProvider()..checkAuthStatus(),
         ),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationService()..init()),
       ],
       child: MaterialApp.router(
         title: 'Ready to Marry',

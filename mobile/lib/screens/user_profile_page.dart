@@ -212,7 +212,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               onPageChanged: (index) =>
                   setState(() => _currentImageIndex = index),
               itemBuilder: (context, index) {
-                return Image.network(
+                final imageWidget = Image.network(
                   _images[index],
                   fit: BoxFit.cover,
                   width: double.infinity,
@@ -243,6 +243,18 @@ class _UserProfilePageState extends State<UserProfilePage>
                     );
                   },
                 );
+
+                // Only hero the first image to match the grid thumbnail
+                if (index == 0) {
+                  return Hero(
+                    tag: 'user-photo-${_userObj['id'] ?? _user['userId'] ?? ''}',
+                    child: Material(
+                      color: Colors.transparent,
+                      child: imageWidget,
+                    ),
+                  );
+                }
+                return imageWidget;
               },
             ),
 

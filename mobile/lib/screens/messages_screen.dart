@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../services/message_service.dart';
 import '../config/api_config.dart';
+import '../widgets/notification_badge.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -98,6 +99,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
         ),
         centerTitle: true,
         actions: [
+          const Padding(
+            padding: EdgeInsets.only(right: 4.0),
+            child: NotificationBadge(),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.black87),
             onPressed: _loadConversations,

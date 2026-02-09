@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import '../config/theme.dart';
 import '../config/api_config.dart';
 import '../services/match_service.dart';
+import '../widgets/notification_badge.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -390,6 +391,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           ),
           Row(
             children: [
+              const NotificationBadge(),
+              const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(Icons.tune, color: Colors.black87),
                 onPressed: _showFilterModal,
@@ -1331,7 +1334,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           child: CardSwiper(
             controller: swipeController,
             cardsCount: users.length,
-            numberOfCardsDisplayed: 3,
+            // Dynamically set to avoid assertion error if fewer cards than default (3)
+            numberOfCardsDisplayed: users.length < 3 ? users.length : 3,
             backCardOffset: const Offset(0, 40),
             padding: const EdgeInsets.all(16),
             cardBuilder: (context, index, horizontalOffset, verticalOffset) {
@@ -1748,20 +1752,26 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   ),
                 ),
                 child: photoUrl.isNotEmpty
-                    ? Image.network(
-                        photoUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Icon(
-                              Icons.person,
-                              size: 50,
-                              color: Colors.white.withOpacity(0.7),
-                            ),
-                          );
-                        },
+                    ? Hero(
+                        tag: 'user-photo-${userObj['id'] ?? profile['userId'] ?? ''}',
+                        child: Material(
+                          color: Colors.transparent,
+                          child: Image.network(
+                            photoUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Center(
+                                child: Icon(
+                                  Icons.person,
+                                  size: 50,
+                                  color: Colors.white.withOpacity(0.7),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       )
                     : Center(
                         child: Icon(

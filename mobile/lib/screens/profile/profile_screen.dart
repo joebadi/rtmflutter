@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'match_preferences_page.dart';
+import '../../widgets/notification_badge.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -122,14 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       // Icons
                       Row(
                         children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.notifications_outlined,
-                              size: 26,
-                            ),
-                            onPressed: () {},
-                            color: Colors.black87,
-                          ),
+                          const NotificationBadge(),
                           IconButton(
                             icon: const Icon(Icons.search, size: 26),
                             onPressed: () {},
