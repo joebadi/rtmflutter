@@ -30,6 +30,7 @@ import 'providers/profile_provider.dart';
 import 'providers/message_provider.dart';
 import 'config/theme.dart';
 
+import 'services/notification_service.dart';
 void main() {
   runApp(const MyApp());
 }
