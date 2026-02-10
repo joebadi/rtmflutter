@@ -1,8 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:dio/dio.dart';
 import '../services/message_service.dart';
 import '../config/api_config.dart';
 import '../widgets/notification_icon.dart';
@@ -18,7 +18,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
   final TextEditingController _searchController = TextEditingController();
   final MessageService _messageService = MessageService();
   final _storage = const FlutterSecureStorage();
-  final Dio _dio = Dio();
 
   bool _isLoading = true;
   List<dynamic> _conversations = [];
@@ -51,20 +50,33 @@ class _MessagesScreenState extends State<MessagesScreen> {
         return;
       }
 
-      final response = await _dio.get(
-        '${ApiConfig.baseUrl}/auth/me',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
-      );
+      // Decode JWT payload locally to extract userId (no API call needed)
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        debugPrint('[MessagesScreen] Invalid JWT format');
+        return;
+      }
 
-      if (response.statusCode == 200) {
-        final userId = response.data['user']?['id'];
-        debugPrint('[MessagesScreen] Fetched userId: $userId');
-        if (userId != null) {
-          _currentUserId = userId.toString();
-        }
+      // JWT payload is base64url encoded
+      String payload = parts[1];
+      // Add padding if needed
+      switch (payload.length % 4) {
+        case 2:
+          payload += '==';
+          break;
+        case 3:
+          payload += '=';
+          break;
+      }
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final Map<String, dynamic> data = json.decode(decoded);
+      final userId = data['userId']?.toString();
+      debugPrint('[MessagesScreen] Decoded userId from JWT: $userId');
+      if (userId != null) {
+        _currentUserId = userId;
       }
     } catch (e) {
-      debugPrint('[MessagesScreen] Error fetching current user: $e');
+      debugPrint('[MessagesScreen] Error decoding JWT: $e');
     }
   }
 
