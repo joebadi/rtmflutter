@@ -108,18 +108,26 @@ class MessageService {
           throw Exception('UNAUTHORIZED');
         }
         
+        // Check for 403 match-required error (by status code or error code)
+        if (e.response?.statusCode == 403) {
+          final errorData = e.response!.data;
+          if (errorData is Map && errorData['code'] == 'MATCH_REQUIRED') {
+            throw Exception('MATCH_REQUIRED');
+          }
+        }
+
         // Extract error message from response
         if (e.response?.data != null) {
           final errorData = e.response!.data;
           if (errorData is Map && errorData['message'] != null) {
             final errorMessage = errorData['message'].toString();
-            
+
             // Check for match requirement error
-            if (errorMessage.contains('need to match') || 
+            if (errorMessage.contains('need to match') ||
                 errorMessage.contains('match with this user')) {
               throw Exception('MATCH_REQUIRED');
             }
-            
+
             // Throw the actual backend error message
             throw Exception(errorMessage);
           }

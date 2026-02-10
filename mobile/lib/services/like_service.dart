@@ -28,7 +28,8 @@ class LikeService {
 
       debugPrint('[LikeService] Response: ${response.data}');
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          response.data['success'] == true) {
         return response.data['data'];
       } else {
         throw Exception(response.data['message'] ?? 'Failed to send like');
@@ -149,7 +150,7 @@ class LikeService {
       final response = await _dio.get('/likes/check/$targetUserId');
 
       if (response.statusCode == 200 && response.data['success'] == true) {
-        return response.data['data']['isLiked'] ?? false;
+        return response.data['data']['hasLiked'] ?? false;
       } else {
         return false;
       }

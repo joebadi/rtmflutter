@@ -17,20 +17,68 @@ class _LikesScreenState extends State<LikesScreen>
   late TabController _tabController;
   final LikeService _likeService = LikeService();
 
-  // Real data from API
   List<dynamic> _receivedLikes = [];
   List<dynamic> _sentLikes = [];
   List<dynamic> _matches = [];
-  
+
   bool _isLoadingReceived = true;
   bool _isLoadingSent = true;
   bool _isLoadingMatches = true;
 
-  // Helper function to convert relative URLs to full URLs
-  String _getFullPhotoUrl(String? url) {
-    if (url == null || url.isEmpty) return '';
+  // Helper to safely get photo URL from a like's user profile
+  String _getUserPhotoUrl(Map<String, dynamic>? user) {
+    if (user == null) return '';
+    final profile = user['profile'] as Map<String, dynamic>?;
+    if (profile == null) return '';
+    final photos = profile['photos'] as List?;
+    if (photos == null || photos.isEmpty) return '';
+    final url = photos[0]['url']?.toString() ?? '';
+    if (url.isEmpty) return '';
     if (url.startsWith('http')) return url;
     return '${ApiConfig.socketUrl}$url';
+  }
+
+  String _getUserName(Map<String, dynamic>? user) {
+    final profile = user?['profile'] as Map<String, dynamic>?;
+    return profile?['firstName']?.toString() ?? 'User';
+  }
+
+  int _getUserAge(Map<String, dynamic>? user) {
+    final profile = user?['profile'] as Map<String, dynamic>?;
+    return profile?['age'] as int? ?? 0;
+  }
+
+  String _getUserLocation(Map<String, dynamic>? user) {
+    final profile = user?['profile'] as Map<String, dynamic>?;
+    if (profile == null) return '';
+    final parts = [
+      profile['city'],
+      profile['state'],
+    ].where((s) => s != null && s.toString().isNotEmpty);
+    return parts.join(', ');
+  }
+
+  String _getUserId(Map<String, dynamic>? user) {
+    return user?['id']?.toString() ?? '';
+  }
+
+  bool _isUserOnline(Map<String, dynamic>? user) {
+    return user?['isOnline'] == true;
+  }
+
+  String _formatTimeAgo(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final diff = DateTime.now().difference(date);
+      if (diff.inDays == 0) return 'Today';
+      if (diff.inDays == 1) return 'Yesterday';
+      if (diff.inDays < 7) return '${diff.inDays} days ago';
+      if (diff.inDays < 30) return '${(diff.inDays / 7).floor()} weeks ago';
+      return '${(diff.inDays / 30).floor()} months ago';
+    } catch (e) {
+      return '';
+    }
   }
 
   @override
@@ -104,24 +152,33 @@ class _LikesScreenState extends State<LikesScreen>
 
   Future<void> _handleLikeBack(String userId) async {
     try {
-      await _likeService.sendLike(userId);
-      // Reload data to reflect changes
+      final result = await _likeService.sendLike(userId);
       await _loadAllData();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Liked back! 💕'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        final isMutual = result['isMutual'] == true;
+        if (isMutual) {
+          _showMatchCelebration(userId);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Liked back!', style: GoogleFonts.poppins()),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('[LikesScreen] Error liking back: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to send like'),
+          SnackBar(
+            content: Text(
+              e.toString().contains('already liked')
+                  ? 'Already liked this user'
+                  : 'Failed to send like',
+              style: GoogleFonts.poppins(),
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -129,16 +186,97 @@ class _LikesScreenState extends State<LikesScreen>
     }
   }
 
+  void _showMatchCelebration(String matchedUserId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFF5722), Color(0xFFE91E63)],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF5722).withOpacity(0.5),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.favorite, color: Colors.white, size: 44),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "It's a Match!",
+                style: GoogleFonts.poppins(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'You can now chat freely!',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Continue',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFFFF5722),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleUnlike(String userId) async {
     try {
       await _likeService.unlikeUser(userId);
-      // Reload data to reflect changes
       await _loadAllData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unliked'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text('Unliked', style: GoogleFonts.poppins()),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -146,13 +284,39 @@ class _LikesScreenState extends State<LikesScreen>
       debugPrint('[LikesScreen] Error unliking: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to unlike'),
+          SnackBar(
+            content: Text('Failed to unlike', style: GoogleFonts.poppins()),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
+  }
+
+  void _navigateToProfile(Map<String, dynamic>? user) {
+    if (user == null) return;
+    final profile = user['profile'] as Map<String, dynamic>?;
+    if (profile == null) return;
+
+    // Build userData in the format UserProfilePage expects
+    final userData = {
+      ...profile,
+      'user': user,
+    };
+    context.push('/user-profile', extra: userData);
+  }
+
+  void _navigateToChat(Map<String, dynamic>? user) {
+    if (user == null) return;
+    final userId = _getUserId(user);
+    final name = _getUserName(user);
+    final photoUrl = _getUserPhotoUrl(user);
+
+    context.push('/chat/$userId', extra: {
+      'receiverId': userId,
+      'receiverName': name,
+      'receiverPhoto': photoUrl,
+    });
   }
 
   @override
@@ -208,9 +372,7 @@ class _LikesScreenState extends State<LikesScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text('Received'),
-                      if (_receivedLikes
-                          .where((l) => l['isNew'] == true)
-                          .isNotEmpty)
+                      if (_receivedLikes.isNotEmpty)
                         Container(
                           margin: const EdgeInsets.only(left: 6),
                           padding: const EdgeInsets.symmetric(
@@ -222,7 +384,7 @@ class _LikesScreenState extends State<LikesScreen>
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            '${_receivedLikes.where((l) => l['isNew'] == true).length}',
+                            '${_receivedLikes.length}',
                             style: GoogleFonts.poppins(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -239,25 +401,26 @@ class _LikesScreenState extends State<LikesScreen>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text('Matches'),
-                      Container(
-                        margin: const EdgeInsets.only(left: 6),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '${_matches.length}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                      if (_matches.isNotEmpty)
+                        Container(
+                          margin: const EdgeInsets.only(left: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${_matches.length}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -271,11 +434,13 @@ class _LikesScreenState extends State<LikesScreen>
         children: [
           _buildReceivedLikesGrid(),
           _buildSentLikesGrid(),
-          _buildMatchesGrid(),
+          _buildMatchesList(),
         ],
       ),
     );
   }
+
+  // ── Received Likes Tab ──
 
   Widget _buildReceivedLikesGrid() {
     if (_isLoadingReceived) {
@@ -292,21 +457,70 @@ class _LikesScreenState extends State<LikesScreen>
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+    return RefreshIndicator(
+      onRefresh: _loadReceivedLikes,
+      color: const Color(0xFFFF5722),
+      child: GridView.builder(
+        padding: const EdgeInsets.all(12),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.7,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: _receivedLikes.length,
+        itemBuilder: (context, index) {
+          final like = _receivedLikes[index] as Map<String, dynamic>;
+          // Received likes have 'liker' as the other user
+          final user = like['liker'] as Map<String, dynamic>?;
+          final likerId = _getUserId(user);
+          final name = _getUserName(user);
+          final age = _getUserAge(user);
+          final location = _getUserLocation(user);
+          final photoUrl = _getUserPhotoUrl(user);
+          final isMutual = like['isMutual'] == true;
+
+          return _buildLikeCard(
+            photoUrl: photoUrl,
+            name: name,
+            age: age,
+            location: location,
+            onTap: () => _navigateToProfile(user),
+            badgeWidget: isMutual
+                ? _buildBadge('Matched', Colors.green)
+                : null,
+            bottomWidget: isMutual
+                ? null
+                : Row(
+                    children: [
+                      // Pass button
+                      Expanded(
+                        child: _buildCardButton(
+                          icon: Icons.close,
+                          color: Colors.grey,
+                          outlined: true,
+                          onTap: () {},
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Like back button
+                      Expanded(
+                        child: _buildCardButton(
+                          icon: Icons.favorite,
+                          color: Colors.white,
+                          gradient: true,
+                          onTap: () => _handleLikeBack(likerId),
+                        ),
+                      ),
+                    ],
+                  ),
+          );
+        },
       ),
-      itemCount: _receivedLikes.length,
-      itemBuilder: (context, index) {
-        final like = _receivedLikes[index];
-        return _buildReceivedLikeCard(like);
-      },
     );
   }
+
+  // ── Sent Likes Tab ──
 
   Widget _buildSentLikesGrid() {
     if (_isLoadingSent) {
@@ -323,419 +537,46 @@ class _LikesScreenState extends State<LikesScreen>
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: _sentLikes.length,
-      itemBuilder: (context, index) {
-        final like = _sentLikes[index];
-        return _buildSentLikeCard(like);
-      },
-    );
-  }
-
-  Widget _buildMatchesGrid() {
-    if (_isLoadingMatches) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFFFF5722)),
-      );
-    }
-
-    if (_matches.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.favorite,
-        title: 'No matches yet',
-        subtitle: 'When someone likes you back, they\'ll appear here!',
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: _matches.length,
-      itemBuilder: (context, index) {
-        final match = _matches[index];
-        return _buildMatchCard(match);
-      },
-    );
-  }
-
-  Widget _buildReceivedLikeCard(Map<String, dynamic> like) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to profile
-        final firstName = like['name'].toString().split(' ').first;
-        context.push('/user/$firstName');
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+    return RefreshIndicator(
+      onRefresh: _loadSentLikes,
+      color: const Color(0xFFFF5722),
+      child: GridView.builder(
+        padding: const EdgeInsets.all(12),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.7,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image Section
-            Expanded(
-              child: Stack(
-                children: [
-                  // Profile Image
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      image: DecorationImage(
-                        image: NetworkImage(like['imageUrl']),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
+        itemCount: _sentLikes.length,
+        itemBuilder: (context, index) {
+          final like = _sentLikes[index] as Map<String, dynamic>;
+          // Sent likes have 'likedUser' as the other user
+          final user = like['likedUser'] as Map<String, dynamic>?;
+          final likedUserId = _getUserId(user);
+          final name = _getUserName(user);
+          final age = _getUserAge(user);
+          final location = _getUserLocation(user);
+          final photoUrl = _getUserPhotoUrl(user);
+          final isMutual = like['isMutual'] == true;
 
-                  // Gradient Overlay
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // New Badge
-                  if (like['isNew'])
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF5722),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFF5722).withOpacity(0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          'NEW',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  // Compatibility Badge
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.verified,
-                            color: Colors.white,
-                            size: 12,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${like['compatibility']}%',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Name and Location
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    right: 8,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${like['name']}, ${like['age']}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on,
-                              color: Colors.white,
-                              size: 12,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              like['location'],
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+          return _buildLikeCard(
+            photoUrl: photoUrl,
+            name: name,
+            age: age,
+            location: location,
+            onTap: () => _navigateToProfile(user),
+            badgeWidget: _buildBadge(
+              isMutual ? 'Matched' : 'Pending',
+              isMutual ? Colors.green : Colors.orange,
             ),
-
-            // Action Buttons
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 36,
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.grey[300]!,
-                          width: 1.5,
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            // Pass action
-                          },
-                          borderRadius: BorderRadius.circular(10),
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.grey,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Container(
-                      height: 36,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFFF5722).withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            // Like back action
-                          },
-                          borderRadius: BorderRadius.circular(10),
-                          child: const Icon(
-                            Icons.favorite,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSentLikeCard(Map<String, dynamic> like) {
-    final isPending = like['status'] == 'Pending';
-
-    return GestureDetector(
-      onTap: () {
-        // Navigate to profile
-        final firstName = like['name'].toString().split(' ').first;
-        context.push('/user/$firstName');
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image Section
-            Expanded(
-              child: Stack(
-                children: [
-                  // Profile Image
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      image: DecorationImage(
-                        image: NetworkImage(like['imageUrl']),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-
-                  // Gradient Overlay
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
-                      ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Status Badge
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isPending ? Colors.orange : Colors.blue,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        like['status'],
-                        style: GoogleFonts.poppins(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Name and Location
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    right: 8,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${like['name']}, ${like['age']}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on,
-                              color: Colors.white,
-                              size: 12,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              like['location'],
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Unlike Button
-            Padding(
+            bottomWidget: Padding(
               padding: const EdgeInsets.all(8),
               child: SizedBox(
                 width: double.infinity,
                 height: 36,
                 child: OutlinedButton(
-                  onPressed: () {
-                    // Unlike action
-                  },
+                  onPressed: () => _handleUnlike(likedUserId),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Colors.grey[300]!, width: 1.5),
                     shape: RoundedRectangleBorder(
@@ -753,186 +594,434 @@ class _LikesScreenState extends State<LikesScreen>
                 ),
               ),
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── Matches Tab ──
+
+  Widget _buildMatchesList() {
+    if (_isLoadingMatches) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+      );
+    }
+
+    if (_matches.isEmpty) {
+      return _buildEmptyState(
+        icon: Icons.favorite,
+        title: 'No matches yet',
+        subtitle: 'When someone likes you back, they\'ll appear here!',
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadMatches,
+      color: const Color(0xFFFF5722),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: _matches.length,
+        itemBuilder: (context, index) {
+          final match = _matches[index] as Map<String, dynamic>;
+          // Matches (from getMutualLikes) have 'likedUser' as the other user
+          final user = match['likedUser'] as Map<String, dynamic>?;
+          final name = _getUserName(user);
+          final age = _getUserAge(user);
+          final location = _getUserLocation(user);
+          final photoUrl = _getUserPhotoUrl(user);
+          final isOnline = _isUserOnline(user);
+          final matchDate = _formatTimeAgo(match['createdAt']?.toString());
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _navigateToChat(user),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      // Profile Image
+                      GestureDetector(
+                        onTap: () => _navigateToProfile(user),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 70,
+                              height: 70,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFFF5722),
+                                  width: 2,
+                                ),
+                                color: Colors.grey[200],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: photoUrl.isNotEmpty
+                                    ? Image.network(
+                                        photoUrl,
+                                        fit: BoxFit.cover,
+                                        width: 70,
+                                        height: 70,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(Icons.person, size: 30, color: Colors.grey),
+                                      )
+                                    : const Icon(Icons.person, size: 30, color: Colors.grey),
+                              ),
+                            ),
+                            if (isOnline)
+                              Positioned(
+                                right: 2,
+                                bottom: 2,
+                                child: Container(
+                                  width: 14,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Match Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    age > 0 ? '$name, $age' : name,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.pink.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.favorite, color: Colors.pink, size: 12),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Match',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.pink,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (location.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on, color: Colors.grey, size: 14),
+                                  const SizedBox(width: 2),
+                                  Expanded(
+                                    child: Text(
+                                      location,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            if (matchDate.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Matched $matchDate',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      // Chat Button
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF5722).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _navigateToChat(user),
+                            borderRadius: BorderRadius.circular(12),
+                            child: const Icon(
+                              Icons.chat_bubble,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── Shared Card Builder ──
+
+  Widget _buildLikeCard({
+    required String photoUrl,
+    required String name,
+    required int age,
+    required String location,
+    required VoidCallback onTap,
+    Widget? badgeWidget,
+    Widget? bottomWidget,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image Section
+            Expanded(
+              child: Stack(
+                children: [
+                  // Profile Image
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      color: Colors.grey[200],
+                      image: photoUrl.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(photoUrl),
+                              fit: BoxFit.cover,
+                              onError: (_, __) {},
+                            )
+                          : null,
+                    ),
+                    child: photoUrl.isEmpty
+                        ? const Center(
+                            child: Icon(Icons.person, size: 50, color: Colors.grey),
+                          )
+                        : null,
+                  ),
+
+                  // Gradient Overlay
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.7),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Badge
+                  if (badgeWidget != null)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: badgeWidget,
+                    ),
+
+                  // Name and Location
+                  Positioned(
+                    bottom: 8,
+                    left: 8,
+                    right: 8,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          age > 0 ? '$name, $age' : name,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (location.isNotEmpty)
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on,
+                                color: Colors.white,
+                                size: 12,
+                              ),
+                              const SizedBox(width: 2),
+                              Expanded(
+                                child: Text(
+                                  location,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Bottom Widget (action buttons)
+            if (bottomWidget != null)
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: bottomWidget,
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMatchCard(Map<String, dynamic> match) {
+  Widget _buildBadge(String text, Color color) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: color,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: color.withOpacity(0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.poppins(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardButton({
+    required IconData icon,
+    required Color color,
+    bool outlined = false,
+    bool gradient = false,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      height: 36,
+      decoration: BoxDecoration(
+        gradient: gradient
+            ? const LinearGradient(
+                colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+              )
+            : null,
+        border: outlined
+            ? Border.all(color: Colors.grey[300]!, width: 1.5)
+            : null,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: gradient
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFFF5722).withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            // Navigate to chat
-            context.push('/chat/${match['name']}');
-          },
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Profile Image
-                GestureDetector(
-                  onTap: () {
-                    final firstName = match['name'].toString().split(' ').first;
-                    context.push('/user/$firstName');
-                  },
-                  child: Stack(
-                    children: [
-                      Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFFFF5722),
-                            width: 2,
-                          ),
-                          image: DecorationImage(
-                            image: NetworkImage(match['imageUrl']),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      if (match['isOnline'])
-                        Positioned(
-                          right: 2,
-                          bottom: 2,
-                          child: Container(
-                            width: 14,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Match Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${match['name']}, ${match['age']}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.pink.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.favorite,
-                                  color: Colors.pink,
-                                  size: 12,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Match',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.pink,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            color: Colors.grey,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            match['location'],
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Matched ${match['matchDate']}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Message Button
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF5722).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.chat_bubble,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Icon(icon, color: color, size: 20),
         ),
       ),
     );

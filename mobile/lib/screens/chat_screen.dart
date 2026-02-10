@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../services/message_service.dart';
+import '../services/like_service.dart';
 import '../config/api_config.dart';
 import 'package:provider/provider.dart';
 import '../providers/message_provider.dart';
@@ -158,7 +159,7 @@ class _ChatScreenState extends State<ChatScreen> {
     debugPrint('[ChatScreen] Sending message to ${widget.receiverId}');
 
     try {
-      final message = await _messageService.sendMessage(
+      await _messageService.sendMessage(
         receiverId: widget.receiverId,
         content: content,
       );
@@ -188,56 +189,315 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _showMatchRequiredDialog() {
+    final LikeService likeService = LikeService();
+    bool isLiking = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.favorite, color: Color(0xFFFF5722), size: 24),
-            SizedBox(width: 8),
-            Text(
-              'Match Required',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+      barrierColor: Colors.black.withOpacity(0.6),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF5722).withOpacity(0.15),
+                  blurRadius: 40,
+                  offset: const Offset(0, 16),
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ],
-        ),
-        content: Text(
-          'You\'ve sent your intro message! To continue chatting, you need to match with ${widget.receiverName}.',
-          style: GoogleFonts.poppins(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'OK',
-              style: GoogleFonts.poppins(color: Colors.grey[600]),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top gradient accent bar
+                Container(
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFFF5722), Color(0xFFE91E63), Color(0xFFFF5722)],
+                    ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
+                  child: Column(
+                    children: [
+                      // Icon with animated ring
+                      Container(
+                        width: 88,
+                        height: 88,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFFFF5722).withOpacity(0.12),
+                              const Color(0xFFE91E63).withOpacity(0.08),
+                            ],
+                          ),
+                        ),
+                        child: Container(
+                          margin: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [Color(0xFFFF5722), Color(0xFFE91E63)],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF5722).withOpacity(0.35),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.favorite_rounded,
+                            color: Colors.white,
+                            size: 36,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Title
+                      Text(
+                        'Match to Continue',
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Description
+                      RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            height: 1.5,
+                          ),
+                          children: [
+                            const TextSpan(
+                              text: 'You\'ve sent your icebreaker message! Like ',
+                            ),
+                            TextSpan(
+                              text: widget.receiverName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFFF5722),
+                              ),
+                            ),
+                            const TextSpan(
+                              text: '\'s profile to match and unlock unlimited messaging.',
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Info pill
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.info_outline_rounded,
+                                size: 16, color: Colors.grey[500]),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Both users get one free icebreaker message',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Like Now button (primary CTA)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF5722), Color(0xFFE91E63)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF5722).withOpacity(0.35),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: isLiking
+                                  ? null
+                                  : () async {
+                                      setDialogState(() => isLiking = true);
+                                      try {
+                                        final result = await likeService
+                                            .sendLike(widget.receiverId);
+                                        if (dialogContext.mounted) {
+                                          Navigator.pop(dialogContext);
+                                        }
+                                        if (mounted) {
+                                          final isMutual =
+                                              result['isMutual'] == true;
+                                          if (isMutual) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  "It's a Match! You can now chat freely.",
+                                                  style: GoogleFonts.poppins(),
+                                                ),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'You liked ${widget.receiverName}! Waiting for them to like you back.',
+                                                  style: GoogleFonts.poppins(),
+                                                ),
+                                                backgroundColor:
+                                                    const Color(0xFFFF5722),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      } catch (e) {
+                                        setDialogState(() => isLiking = false);
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                e.toString().contains(
+                                                        'already liked')
+                                                    ? 'You already liked this user. Waiting for them to match!'
+                                                    : 'Could not send like',
+                                                style: GoogleFonts.poppins(),
+                                              ),
+                                              backgroundColor:
+                                                  e.toString().contains(
+                                                          'already liked')
+                                                      ? const Color(0xFFFF5722)
+                                                      : Colors.red,
+                                            ),
+                                          );
+                                          if (dialogContext.mounted) {
+                                            Navigator.pop(dialogContext);
+                                          }
+                                        }
+                                      }
+                                    },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Center(
+                                child: isLiking
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.favorite_rounded,
+                                              color: Colors.white, size: 20),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Like ${widget.receiverName}',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                              letterSpacing: 0.2,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Dismiss button (secondary)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: TextButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: Text(
+                            'Maybe Later',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Navigate back to profile to like
-              context.pop();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFFFF5722),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              'View Profile',
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../config/api_config.dart';
+import '../services/like_service.dart';
 
 class UserProfilePage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -22,6 +23,10 @@ class _UserProfilePageState extends State<UserProfilePage>
   late Animation<double> _menuAnimation;
   late TabController _tabController;
   late PageController _pageController;
+
+  final LikeService _likeService = LikeService();
+  bool _isLiked = false;
+  bool _isLiking = false;
 
   List<String> _images = [];
   late Map<String, dynamic> _user;
@@ -47,6 +52,19 @@ class _UserProfilePageState extends State<UserProfilePage>
     
     // Load images
     _loadImages();
+
+    // Check if already liked
+    _checkLikeStatus();
+  }
+
+  Future<void> _checkLikeStatus() async {
+    final userId = _userObj['id'] ?? _user['userId'];
+    if (userId != null) {
+      final liked = await _likeService.checkIfLiked(userId.toString());
+      if (mounted) {
+        setState(() => _isLiked = liked);
+      }
+    }
   }
 
   void _loadImages() {
@@ -158,15 +176,168 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
-  void _likeUser() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'You liked ${_user['firstName']}!',
-          style: GoogleFonts.poppins(),
+  Future<void> _likeUser() async {
+    if (_isLiking || _isLiked) return;
+
+    final userId = _userObj['id'] ?? _user['userId'];
+    if (userId == null) return;
+
+    setState(() => _isLiking = true);
+
+    try {
+      final result = await _likeService.sendLike(userId.toString());
+      final isMutual = result['isMutual'] == true;
+
+      if (mounted) {
+        setState(() {
+          _isLiked = true;
+          _isLiking = false;
+        });
+
+        if (isMutual) {
+          _showMatchCelebration();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'You liked ${_user['firstName']}!',
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: const Color(0xFFFF5722),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLiking = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().contains('already liked')
+                  ? 'You already liked this user'
+                  : 'Failed to send like',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showMatchCelebration() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFF5722), Color(0xFFE91E63)],
+            ),
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF5722).withOpacity(0.5),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.favorite,
+                  color: Colors.white,
+                  size: 44,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "It's a Match!",
+                style: GoogleFonts.poppins(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'You and ${_user['firstName']} liked each other',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        'Keep Browsing',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _startChat();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'Send Message',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFFF5722),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-        backgroundColor: const Color(0xFFFF5722),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -616,7 +787,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                 width: 50,
                                 height: 50,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
+                                  color: _isLiked
+                                      ? const Color(0xFFFF5722)
+                                      : Colors.white.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: const Color(0xFFFF5722),
@@ -628,11 +801,23 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   child: InkWell(
                                     onTap: _likeUser,
                                     borderRadius: BorderRadius.circular(12),
-                                    child: const Icon(
-                                      Icons.favorite,
-                                      color: Color(0xFFFF5722),
-                                      size: 24,
-                                    ),
+                                    child: _isLiking
+                                        ? const Padding(
+                                            padding: EdgeInsets.all(13),
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Icon(
+                                            _isLiked
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            color: _isLiked
+                                                ? Colors.white
+                                                : const Color(0xFFFF5722),
+                                            size: 24,
+                                          ),
                                   ),
                                 ),
                               ),
@@ -1053,7 +1238,9 @@ class _UserProfilePageState extends State<UserProfilePage>
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
+            color: _isLiked
+                ? const Color(0xFFFF5722)
+                : Colors.white.withOpacity(0.15),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: const Color(0xFFFF5722), width: 1.5),
           ),
@@ -1062,11 +1249,19 @@ class _UserProfilePageState extends State<UserProfilePage>
             child: InkWell(
               onTap: _likeUser,
               borderRadius: BorderRadius.circular(10),
-              child: const Icon(
-                Icons.favorite,
-                color: Color(0xFFFF5722),
-                size: 20,
-              ),
+              child: _isLiking
+                  ? const Padding(
+                      padding: EdgeInsets.all(11),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Icon(
+                      _isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: _isLiked ? Colors.white : const Color(0xFFFF5722),
+                      size: 20,
+                    ),
             ),
           ),
         ),
