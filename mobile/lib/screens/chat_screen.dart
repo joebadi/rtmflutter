@@ -206,8 +206,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // Check if user already liked this person
     try {
-      final likeStatus = await likeService.checkIfLiked(widget.receiverId);
-      alreadyLiked = likeStatus['hasLiked'] == true;
+      alreadyLiked = await likeService.checkIfLiked(widget.receiverId);
     } catch (e) {
       debugPrint('[ChatScreen] Error checking like status: $e');
     }

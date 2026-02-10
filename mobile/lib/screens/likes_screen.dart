@@ -343,10 +343,7 @@ class _LikesScreenState extends State<LikesScreen>
         ),
         centerTitle: true,
         actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 8.0),
-            child: NotificationBadge(),
-          ),
+          NotificationIcon(),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),

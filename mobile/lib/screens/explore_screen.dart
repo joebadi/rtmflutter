@@ -10,7 +10,7 @@ import 'package:latlong2/latlong.dart';
 import '../config/theme.dart';
 import '../config/api_config.dart';
 import '../services/match_service.dart';
-import '../widgets/notification_badge.dart';
+import '../widgets/notification_icon.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -391,7 +391,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           ),
           Row(
             children: [
-              const NotificationBadge(),
+              const NotificationIcon(),
               const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(Icons.tune, color: Colors.black87),

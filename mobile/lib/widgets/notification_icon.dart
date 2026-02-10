@@ -8,7 +8,9 @@ import '../config/api_config.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class NotificationIcon extends StatefulWidget {
-  const NotificationIcon({super.key});
+  final bool isDark;
+
+  const NotificationIcon({super.key, this.isDark = false});
 
   @override
   State<NotificationIcon> createState() => _NotificationIconState();
@@ -335,8 +337,10 @@ class _NotificationIconState extends State<NotificationIcon> {
         children: [
           IconButton(
             onPressed: _toggleNotificationDropdown,
-            icon: const Icon(Icons.notifications_outlined),
-            color: Colors.black87,
+            icon: Icon(
+              Icons.notifications_outlined,
+              color: widget.isDark ? Colors.white : Colors.black87,
+            ),
           ),
           if (unreadCount > 0)
             Positioned(

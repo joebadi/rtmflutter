@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../config/theme.dart';
-import '../widgets/notification_badge.dart';
+import '../widgets/notification_icon.dart';
 
 class LiveDatesScreen extends StatefulWidget {
   const LiveDatesScreen({super.key});
@@ -70,7 +70,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                   ),
                   Row(
                     children: [
-                      const NotificationBadge(isDark: true),
+                      const NotificationIcon(isDark: true),
                       const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.tune, color: Colors.white),
