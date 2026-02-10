@@ -46,7 +46,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
   Future<void> _fetchCurrentUserId() async {
     try {
       final token = await _storage.read(key: 'access_token');
-      if (token == null) return;
+      if (token == null) {
+        debugPrint('[MessagesScreen] No access token found');
+        return;
+      }
 
       final response = await _dio.get(
         '${ApiConfig.baseUrl}/auth/me',
@@ -55,12 +58,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
       if (response.statusCode == 200) {
         final userId = response.data['user']?['id'];
+        debugPrint('[MessagesScreen] Fetched userId: $userId');
         if (userId != null) {
           _currentUserId = userId.toString();
         }
       }
     } catch (e) {
-      debugPrint('Error fetching current user: $e');
+      debugPrint('[MessagesScreen] Error fetching current user: $e');
     }
   }
 
@@ -271,8 +275,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
   /// Determines if the last message was sent by the current user.
   /// Returns null if we can't determine (no message or no userId).
   bool? _isSentByMe(dynamic lastMessage) {
-    if (lastMessage == null || _currentUserId == null) return null;
+    if (lastMessage == null || _currentUserId == null) {
+      debugPrint('[MessagesScreen] _isSentByMe: lastMessage=${lastMessage != null}, currentUserId=$_currentUserId');
+      return null;
+    }
     final senderId = lastMessage['senderId']?.toString();
+    debugPrint('[MessagesScreen] _isSentByMe: senderId=$senderId, currentUserId=$_currentUserId, match=${senderId == _currentUserId}');
     return senderId == _currentUserId;
   }
 
