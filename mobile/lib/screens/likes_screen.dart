@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../services/like_service.dart';
 import '../config/api_config.dart';
-import '../widgets/notification_badge.dart';
+import '../widgets/notification_icon.dart';
 
 class LikesScreen extends StatefulWidget {
   const LikesScreen({super.key});
