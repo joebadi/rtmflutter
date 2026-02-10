@@ -267,6 +267,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     dynamic lastMessage,
     String messageContent,
     bool hasUnread,
+    String otherUserName,
   ) {
     if (lastMessage == null || _currentUserId == null) {
       return Text(
@@ -284,32 +285,45 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final senderId = lastMessage['senderId'];
     final isSentByMe = senderId == _currentUserId;
 
-    return RichText(
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      text: TextSpan(
-        children: [
-          if (isSentByMe)
-            TextSpan(
-              text: 'You: ',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: hasUnread
-                    ? const Color(0xFFFF5722)
-                    : Colors.grey[500],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          TextSpan(
-            text: messageContent,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: hasUnread ? Colors.black87 : Colors.grey[600],
-              fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
+    return Row(
+      children: [
+        Icon(
+          isSentByMe ? Icons.call_made_rounded : Icons.call_received_rounded,
+          size: 14,
+          color: isSentByMe
+              ? (hasUnread ? Colors.grey[500] : Colors.grey[400])
+              : (hasUnread ? const Color(0xFFFF5722) : Colors.grey[500]),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: RichText(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: isSentByMe ? 'You: ' : '$otherUserName: ',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: isSentByMe
+                        ? (hasUnread ? Colors.grey[600] : Colors.grey[500])
+                        : (hasUnread ? const Color(0xFFFF5722) : Colors.grey[500]),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: messageContent,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: hasUnread ? Colors.black87 : Colors.grey[600],
+                    fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -486,6 +500,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           lastMessage,
                           lastMessageContent,
                           hasUnread,
+                          firstName,
                         ),
                       ),
                       if (hasUnread && unreadCount > 0)

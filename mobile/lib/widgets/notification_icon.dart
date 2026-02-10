@@ -58,6 +58,9 @@ class _NotificationIconState extends State<NotificationIcon> {
   void _showDropdown() {
     _fetchNotifications();
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final dropdownWidth = screenWidth < 400 ? screenWidth - 24.0 : 360.0;
+
     _overlayEntry = OverlayEntry(
       builder: (context) => GestureDetector(
         behavior: HitTestBehavior.translucent,
@@ -65,7 +68,7 @@ class _NotificationIconState extends State<NotificationIcon> {
         child: Stack(
           children: [
             Positioned(
-              width: 360,
+              width: dropdownWidth,
               child: CompositedTransformFollower(
                 link: _layerLink,
                 targetAnchor: Alignment.bottomRight,
@@ -75,7 +78,7 @@ class _NotificationIconState extends State<NotificationIcon> {
                   elevation: 8,
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    constraints: const BoxConstraints(maxHeight: 500),
+                    constraints: BoxConstraints(maxHeight: screenWidth < 400 ? 400 : 500),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -92,7 +95,10 @@ class _NotificationIconState extends State<NotificationIcon> {
                       children: [
                         // Header
                         Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             border: Border(
                               bottom: BorderSide(color: Colors.grey[200]!),
@@ -100,17 +106,25 @@ class _NotificationIconState extends State<NotificationIcon> {
                           ),
                           child: Row(
                             children: [
-                              Text(
-                                'Notifications',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                              Flexible(
+                                child: Text(
+                                  'Notifications',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const Spacer(),
                               if (_notifications.isNotEmpty)
                                 TextButton(
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
                                   onPressed: () async {
                                     await context
                                         .read<NotificationService>()
@@ -239,60 +253,72 @@ class _NotificationIconState extends State<NotificationIcon> {
           bottom: BorderSide(color: Colors.grey[200]!),
         ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: iconColor.withOpacity(0.1),
-          ),
-          child: Icon(icon, color: iconColor, size: 22),
-        ),
-        title: Text(
-          notification['title'] ?? '',
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            fontWeight: isRead ? FontWeight.w500 : FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 4),
-            Text(
-              notification['message'] ?? '',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.grey[600],
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: iconColor.withOpacity(0.1),
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              child: Icon(icon, color: iconColor, size: 20),
             ),
-            if (timeAgo.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                timeAgo,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: Colors.grey[500],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    notification['title'] ?? '',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: isRead ? FontWeight.w500 : FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    notification['message'] ?? '',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (timeAgo.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      timeAgo,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (!isRead)
+              Padding(
+                padding: const EdgeInsets.only(left: 6, top: 4),
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFFF5722),
+                  ),
                 ),
               ),
-            ],
           ],
         ),
-        trailing: !isRead
-            ? Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFFF5722),
-                ),
-              )
-            : null,
       ),
     );
   }
