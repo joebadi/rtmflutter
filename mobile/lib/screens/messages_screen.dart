@@ -35,7 +35,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchCurrentUserId();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await _fetchCurrentUserId();
     _loadConversations();
   }
 
@@ -50,9 +54,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
       );
 
       if (response.statusCode == 200) {
-        setState(() {
-          _currentUserId = response.data['user']?['id'];
-        });
+        final userId = response.data['user']?['id'];
+        if (userId != null) {
+          _currentUserId = userId.toString();
+        }
       }
     } catch (e) {
       debugPrint('Error fetching current user: $e');
@@ -263,13 +268,24 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
   }
 
+  /// Determines if the last message was sent by the current user.
+  /// Returns null if we can't determine (no message or no userId).
+  bool? _isSentByMe(dynamic lastMessage) {
+    if (lastMessage == null || _currentUserId == null) return null;
+    final senderId = lastMessage['senderId']?.toString();
+    return senderId == _currentUserId;
+  }
+
   Widget _buildLastMessagePreview(
     dynamic lastMessage,
     String messageContent,
     bool hasUnread,
     String otherUserName,
   ) {
-    if (lastMessage == null || _currentUserId == null) {
+    final sentByMe = _isSentByMe(lastMessage);
+
+    // Fallback: can't determine sender
+    if (sentByMe == null) {
       return Text(
         messageContent,
         style: GoogleFonts.poppins(
@@ -282,19 +298,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
       );
     }
 
-    final senderId = lastMessage['senderId'];
-    final isSentByMe = senderId == _currentUserId;
-
     return Row(
       children: [
-        Icon(
-          isSentByMe ? Icons.call_made_rounded : Icons.call_received_rounded,
-          size: 14,
-          color: isSentByMe
-              ? (hasUnread ? Colors.grey[500] : Colors.grey[400])
-              : (hasUnread ? const Color(0xFFFF5722) : Colors.grey[500]),
+        // Sent/received icon
+        Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: sentByMe
+                ? Colors.grey[300]
+                : const Color(0xFFFF5722).withOpacity(0.15),
+          ),
+          child: Icon(
+            sentByMe ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+            size: 12,
+            color: sentByMe ? Colors.grey[600] : const Color(0xFFFF5722),
+          ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 6),
         Expanded(
           child: RichText(
             maxLines: 1,
@@ -302,12 +324,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
             text: TextSpan(
               children: [
                 TextSpan(
-                  text: isSentByMe ? 'You: ' : '$otherUserName: ',
+                  text: sentByMe ? 'You: ' : '$otherUserName: ',
                   style: GoogleFonts.poppins(
                     fontSize: 13,
-                    color: isSentByMe
-                        ? (hasUnread ? Colors.grey[600] : Colors.grey[500])
-                        : (hasUnread ? const Color(0xFFFF5722) : Colors.grey[500]),
+                    color: sentByMe
+                        ? Colors.grey[500]
+                        : const Color(0xFFFF5722),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -387,7 +409,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
       },
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -399,6 +420,21 @@ class _MessagesScreenState extends State<MessagesScreen> {
             ),
           ],
         ),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border(
+              left: BorderSide(
+                color: _isSentByMe(lastMessage) == false
+                    ? const Color(0xFFFF5722)
+                    : _isSentByMe(lastMessage) == true
+                        ? Colors.grey[300]!
+                        : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
         child: Row(
           children: [
             // Profile Image
@@ -529,6 +565,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
