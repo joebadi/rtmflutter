@@ -74,8 +74,18 @@ class _ChatScreenState extends State<ChatScreen> {
           final message = data['message'];
           
           setState(() {
-            // Add to list (at start since reversed)
-            _messages.insert(0, message);
+            _messages.add(message); // Append to end (chronological order)
+          });
+
+          // Scroll to bottom to show the new message
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
           });
           
           // Mark as read immediately since user is looking at it
@@ -100,7 +110,7 @@ class _ChatScreenState extends State<ChatScreen> {
       debugPrint('[ChatScreen] Loaded ${messages.length} messages');
       
       setState(() {
-        _messages = messages.reversed.toList(); // Reverse to show oldest first
+        _messages = List.from(messages); // Already chronological from backend (oldest first)
         _isLoading = false;
       });
 
