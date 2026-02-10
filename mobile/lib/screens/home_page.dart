@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import '../widgets/notification_icon.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -56,9 +57,15 @@ class _HomePageState extends State<HomePage> {
                     'Nearby You',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
-                  IconButton(
-                    onPressed: () {}, // TODO: Filters
-                    icon: const Icon(Icons.tune_rounded), // Sliders icon
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const NotificationIcon(),
+                      IconButton(
+                        onPressed: () {}, // TODO: Filters
+                        icon: const Icon(Icons.tune_rounded),
+                      ),
+                    ],
                   ),
                 ],
               ),

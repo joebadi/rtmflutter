@@ -198,9 +198,21 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _showMatchRequiredDialog() {
+  Future<void> _showMatchRequiredDialog() async {
     final LikeService likeService = LikeService();
     bool isLiking = false;
+    bool isCheckingLike = true;
+    bool alreadyLiked = false;
+
+    // Check if user already liked this person
+    try {
+      final likeStatus = await likeService.checkIfLiked(widget.receiverId);
+      alreadyLiked = likeStatus['hasLiked'] == true;
+    } catch (e) {
+      debugPrint('[ChatScreen] Error checking like status: $e');
+    }
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -308,21 +320,37 @@ class _ChatScreenState extends State<ChatScreen> {
                             color: Colors.grey[600],
                             height: 1.5,
                           ),
-                          children: [
-                            const TextSpan(
-                              text: 'You\'ve sent your icebreaker message! Like ',
-                            ),
-                            TextSpan(
-                              text: widget.receiverName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFFF5722),
-                              ),
-                            ),
-                            const TextSpan(
-                              text: '\'s profile to match and unlock unlimited messaging.',
-                            ),
-                          ],
+                          children: alreadyLiked
+                              ? [
+                                  const TextSpan(
+                                    text: 'You\'ve already liked ',
+                                  ),
+                                  TextSpan(
+                                    text: widget.receiverName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFFFF5722),
+                                    ),
+                                  ),
+                                  const TextSpan(
+                                    text: '! Waiting for them to like you back to unlock unlimited messaging.',
+                                  ),
+                                ]
+                              : [
+                                  const TextSpan(
+                                    text: 'You\'ve sent your icebreaker message! Like ',
+                                  ),
+                                  TextSpan(
+                                    text: widget.receiverName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFFFF5722),
+                                    ),
+                                  ),
+                                  const TextSpan(
+                                    text: '\'s profile to match and unlock unlimited messaging.',
+                                  ),
+                                ],
                         ),
                       ),
 
@@ -359,28 +387,34 @@ class _ChatScreenState extends State<ChatScreen> {
 
                       const SizedBox(height: 28),
 
-                      // Like Now button (primary CTA)
+                      // Like Now button or Waiting state (primary CTA)
                       SizedBox(
                         width: double.infinity,
                         height: 52,
                         child: Container(
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFF5722), Color(0xFFE91E63)],
-                            ),
+                            gradient: alreadyLiked
+                                ? LinearGradient(
+                                    colors: [Colors.grey[300]!, Colors.grey[400]!],
+                                  )
+                                : const LinearGradient(
+                                    colors: [Color(0xFFFF5722), Color(0xFFE91E63)],
+                                  ),
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFF5722).withOpacity(0.35),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
+                            boxShadow: alreadyLiked
+                                ? null
+                                : [
+                                    BoxShadow(
+                                      color: const Color(0xFFFF5722).withOpacity(0.35),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
                           ),
                           child: Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: isLiking
+                              onTap: (isLiking || alreadyLiked)
                                   ? null
                                   : () async {
                                       setDialogState(() => isLiking = true);
@@ -455,23 +489,41 @@ class _ChatScreenState extends State<ChatScreen> {
                                           color: Colors.white,
                                         ),
                                       )
-                                    : Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.favorite_rounded,
-                                              color: Colors.white, size: 20),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            'Like ${widget.receiverName}',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                              letterSpacing: 0.2,
-                                            ),
+                                    : alreadyLiked
+                                        ? Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.hourglass_empty_rounded,
+                                                  color: Colors.grey[700], size: 20),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Waiting for ${widget.receiverName}',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.grey[700],
+                                                  letterSpacing: 0.2,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        : Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.favorite_rounded,
+                                                  color: Colors.white, size: 20),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Like ${widget.receiverName}',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                  letterSpacing: 0.2,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
                               ),
                             ),
                           ),

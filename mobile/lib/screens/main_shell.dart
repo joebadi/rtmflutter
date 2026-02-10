@@ -55,6 +55,35 @@ class _MainShellState extends State<MainShell> {
     }
   }
 
+  Widget _buildPulsingDot() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 1000),
+      builder: (context, value, child) {
+        return Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.red,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withOpacity(0.6 * value),
+                blurRadius: 6 * value,
+                spreadRadius: 2 * value,
+              ),
+            ],
+          ),
+        );
+      },
+      onEnd: () {
+        if (mounted) {
+          setState(() {}); // Restart animation
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,28 +131,9 @@ class _MainShellState extends State<MainShell> {
                   const Icon(Icons.chat_bubble_outline),
                   if (context.watch<MessageProvider>().unreadCount > 0)
                     Positioned(
-                      right: -2,
-                      top: -2,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 14,
-                          minHeight: 14,
-                        ),
-                        child: Text(
-                          '${context.watch<MessageProvider>().unreadCount}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+                      right: -4,
+                      top: -4,
+                      child: _buildPulsingDot(),
                     ),
                 ],
               ),
@@ -133,28 +143,9 @@ class _MainShellState extends State<MainShell> {
                   const Icon(Icons.chat_bubble),
                   if (context.watch<MessageProvider>().unreadCount > 0)
                     Positioned(
-                      right: -2,
-                      top: -2,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 14,
-                          minHeight: 14,
-                        ),
-                        child: Text(
-                          '${context.watch<MessageProvider>().unreadCount}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+                      right: -4,
+                      top: -4,
+                      child: _buildPulsingDot(),
                     ),
                 ],
               ),

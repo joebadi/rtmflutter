@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 import '../services/message_service.dart';
 import '../config/api_config.dart';
-import '../widgets/notification_badge.dart';
+import '../widgets/notification_icon.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -15,10 +17,13 @@ class MessagesScreen extends StatefulWidget {
 class _MessagesScreenState extends State<MessagesScreen> {
   final TextEditingController _searchController = TextEditingController();
   final MessageService _messageService = MessageService();
+  final _storage = const FlutterSecureStorage();
+  final Dio _dio = Dio();
 
   bool _isLoading = true;
   List<dynamic> _conversations = [];
   String? _error;
+  String? _currentUserId;
 
   // Helper function to convert relative URLs to full URLs
   String _getFullPhotoUrl(String? url) {
@@ -30,7 +35,28 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   void initState() {
     super.initState();
+    _fetchCurrentUserId();
     _loadConversations();
+  }
+
+  Future<void> _fetchCurrentUserId() async {
+    try {
+      final token = await _storage.read(key: 'access_token');
+      if (token == null) return;
+
+      final response = await _dio.get(
+        '${ApiConfig.baseUrl}/auth/me',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _currentUserId = response.data['user']?['id'];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching current user: $e');
+    }
   }
 
   Future<void> _loadConversations() async {
@@ -99,10 +125,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         ),
         centerTitle: true,
         actions: [
-          const Padding(
-            padding: EdgeInsets.only(right: 4.0),
-            child: NotificationBadge(),
-          ),
+          const NotificationIcon(),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.black87),
             onPressed: _loadConversations,
@@ -237,6 +260,56 @@ class _MessagesScreenState extends State<MessagesScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLastMessagePreview(
+    dynamic lastMessage,
+    String messageContent,
+    bool hasUnread,
+  ) {
+    if (lastMessage == null || _currentUserId == null) {
+      return Text(
+        messageContent,
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          color: hasUnread ? Colors.black87 : Colors.grey[600],
+          fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    final senderId = lastMessage['senderId'];
+    final isSentByMe = senderId == _currentUserId;
+
+    return RichText(
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      text: TextSpan(
+        children: [
+          if (isSentByMe)
+            TextSpan(
+              text: 'You: ',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: hasUnread
+                    ? const Color(0xFFFF5722)
+                    : Colors.grey[500],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          TextSpan(
+            text: messageContent,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: hasUnread ? Colors.black87 : Colors.grey[600],
+              fontWeight: hasUnread ? FontWeight.w500 : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -409,19 +482,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: _buildLastMessagePreview(
+                          lastMessage,
                           lastMessageContent,
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            color: hasUnread
-                                ? Colors.black87
-                                : Colors.grey[600],
-                            fontWeight: hasUnread
-                                ? FontWeight.w500
-                                : FontWeight.normal,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          hasUnread,
                         ),
                       ),
                       if (hasUnread && unreadCount > 0)
