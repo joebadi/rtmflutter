@@ -25,6 +25,7 @@ import 'screens/likes_screen.dart';
 import 'screens/messages_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/user_profile_page.dart';
+import 'screens/notifications_screen.dart';
 import 'screens/main_shell.dart';
 import 'providers/profile_provider.dart';
 import 'providers/message_provider.dart';
@@ -122,6 +123,7 @@ final _router = GoRouter(
       builder: (context, state) => const MatchPreferencesPage(),
     ),
     GoRoute(path: '/options', builder: (context, state) => const OptionsPage()),
+    GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
     GoRoute(path: '/premium', builder: (context, state) => const PremiumPage()),
     GoRoute(path: '/wallet', builder: (context, state) => const WalletPage()),
     GoRoute(
