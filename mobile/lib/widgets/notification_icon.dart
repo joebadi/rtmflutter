@@ -22,7 +22,6 @@ class _NotificationIconState extends State<NotificationIcon> {
   List<dynamic> _notifications = [];
   bool _isLoading = false;
   OverlayEntry? _overlayEntry;
-  final LayerLink _layerLink = LayerLink();
 
   Future<void> _fetchNotifications() async {
     setState(() => _isLoading = true);
@@ -59,7 +58,12 @@ class _NotificationIconState extends State<NotificationIcon> {
     _fetchNotifications();
 
     final screenWidth = MediaQuery.of(context).size.width;
-    final dropdownWidth = screenWidth < 400 ? screenWidth - 24.0 : 360.0;
+
+    // Get the icon's position on screen to place dropdown below it
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final iconPosition = renderBox.localToGlobal(Offset.zero);
+    final iconSize = renderBox.size;
+    final topOffset = iconPosition.dy + iconSize.height + 4;
 
     _overlayEntry = OverlayEntry(
       builder: (context) => GestureDetector(
@@ -67,18 +71,22 @@ class _NotificationIconState extends State<NotificationIcon> {
         onTap: _closeDropdown,
         child: Stack(
           children: [
+            // Full-screen transparent barrier
+            Positioned.fill(
+              child: Container(color: Colors.transparent),
+            ),
             Positioned(
-              width: dropdownWidth,
-              child: CompositedTransformFollower(
-                link: _layerLink,
-                targetAnchor: Alignment.bottomRight,
-                followerAnchor: Alignment.topRight,
-                offset: const Offset(0, 8),
-                child: Material(
+              left: 12,
+              right: 12,
+              top: topOffset,
+              child: Material(
                   elevation: 8,
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    constraints: BoxConstraints(maxHeight: screenWidth < 400 ? 400 : 500),
+                    constraints: BoxConstraints(
+                      maxHeight: screenWidth < 400 ? 400 : 500,
+                      maxWidth: 400,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -195,7 +203,6 @@ class _NotificationIconState extends State<NotificationIcon> {
                     ),
                   ),
                 ),
-              ),
             ),
           ],
         ),
@@ -356,26 +363,23 @@ class _NotificationIconState extends State<NotificationIcon> {
   Widget build(BuildContext context) {
     final unreadCount = context.watch<NotificationService>().unreadCount;
 
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          IconButton(
-            onPressed: _toggleNotificationDropdown,
-            icon: Icon(
-              Icons.notifications_outlined,
-              color: widget.isDark ? Colors.white : Colors.black87,
-            ),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          onPressed: _toggleNotificationDropdown,
+          icon: Icon(
+            Icons.notifications_outlined,
+            color: widget.isDark ? Colors.white : Colors.black87,
           ),
-          if (unreadCount > 0)
-            Positioned(
-              right: 8,
-              top: 8,
-              child: _buildPulsingDot(),
-            ),
-        ],
-      ),
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: _buildPulsingDot(),
+          ),
+      ],
     );
   }
 
