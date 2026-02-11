@@ -667,27 +667,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ? _buildErrorState()
               : Column(
                   children: [
-                    // Date Divider
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Today',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // Messages List
+                    // Messages List with inline date headers
                     Expanded(
                       child: _messages.isEmpty
                           ? Center(
@@ -705,7 +685,14 @@ class _ChatScreenState extends State<ChatScreen> {
                               itemCount: _messages.length,
                               itemBuilder: (context, index) {
                                 final message = _messages[index];
-                                return _buildMessageBubble(message);
+                                final showDateHeader = _shouldShowDateHeader(index);
+                                return Column(
+                                  children: [
+                                    if (showDateHeader)
+                                      _buildDateHeader(_parseMessageDate(message)),
+                                    _buildMessageBubble(message),
+                                  ],
+                                );
                               },
                             ),
                     ),
@@ -874,6 +861,75 @@ class _ChatScreenState extends State<ChatScreen> {
             child: const Text('Retry', style: TextStyle(color: Color(0xFFFF5722))),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Parse the createdAt field into a DateTime, returning null on failure.
+  DateTime? _parseMessageDate(dynamic message) {
+    final createdAt = message['createdAt'] ?? '';
+    if (createdAt.toString().isEmpty) return null;
+    try {
+      return DateTime.parse(createdAt.toString()).toLocal();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Returns true if a date header should be shown above the message at [index].
+  bool _shouldShowDateHeader(int index) {
+    if (index == 0) return true; // Always show header for the first message
+
+    final currentDate = _parseMessageDate(_messages[index]);
+    final previousDate = _parseMessageDate(_messages[index - 1]);
+
+    if (currentDate == null) return false;
+    if (previousDate == null) return true;
+
+    // Show header when the calendar day changes
+    return currentDate.year != previousDate.year ||
+        currentDate.month != previousDate.month ||
+        currentDate.day != previousDate.day;
+  }
+
+  /// Format a date into a human-readable label.
+  String _formatDateLabel(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDay = DateTime(date.year, date.month, date.day);
+    final difference = today.difference(messageDay).inDays;
+
+    if (difference == 0) return 'Today';
+    if (difference == 1) return 'Yesterday';
+    if (difference < 7) {
+      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      return days[date.weekday - 1];
+    }
+    // For older messages, show full date
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  Widget _buildDateHeader(DateTime? date) {
+    final label = date != null ? _formatDateLabel(date) : 'Unknown';
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+          ),
+        ),
       ),
     );
   }
