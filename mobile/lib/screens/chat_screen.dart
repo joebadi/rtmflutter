@@ -89,7 +89,11 @@ class _ChatScreenState extends State<ChatScreen> {
           });
           
           // Mark as read immediately since user is looking at it
-          _messageService.markAsRead(message['id']);
+          _messageService.markAsRead(message['id']).then((_) {
+            if (mounted) {
+              context.read<MessageProvider>().fetchUnreadCount();
+            }
+          });
         }
       });
     } else {
@@ -117,6 +121,10 @@ class _ChatScreenState extends State<ChatScreen> {
       // Mark conversation as read (only if conversation exists)
       try {
         await _messageService.markConversationAsRead(widget.conversationId);
+        // Refresh the global unread count so the bottom nav badge updates
+        if (mounted) {
+          context.read<MessageProvider>().fetchUnreadCount();
+        }
       } catch (e) {
         // Ignore 404 errors for new conversations that don't exist yet
         debugPrint('[ChatScreen] Could not mark as read (conversation may not exist yet): $e');
