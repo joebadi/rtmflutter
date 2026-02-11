@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/profile_provider.dart';
 import '../../widgets/premium_dropdown.dart';
+import '../../widgets/premium_loader.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -66,7 +67,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Complete Your Profile')),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: PremiumLoader())
           : Form(
               key: _formKey,
               child: ListView(

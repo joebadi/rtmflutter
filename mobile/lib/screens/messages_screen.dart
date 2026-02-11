@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/message_service.dart';
 import '../config/api_config.dart';
 import '../widgets/notification_icon.dart';
+import '../widgets/premium_loader.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -155,7 +156,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+              child: PremiumLoader(),
             )
           : _error != null
               ? _buildErrorState()
@@ -482,7 +483,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               return Container(
                                 color: Colors.grey[200],
                                 child: const Center(
-                                  child: CircularProgressIndicator(
+                                  child: PremiumLoader(
                                     strokeWidth: 2,
                                     color: Color(0xFFFF5722),
                                   ),

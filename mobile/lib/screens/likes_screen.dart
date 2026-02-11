@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../services/like_service.dart';
 import '../config/api_config.dart';
 import '../widgets/notification_icon.dart';
+import '../widgets/premium_loader.dart';
 
 class LikesScreen extends StatefulWidget {
   const LikesScreen({super.key});
@@ -442,7 +443,7 @@ class _LikesScreenState extends State<LikesScreen>
   Widget _buildReceivedLikesGrid() {
     if (_isLoadingReceived) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+        child: PremiumLoader(),
       );
     }
 
@@ -522,7 +523,7 @@ class _LikesScreenState extends State<LikesScreen>
   Widget _buildSentLikesGrid() {
     if (_isLoadingSent) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+        child: PremiumLoader(),
       );
     }
 
@@ -602,7 +603,7 @@ class _LikesScreenState extends State<LikesScreen>
   Widget _buildMatchesList() {
     if (_isLoadingMatches) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+        child: PremiumLoader(),
       );
     }
 

@@ -6,6 +6,7 @@ import 'package:geocoding/geocoding.dart';
 import '../../config/theme.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/premium_dropdown.dart';
+import '../../widgets/premium_loader.dart';
 
 class PersonalInformationPage extends StatefulWidget {
   const PersonalInformationPage({super.key});
@@ -479,7 +480,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
                           ? const SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: PremiumLoader(strokeWidth: 2),
                             )
                           : const Icon(Icons.my_location,
                               color: AppTheme.primary),
@@ -776,7 +777,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
                         ? const SizedBox(
                             width: 24,
                             height: 24,
-                            child: CircularProgressIndicator(
+                            child: PremiumLoader(
                               strokeWidth: 2,
                               valueColor:
                                   AlwaysStoppedAnimation<Color>(Colors.white),

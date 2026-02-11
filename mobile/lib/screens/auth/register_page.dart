@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/password_strength_indicator.dart';
+import '../../widgets/premium_loader.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -352,7 +353,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                             height: 16,
                                             child: Padding(
                                               padding: EdgeInsets.all(12.0),
-                                              child: CircularProgressIndicator(
+                                              child: PremiumLoader(
                                                 strokeWidth: 2,
                                               ),
                                             ),
@@ -542,7 +543,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                           ? const SizedBox(
                                               width: 22,
                                               height: 22,
-                                              child: CircularProgressIndicator(
+                                              child: PremiumLoader(
                                                 color: Colors.white,
                                                 strokeWidth: 2.5,
                                               ),
@@ -860,7 +861,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             height: 16,
                             child: Padding(
                               padding: EdgeInsets.all(12.0),
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: PremiumLoader(strokeWidth: 2),
                             ),
                           )
                         : _phoneTaken // Show X if taken

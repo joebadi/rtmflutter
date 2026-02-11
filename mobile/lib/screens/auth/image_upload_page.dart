@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/profile_service.dart';
+import '../../widgets/premium_loader.dart';
 
 class ImageUploadPage extends StatefulWidget {
   const ImageUploadPage({super.key});
@@ -51,7 +52,7 @@ class _ImageUploadPageState extends State<ImageUploadPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => const Center(child: PremiumLoader()),
     );
 
     try {

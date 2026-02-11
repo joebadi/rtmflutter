@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math';
+import '../../widgets/premium_loader.dart';
 
 class VideoVerificationPage extends StatefulWidget {
   const VideoVerificationPage({super.key});
@@ -206,7 +207,7 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
                                   const SizedBox(
                                     width: 60,
                                     height: 60,
-                                    child: CircularProgressIndicator(
+                                    child: PremiumLoader(
                                       color: Color(0xFFFF5722),
                                       strokeWidth: 4,
                                     ),

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../services/match_service.dart';
 import '../../widgets/premium_dropdown.dart';
 import '../../widgets/premium_multi_select.dart';
+import '../../widgets/premium_loader.dart';
 
 class MatchPreferencesPage extends StatefulWidget {
   const MatchPreferencesPage({super.key});
@@ -397,7 +398,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     if (_isLoading) {
       return const Scaffold(
         body: Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
+          child: PremiumLoader(),
         ),
       );
     }

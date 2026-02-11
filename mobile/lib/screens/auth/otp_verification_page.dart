@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/premium_loader.dart';
 
 class OtpVerificationPage extends StatefulWidget {
   final String phoneNumber;
@@ -530,7 +531,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                                         ? const SizedBox(
                                             width: 22,
                                             height: 22,
-                                            child: CircularProgressIndicator(
+                                            child: PremiumLoader(
                                               color: Colors.white,
                                               strokeWidth: 2.5,
                                             ),

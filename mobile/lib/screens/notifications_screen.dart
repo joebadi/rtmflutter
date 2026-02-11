@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import '../config/api_config.dart';
 import '../services/notification_service.dart';
+import '../widgets/premium_loader.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -294,7 +295,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             child: _isLoading
                 ? const Center(
                     child:
-                        CircularProgressIndicator(color: Color(0xFFFF5722)),
+                        PremiumLoader(),
                   )
                 : _error != null
                     ? _buildErrorState()

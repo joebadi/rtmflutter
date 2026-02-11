@@ -6,6 +6,7 @@ import '../services/like_service.dart';
 import '../config/api_config.dart';
 import 'package:provider/provider.dart';
 import '../providers/message_provider.dart';
+import '../widgets/premium_loader.dart';
 
 class ChatScreen extends StatefulWidget {
   final String conversationId;
@@ -491,7 +492,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     ? const SizedBox(
                                         width: 22,
                                         height: 22,
-                                        child: CircularProgressIndicator(
+                                        child: PremiumLoader(
                                           strokeWidth: 2.5,
                                           color: Colors.white,
                                         ),
@@ -606,7 +607,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               return Container(
                                 color: Colors.grey[200],
                                 child: Center(
-                                  child: CircularProgressIndicator(
+                                  child: PremiumLoader(
                                     value: loadingProgress.expectedTotalBytes != null
                                         ? loadingProgress.cumulativeBytesLoaded /
                                             loadingProgress.expectedTotalBytes!
@@ -661,7 +662,7 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+              child: PremiumLoader(),
             )
           : _error != null
               ? _buildErrorState()
@@ -817,7 +818,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                       child: _isSending
                                           ? const Padding(
                                               padding: EdgeInsets.all(12),
-                                              child: CircularProgressIndicator(
+                                              child: PremiumLoader(
                                                 strokeWidth: 2,
                                                 color: Colors.grey,
                                               ),
@@ -996,7 +997,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               child: SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(
+                                child: PremiumLoader(
                                   strokeWidth: 2,
                                   color: Color(0xFFFF5722),
                                 ),
@@ -1116,7 +1117,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               child: SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(
+                                child: PremiumLoader(
                                   strokeWidth: 2,
                                   color: Color(0xFFFF5722),
                                 ),

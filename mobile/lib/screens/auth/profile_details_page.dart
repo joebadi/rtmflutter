@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/premium_dropdown.dart';
+import '../../widgets/premium_loader.dart';
 
 class ProfileDetailsPage extends StatefulWidget {
   final String? firstName;
@@ -326,7 +327,7 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+        builder: (context) => const Center(child: PremiumLoader()),
       );
 
       try {
@@ -906,7 +907,7 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(
+                        child: PremiumLoader(
                           strokeWidth: 2,
                           color: Color(0xFFFF6B35),
                         ),

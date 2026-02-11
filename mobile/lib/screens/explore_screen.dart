@@ -11,6 +11,7 @@ import '../config/theme.dart';
 import '../config/api_config.dart';
 import '../services/match_service.dart';
 import '../widgets/notification_icon.dart';
+import '../widgets/premium_loader.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -366,7 +367,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             // Content
             Expanded(
               child: _isLoading 
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF5722))) 
+                ? const Center(child: PremiumLoader()) 
                 : _buildContent(),
             ),
           ],

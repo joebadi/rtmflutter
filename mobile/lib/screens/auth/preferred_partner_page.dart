@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/premium_dropdown.dart';
 import '../../widgets/premium_multi_select.dart';
+import '../../widgets/premium_loader.dart';
 
 class PreferredPartnerPage extends StatefulWidget {
   const PreferredPartnerPage({super.key});
@@ -535,7 +536,7 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                               height: 20,
                                               width: 20,
                                               child:
-                                                  CircularProgressIndicator(
+                                                  PremiumLoader(
                                                 strokeWidth: 2,
                                                 valueColor:
                                                     AlwaysStoppedAnimation<

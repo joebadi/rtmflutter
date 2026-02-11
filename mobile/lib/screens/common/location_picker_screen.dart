@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import '../../services/location_search_service.dart';
+import '../../widgets/premium_loader.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key});
@@ -220,7 +221,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           if (_isLoading)
             const Expanded(
               child: Center(
-                child: CircularProgressIndicator(color: Color(0xFFFF5722)),
+                child: PremiumLoader(),
               ),
             )
           else if (_error != null)

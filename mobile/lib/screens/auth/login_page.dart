@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/profile_service.dart';
+import '../../widgets/premium_loader.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -429,7 +430,7 @@ class _LoginPageState extends State<LoginPage> {
                                                 ? const SizedBox(
                                                     width: 22,
                                                     height: 22,
-                                                    child: CircularProgressIndicator(
+                                                    child: PremiumLoader(
                                                       color: Colors.white,
                                                       strokeWidth: 2.5,
                                                     ),
@@ -773,7 +774,7 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
               child: _isLoading
                   ? const SizedBox(
                       width: 22, height: 22,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                      child: PremiumLoader(color: Colors.white, strokeWidth: 2.5),
                     )
                   : Text(
                       'Send Reset Token',
@@ -878,7 +879,7 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
             child: _isLoading
                 ? const SizedBox(
                     width: 22, height: 22,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                    child: PremiumLoader(color: Colors.white, strokeWidth: 2.5),
                   )
                 : Text(
                     'Reset Password',

@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../config/api_config.dart';
+import '../../widgets/premium_loader.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -40,7 +41,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Consumer<ProfileProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading && !provider.hasProfile) {
-            return const Center(child: CircularProgressIndicator(color: Color(0xFFFF5722)));
+            return const Center(child: PremiumLoader());
           }
 
           final profileData = provider.profile?['data']?['profile'];

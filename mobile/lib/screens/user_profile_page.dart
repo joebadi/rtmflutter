@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../config/api_config.dart';
 import '../services/like_service.dart';
+import '../widgets/premium_loader.dart';
 
 class UserProfilePage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -403,7 +404,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                     return Container(
                       color: Colors.grey[900],
                       child: Center(
-                        child: CircularProgressIndicator(
+                        child: PremiumLoader(
                           value: loadingProgress.expectedTotalBytes != null
                               ? loadingProgress.cumulativeBytesLoaded /
                                   loadingProgress.expectedTotalBytes!
@@ -804,7 +805,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                     child: _isLiking
                                         ? const Padding(
                                             padding: EdgeInsets.all(13),
-                                            child: CircularProgressIndicator(
+                                            child: PremiumLoader(
                                               strokeWidth: 2,
                                               color: Colors.white,
                                             ),
@@ -1252,7 +1253,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               child: _isLiking
                   ? const Padding(
                       padding: EdgeInsets.all(11),
-                      child: CircularProgressIndicator(
+                      child: PremiumLoader(
                         strokeWidth: 2,
                         color: Colors.white,
                       ),
