@@ -925,9 +925,7 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
                                       _buildDetailItem(
                                         Icons.child_care,
                                         'Children',
-                                        widget.profile['hasChildren'] != null
-                                            ? (widget.profile['hasChildren'] ? 'Yes' : 'No')
-                                            : 'Not specified',
+                                        widget.profile['hasChildren'] ?? 'Not specified',
                                       ),
                                     ],
                                   ),
