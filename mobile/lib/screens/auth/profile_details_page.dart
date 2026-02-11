@@ -34,7 +34,7 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
   String _selectedBloodGroup = 'O+';
   String? _calculatedZodiac;
   int? _calculatedAge;
-  String _selectedHeight = '5\'6"';
+  String? _selectedHeight;
   String _selectedBodyType = 'Average';
   bool _hasTattoos = false;
   bool _hasPiercings = false;
@@ -131,15 +131,32 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
     'AB-',
   ];
   final List<String> _heights = [
-    '4\'0"',
-    '4\'6"',
-    '5\'0"',
-    '5\'3"',
-    '5\'6"',
-    '5\'9"',
-    '6\'0"',
-    '6\'3"',
-    '6\'6"',
+    '4\'7" (140 cm)',
+    '4\'8" (142 cm)',
+    '4\'9" (145 cm)',
+    '4\'10" (147 cm)',
+    '4\'11" (150 cm)',
+    '5\'0" (152 cm)',
+    '5\'1" (155 cm)',
+    '5\'2" (157 cm)',
+    '5\'3" (160 cm)',
+    '5\'4" (163 cm)',
+    '5\'5" (165 cm)',
+    '5\'6" (168 cm)',
+    '5\'7" (170 cm)',
+    '5\'8" (173 cm)',
+    '5\'9" (175 cm)',
+    '5\'10" (178 cm)',
+    '5\'11" (180 cm)',
+    '6\'0" (183 cm)',
+    '6\'1" (185 cm)',
+    '6\'2" (188 cm)',
+    '6\'3" (190 cm)',
+    '6\'4" (193 cm)',
+    '6\'5" (196 cm)',
+    '6\'6" (198 cm)',
+    '6\'7" (201 cm)',
+    '6\'8" (203 cm)',
   ];
   final List<String> _bodyTypes = [
     'Slim',
@@ -149,6 +166,30 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
     'Plus Size',
     'Muscular',
   ];
+
+  final List<String> _maleBodyTypes = [
+    'Slim',
+    'Average',
+    'Athletic',
+    'Muscular',
+    'Stocky',
+    'Heavyset',
+  ];
+
+  final List<String> _femaleBodyTypes = [
+    'Slim',
+    'Petite',
+    'Average',
+    'Athletic',
+    'Curvy',
+    'Full-figured',
+  ];
+
+  List<String> _getBodyTypesForGender() {
+    if (_selectedGender == 'Male') return _maleBodyTypes;
+    if (_selectedGender == 'Female') return _femaleBodyTypes;
+    return _bodyTypes;
+  }
 
   void _calculateZodiacAndAge(DateTime dob) {
     // Calculate Age
@@ -548,7 +589,14 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
                                     'Gender',
                                     _selectedGender,
                                     _genders,
-                                    (v) => setState(() => _selectedGender = v!),
+                                    (v) => setState(() {
+                                      _selectedGender = v!;
+                                      // Reset body type if current selection is invalid for new gender
+                                      final validTypes = _getBodyTypesForGender();
+                                      if (!validTypes.contains(_selectedBodyType)) {
+                                        _selectedBodyType = validTypes.first;
+                                      }
+                                    }),
                                   ),
                                   const SizedBox(height: 14),
 
@@ -601,31 +649,27 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
                                   ),
                                   const SizedBox(height: 14),
 
-                                  // Height & Body Type (Row)
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildDropdown(
-                                          'Height',
-                                          _selectedHeight,
-                                          _heights,
-                                          (v) => setState(
-                                            () => _selectedHeight = v!,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: _buildDropdown(
-                                          'Body Type',
-                                          _selectedBodyType,
-                                          _bodyTypes,
-                                          (v) => setState(
-                                            () => _selectedBodyType = v!,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  // Height
+                                  PremiumDropdown(
+                                    label: 'Height',
+                                    value: _selectedHeight,
+                                    hint: 'Select height',
+                                    items: _heights,
+                                    onChanged: (v) => setState(
+                                      () => _selectedHeight = v,
+                                    ),
+                                    isDarkLabel: true,
+                                  ),
+                                  const SizedBox(height: 14),
+
+                                  // Body Type
+                                  _buildDropdown(
+                                    'Body Type',
+                                    _selectedBodyType,
+                                    _getBodyTypesForGender(),
+                                    (v) => setState(
+                                      () => _selectedBodyType = v!,
+                                    ),
                                   ),
                                   const SizedBox(height: 14),
 
@@ -750,6 +794,54 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
     );
   }
 
+  // Known location suggestions for autocomplete
+  static const List<String> _locationSuggestions = [
+    'Lagos, Lagos, Nigeria',
+    'Ikeja, Lagos, Nigeria',
+    'Lekki, Lagos, Nigeria',
+    'Victoria Island, Lagos, Nigeria',
+    'Abuja, FCT, Nigeria',
+    'Port Harcourt, Rivers, Nigeria',
+    'Ibadan, Oyo, Nigeria',
+    'Kano, Kano, Nigeria',
+    'Benin City, Edo, Nigeria',
+    'Enugu, Enugu, Nigeria',
+    'Owerri, Imo, Nigeria',
+    'Calabar, Cross River, Nigeria',
+    'Uyo, Akwa Ibom, Nigeria',
+    'Abeokuta, Ogun, Nigeria',
+    'Jos, Plateau, Nigeria',
+    'Kaduna, Kaduna, Nigeria',
+    'Warri, Delta, Nigeria',
+    'Aba, Abia, Nigeria',
+    'Accra, Greater Accra, Ghana',
+    'Kumasi, Ashanti, Ghana',
+    'Nairobi, Nairobi, Kenya',
+    'Mombasa, Mombasa, Kenya',
+    'Johannesburg, Gauteng, South Africa',
+    'Cape Town, Western Cape, South Africa',
+    'London, England, UK',
+    'Manchester, England, UK',
+    'New York, NY, USA',
+    'Houston, TX, USA',
+    'Atlanta, GA, USA',
+    'Toronto, Ontario, Canada',
+  ];
+
+  List<String> _filteredLocations = [];
+
+  void _onLocationChanged(String query) {
+    if (query.length < 2) {
+      setState(() => _filteredLocations = []);
+      return;
+    }
+    setState(() {
+      _filteredLocations = _locationSuggestions
+          .where((loc) => loc.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
   Widget _buildLocationField({
     required TextEditingController controller,
     required String label,
@@ -762,44 +854,120 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
         Text(
           label,
           style: GoogleFonts.poppins(
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             color: Colors.white.withOpacity(0.9),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: controller.text.isNotEmpty
+                  ? const Color(0xFFFF6B35).withOpacity(0.3)
+                  : Colors.grey[300]!.withOpacity(0.5),
+              width: controller.text.isNotEmpty ? 1.5 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: controller.text.isNotEmpty
+                    ? const Color(0xFFFF6B35).withOpacity(0.06)
+                    : Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: TextFormField(
             controller: controller,
-            style: GoogleFonts.poppins(color: Colors.black, fontSize: 13),
+            style: GoogleFonts.poppins(color: Colors.black87, fontSize: 14),
             validator: (value) =>
                 value == null || value.isEmpty ? 'Required' : null,
+            onChanged: _onLocationChanged,
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
+              hintStyle: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 14),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
+                horizontal: 16,
                 vertical: 14,
+              ),
+              prefixIcon: Icon(
+                Icons.location_on_outlined,
+                color: controller.text.isNotEmpty
+                    ? const Color(0xFFFF6B35)
+                    : Colors.grey[400],
+                size: 20,
               ),
               suffixIcon: IconButton(
                 icon: _isLoadingLocation
                     ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFFFF6B35),
+                        ),
                       )
-                    : const Icon(Icons.my_location, color: Color(0xFFFF6B35)),
+                    : const Icon(Icons.my_location, color: Color(0xFFFF6B35), size: 20),
                 onPressed: onGeolocate,
                 tooltip: 'Use current location',
               ),
             ),
           ),
         ),
+        // Autocomplete suggestions
+        if (_filteredLocations.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            constraints: const BoxConstraints(maxHeight: 160),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              itemCount: _filteredLocations.length,
+              itemBuilder: (context, index) {
+                final loc = _filteredLocations[index];
+                return InkWell(
+                  onTap: () {
+                    controller.text = loc;
+                    setState(() => _filteredLocations = []);
+                    FocusScope.of(context).unfocus();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    child: Row(
+                      children: [
+                        Icon(Icons.place_outlined, size: 16, color: Colors.grey[500]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            loc,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
       ],
     );
   }

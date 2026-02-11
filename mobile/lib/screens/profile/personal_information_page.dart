@@ -104,14 +104,22 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
     'AB+',
     'AB-',
   ];
-  final List<String> _heights = ['4\'0"', '5\'0"', '5\'6"', '6\'0"', '6\'6"'];
-  final List<String> _bodyTypes = [
-    'Slim',
-    'Average',
-    'Athletic',
-    'Curvy',
-    'Plus Size',
+  final List<String> _heights = [
+    '4\'7" (140 cm)', '4\'8" (142 cm)', '4\'9" (145 cm)', '4\'10" (147 cm)', '4\'11" (150 cm)',
+    '5\'0" (152 cm)', '5\'1" (155 cm)', '5\'2" (157 cm)', '5\'3" (160 cm)', '5\'4" (163 cm)',
+    '5\'5" (165 cm)', '5\'6" (168 cm)', '5\'7" (170 cm)', '5\'8" (173 cm)', '5\'9" (175 cm)',
+    '5\'10" (178 cm)', '5\'11" (180 cm)', '6\'0" (183 cm)', '6\'1" (185 cm)', '6\'2" (188 cm)',
+    '6\'3" (190 cm)', '6\'4" (193 cm)', '6\'5" (196 cm)', '6\'6" (198 cm)', '6\'7" (201 cm)', '6\'8" (203 cm)',
   ];
+  final List<String> _maleBodyTypes = ['Slim', 'Average', 'Athletic', 'Muscular', 'Stocky', 'Heavyset'];
+  final List<String> _femaleBodyTypes = ['Slim', 'Petite', 'Average', 'Athletic', 'Curvy', 'Full-figured'];
+  final List<String> _bodyTypes = ['Slim', 'Average', 'Athletic', 'Curvy', 'Plus Size', 'Muscular'];
+
+  List<String> _getBodyTypesForGender() {
+    if (_gender == 'Male') return _maleBodyTypes;
+    if (_gender == 'Female') return _femaleBodyTypes;
+    return _bodyTypes;
+  }
   final List<String> _skinColors = [
     'Fair',
     'Light Brown',
@@ -493,7 +501,13 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
                           'Gender',
                           _gender,
                           _genders,
-                          (v) => setState(() => _gender = v!),
+                          (v) => setState(() {
+                            _gender = v!;
+                            final validTypes = _getBodyTypesForGender();
+                            if (!validTypes.contains(_bodyType)) {
+                              _bodyType = validTypes.first;
+                            }
+                          }),
                         ),
                       ),
                     ],
@@ -658,7 +672,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
                         child: _buildDropdown(
                           'Body Type',
                           _bodyType,
-                          _bodyTypes,
+                          _getBodyTypesForGender(),
                           (v) => setState(() => _bodyType = v!),
                         ),
                       ),

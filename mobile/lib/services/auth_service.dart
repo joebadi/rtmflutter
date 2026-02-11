@@ -213,6 +213,32 @@ class AuthService {
     }
   }
 
+  /// Forgot password - request reset token via email
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await _dio.post(
+        ApiConfig.forgotPassword,
+        data: {'email': email},
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Failed to send reset link');
+    }
+  }
+
+  /// Reset password with token and new password
+  Future<Map<String, dynamic>> resetPassword(String token, String newPassword) async {
+    try {
+      final response = await _dio.post(
+        ApiConfig.resetPassword,
+        data: {'token': token, 'newPassword': newPassword},
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Failed to reset password');
+    }
+  }
+
   /// Refresh access token
   Future<String?> refreshAccessToken() async {
     try {

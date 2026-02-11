@@ -315,20 +315,7 @@ class _ImageUploadPageState extends State<ImageUploadPage> {
                                           ),
                                         ),
 
-                                        const SizedBox(height: 12),
-
-                                        // Skip Option
-                                        TextButton(
-                                          onPressed: () =>
-                                              context.push('/preferred-partner'),
-                                          child: Text(
-                                            'Skip for now',
-                                            style: GoogleFonts.poppins(
-                                              color: Colors.white.withOpacity(0.6),
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
+                                        const SizedBox(height: 16),
                                       ],
                                     ),
                                   ),

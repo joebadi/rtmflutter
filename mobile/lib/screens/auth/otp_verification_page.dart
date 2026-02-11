@@ -101,30 +101,145 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     if (!mounted) return;
 
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('OTP Verified Successfully!'),
-          backgroundColor: Color(0xFFFF6B35),
-        ),
+      _showResultPopup(
+        isSuccess: true,
+        title: 'Verified!',
+        message: 'Your account has been verified successfully.',
+        onDismiss: () {
+          if (mounted) {
+            context.go(
+              '/profile-details',
+              extra: {'firstName': widget.firstName, 'lastName': widget.lastName},
+            );
+          }
+        },
       );
+    } else {
+      _showResultPopup(
+        isSuccess: false,
+        title: 'Verification Failed',
+        message: auth.error ?? 'The OTP you entered is incorrect. Please try again.',
+      );
+    }
+  }
 
-      // Navigate to profile details page to complete profile
-      // Pass firstName and lastName if available
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) {
-          context.go(
-            '/profile-details',
-            extra: {'firstName': widget.firstName, 'lastName': widget.lastName},
-          );
+  void _showResultPopup({
+    required bool isSuccess,
+    required String title,
+    required String message,
+    VoidCallback? onDismiss,
+  }) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: !isSuccess,
+      barrierLabel: '',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (ctx, anim1, anim2) => const SizedBox(),
+      transitionBuilder: (ctx, anim1, anim2, child) {
+        final curvedAnim = CurvedAnimation(parent: anim1, curve: Curves.easeOutBack);
+        return ScaleTransition(
+          scale: curvedAnim,
+          child: FadeTransition(
+            opacity: anim1,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Animated icon container
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 600),
+                    curve: Curves.elasticOut,
+                    builder: (context, value, child) {
+                      return Transform.scale(scale: value, child: child);
+                    },
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: (isSuccess ? Colors.green : Colors.red).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Container(
+                        margin: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: (isSuccess ? Colors.green : Colors.red).withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isSuccess ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                          size: 44,
+                          color: isSuccess ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        onDismiss?.call();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isSuccess
+                            ? const Color(0xFFFF6B35)
+                            : Colors.grey[200],
+                        foregroundColor: isSuccess ? Colors.white : Colors.black87,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        isSuccess ? 'Continue' : 'Try Again',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    // Auto-dismiss success popup after 2 seconds
+    if (isSuccess) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context);
+          onDismiss?.call();
         }
       });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(auth.error ?? 'OTP verification failed'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 

@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/auth_provider.dart';
-import '../config/theme.dart';
 import '../services/profile_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -15,10 +14,12 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -38,6 +39,16 @@ class _SplashScreenState extends State<SplashScreen>
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(
+      begin: 0.95,
+      end: 1.05,
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+
     _controller.forward();
     _checkAuth();
   }
@@ -45,6 +56,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _controller.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -152,12 +164,12 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              AppTheme.primaryDark,
-              AppTheme.primary,
-              AppTheme.primaryLight,
+              Color(0xFF1A1A2E),
+              Color(0xFF16213E),
+              Color(0xFF0F3460),
             ],
           ),
         ),
@@ -169,28 +181,49 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo Container
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                  // Pulsing Logo with glow
+                  AnimatedBuilder(
+                    animation: _pulseAnimation,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: _pulseAnimation.value,
+                        child: Container(
+                          width: 130,
+                          height: 130,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFFFF6B35),
+                                Color(0xFFFF5722),
+                                Color(0xFFE64A19),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFFF6B35).withOpacity(0.4),
+                                blurRadius: 30,
+                                spreadRadius: 5,
+                              ),
+                              BoxShadow(
+                                color: const Color(0xFFFF5722).withOpacity(0.2),
+                                blurRadius: 60,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.favorite_rounded,
+                            size: 60,
+                            color: Colors.white,
+                          ),
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.favorite,
-                      size: 60,
-                      color: AppTheme.primary,
-                    ),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 36),
                   // App Name
                   Text(
                     'Ready to Marry',
@@ -201,33 +234,97 @@ class _SplashScreenState extends State<SplashScreen>
                       letterSpacing: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Text(
                     'Find Your Perfect Match',
                     style: GoogleFonts.poppins(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w300,
+                      color: Colors.white.withOpacity(0.6),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 50),
-                  // Loading Indicator
-                  SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white.withOpacity(0.8),
-                      ),
-                      strokeWidth: 3,
-                    ),
-                  ),
+                  const SizedBox(height: 60),
+                  // Premium loading dots
+                  const _PremiumLoadingDots(),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PremiumLoadingDots extends StatefulWidget {
+  const _PremiumLoadingDots();
+
+  @override
+  State<_PremiumLoadingDots> createState() => _PremiumLoadingDotsState();
+}
+
+class _PremiumLoadingDotsState extends State<_PremiumLoadingDots>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1400),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(3, (index) {
+            final delay = index * 0.2;
+            final progress = (_controller.value - delay).clamp(0.0, 1.0);
+            final bounce = (progress < 0.5)
+                ? Curves.easeOut.transform(progress * 2)
+                : Curves.easeIn.transform((1 - progress) * 2);
+
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 5),
+              child: Transform.translate(
+                offset: Offset(0, -8 * bounce),
+                child: Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: Color.lerp(
+                      const Color(0xFFFF6B35).withOpacity(0.4),
+                      const Color(0xFFFF6B35),
+                      bounce,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF6B35).withOpacity(0.3 * bounce),
+                        blurRadius: 8,
+                        spreadRadius: 2 * bounce,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }
