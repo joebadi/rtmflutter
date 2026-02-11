@@ -53,7 +53,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   String _hairyStatus = 'No';
   String _tribalMarks = 'No';
   String _bestFeature = 'Eyes';
-  String? _selectedHeight;
+  String _selectedHeight = '5\'6" (168 cm)';
 
   // Bio
 
@@ -431,7 +431,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
           'isHairy': _hairyStatus == 'Yes',
           'hasTribalMarks': _tribalMarks == 'Yes',
           'bestFeature': _bestFeature,
-          if (_selectedHeight != null) 'height': _selectedHeight,
+          'height': _selectedHeight,
 
           // Medical
           'genotype': _genotype,
@@ -1041,7 +1041,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                     'Height',
                     _selectedHeight,
                     _heights,
-                    (v) => setState(() => _selectedHeight = v),
+                    (v) => setState(() => _selectedHeight = v!),
                   ),
                   const SizedBox(height: 12),
                   Row(
