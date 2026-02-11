@@ -846,27 +846,27 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
                                       _buildDetailItem(
                                         Icons.height,
                                         'Height',
-                                        '5\'6"',
+                                        widget.profile['height'] ?? 'Not specified',
                                       ),
                                       _buildDetailItem(
                                         Icons.church,
                                         'Religion',
-                                        'Christianity',
+                                        widget.profile['religion'] ?? 'Not specified',
                                       ),
                                       _buildDetailItem(
                                         Icons.school,
                                         'Education',
-                                        'Bachelor\'s Degree',
+                                        widget.profile['education'] ?? 'Not specified',
                                       ),
                                       _buildDetailItem(
                                         Icons.work,
                                         'Work',
-                                        'Employed',
+                                        widget.profile['workStatus'] ?? 'Not specified',
                                       ),
                                       _buildDetailItem(
                                         Icons.favorite,
                                         'Status',
-                                        'Single',
+                                        widget.profile['relationshipStatus'] ?? 'Not specified',
                                       ),
                                     ],
                                   ),
@@ -888,12 +888,12 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
                                       _buildDetailItem(
                                         Icons.medical_services,
                                         'Genotype',
-                                        'AA',
+                                        widget.profile['genotype'] ?? 'Not specified',
                                       ),
                                       _buildDetailItem(
                                         Icons.bloodtype,
                                         'Blood Group',
-                                        'O+',
+                                        widget.profile['bloodGroup'] ?? 'Not specified',
                                       ),
                                     ],
                                   ),
@@ -915,17 +915,19 @@ class _ProfileDetailsModalState extends State<ProfileDetailsModal> {
                                       _buildDetailItem(
                                         Icons.local_bar,
                                         'Drinks',
-                                        'Socially',
+                                        widget.profile['drinkingStatus'] ?? 'Not specified',
                                       ),
                                       _buildDetailItem(
                                         Icons.smoking_rooms,
                                         'Smokes',
-                                        'No',
+                                        widget.profile['smokingStatus'] ?? 'Not specified',
                                       ),
                                       _buildDetailItem(
                                         Icons.child_care,
                                         'Children',
-                                        'No',
+                                        widget.profile['hasChildren'] != null
+                                            ? (widget.profile['hasChildren'] ? 'Yes' : 'No')
+                                            : 'Not specified',
                                       ),
                                     ],
                                   ),

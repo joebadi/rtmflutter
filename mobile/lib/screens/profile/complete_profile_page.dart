@@ -53,6 +53,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   String _hairyStatus = 'No';
   String _tribalMarks = 'No';
   String _bestFeature = 'Eyes';
+  String? _selectedHeight;
 
   // Bio
 
@@ -136,6 +137,34 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     'B-',
     'AB+',
     'AB-',
+  ];
+  final List<String> _heights = [
+    '4\'7" (140 cm)',
+    '4\'8" (142 cm)',
+    '4\'9" (145 cm)',
+    '4\'10" (147 cm)',
+    '4\'11" (150 cm)',
+    '5\'0" (152 cm)',
+    '5\'1" (155 cm)',
+    '5\'2" (157 cm)',
+    '5\'3" (160 cm)',
+    '5\'4" (163 cm)',
+    '5\'5" (165 cm)',
+    '5\'6" (168 cm)',
+    '5\'7" (170 cm)',
+    '5\'8" (173 cm)',
+    '5\'9" (175 cm)',
+    '5\'10" (178 cm)',
+    '5\'11" (180 cm)',
+    '6\'0" (183 cm)',
+    '6\'1" (185 cm)',
+    '6\'2" (188 cm)',
+    '6\'3" (190 cm)',
+    '6\'4" (193 cm)',
+    '6\'5" (196 cm)',
+    '6\'6" (198 cm)',
+    '6\'7" (201 cm)',
+    '6\'8" (203 cm)',
   ];
 
   // Ethnicity fields
@@ -288,6 +317,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
             if (profile['isHairy'] != null) _hairyStatus = profile['isHairy'] == true ? 'Yes' : 'No';
             if (profile['hasTribalMarks'] != null) _tribalMarks = profile['hasTribalMarks'] == true ? 'Yes' : 'No';
              if (profile['bestFeature'] != null) _bestFeature = profile['bestFeature'];
+            if (profile['height'] != null) _selectedHeight = profile['height'];
 
             // Medical
             if (profile['genotype'] != null) _genotype = profile['genotype'];
@@ -401,6 +431,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
           'isHairy': _hairyStatus == 'Yes',
           'hasTribalMarks': _tribalMarks == 'Yes',
           'bestFeature': _bestFeature,
+          if (_selectedHeight != null) 'height': _selectedHeight,
 
           // Medical
           'genotype': _genotype,
@@ -1005,6 +1036,14 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
 
                 // LOOKS
                 _buildSectionCard('Physical Appearance', Icons.face, [
+                  // Height
+                  _buildDropdown(
+                    'Height',
+                    _selectedHeight,
+                    _heights,
+                    (v) => setState(() => _selectedHeight = v),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
