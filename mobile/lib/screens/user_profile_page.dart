@@ -1377,9 +1377,61 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
+  String _formatList(dynamic value) {
+    if (value == null) return 'Any';
+    if (value is List) {
+      if (value.isEmpty) return 'Any';
+      return value.map((e) => e.toString()).join(', ');
+    }
+    return value.toString();
+  }
+
+  Widget _buildPreferenceItem(IconData icon, String label, String value) {
+    if (value == 'Any' || value.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFFFF5722), size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.95),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPreferredPartnerTab() {
-    // Note: This would need match preferences data from the user
-    // For now, showing a placeholder
+    final prefs = _user['preferences']
+        ?? _user['matchPreferences']
+        ?? _userObj['matchPreferences']
+        ?? {};
+    final bool hasPrefs = prefs is Map && prefs.isNotEmpty;
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1396,16 +1448,17 @@ class _UserProfilePageState extends State<UserProfilePage>
             child: Row(
               children: [
                 const Icon(
-                  Icons.info_outline,
+                  Icons.favorite_border,
                   color: Color(0xFFFF5722),
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Partner preferences for ${_user['firstName']}',
+                    'What ${_user['firstName'] ?? 'they'} is looking for',
                     style: GoogleFonts.poppins(
                       fontSize: 13,
+                      fontWeight: FontWeight.w500,
                       color: Colors.white.withOpacity(0.9),
                     ),
                   ),
@@ -1415,15 +1468,126 @@ class _UserProfilePageState extends State<UserProfilePage>
           ),
           const SizedBox(height: 20),
 
-          Center(
-            child: Text(
-              'Partner preferences not available',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.white.withOpacity(0.6),
+          if (!hasPrefs)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.favorite_border,
+                      color: Colors.white.withOpacity(0.3),
+                      size: 48,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Partner preferences not shared yet',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            )
+          else ...[
+            // Age Range
+            if (prefs['ageMin'] != null && prefs['ageMax'] != null)
+              _buildPreferenceItem(
+                Icons.calendar_today,
+                'Preferred Age',
+                '${prefs['ageMin']} - ${prefs['ageMax']} years',
+              ),
+
+            // Relationship Status
+            _buildPreferenceItem(
+              Icons.favorite,
+              'Relationship Status',
+              _formatList(prefs['relationshipStatus']),
             ),
-          ),
+
+            // Location
+            if (prefs['locationCountry'] != null)
+              _buildPreferenceItem(
+                Icons.location_on,
+                'Preferred Location',
+                prefs['locationCountry'].toString(),
+              ),
+
+            // States
+            _buildPreferenceItem(
+              Icons.map,
+              'Preferred States',
+              _formatList(prefs['locationStates']),
+            ),
+
+            // Tribes
+            _buildPreferenceItem(
+              Icons.people,
+              'Preferred Tribe(s)',
+              _formatList(prefs['locationTribes']),
+            ),
+
+            // Religion
+            _buildPreferenceItem(
+              Icons.auto_awesome,
+              'Preferred Religion',
+              _formatList(prefs['religion']),
+            ),
+
+            // Zodiac
+            _buildPreferenceItem(
+              Icons.stars,
+              'Preferred Zodiac',
+              _formatList(prefs['zodiac']),
+            ),
+
+            // Genotype
+            _buildPreferenceItem(
+              Icons.medical_services,
+              'Preferred Genotype',
+              _formatList(prefs['genotype']),
+            ),
+
+            // Blood Group
+            _buildPreferenceItem(
+              Icons.bloodtype,
+              'Preferred Blood Group',
+              _formatList(prefs['bloodGroup']),
+            ),
+
+            // Height
+            if (prefs['heightMin'] != null && prefs['heightMax'] != null)
+              _buildPreferenceItem(
+                Icons.height,
+                'Preferred Height',
+                '${prefs['heightMin']} to ${prefs['heightMax']}',
+              ),
+
+            // Body Type
+            _buildPreferenceItem(
+              Icons.accessibility_new,
+              'Preferred Body Type',
+              _formatList(prefs['bodyType']),
+            ),
+
+            // Tattoos
+            if (prefs['tattoosAcceptable'] != null)
+              _buildPreferenceItem(
+                Icons.brush,
+                'Tattoos',
+                prefs['tattoosAcceptable'] == true ? 'Yes' : 'No',
+              ),
+
+            // Piercings
+            if (prefs['piercingsAcceptable'] != null)
+              _buildPreferenceItem(
+                Icons.circle,
+                'Piercings',
+                prefs['piercingsAcceptable'] == true ? 'Yes' : 'No',
+              ),
+          ],
 
           const SizedBox(height: 24),
 

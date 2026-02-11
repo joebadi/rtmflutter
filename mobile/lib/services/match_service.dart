@@ -85,10 +85,14 @@ class MatchService {
       final response = await _dio.get(ApiConfig.preferences);
 
       if (response.statusCode == 200 && response.data['success'] == true) {
-        return response.data['data'];
+        final data = response.data['data'];
+        // Backend returns { preferences: { ... } } - extract the inner object
+        if (data is Map && data.containsKey('preferences') && data['preferences'] != null) {
+          return Map<String, dynamic>.from(data['preferences']);
+        }
+        return Map<String, dynamic>.from(data ?? {});
       } else {
-        // If 404, might return empty defaults?
-        return {}; 
+        return {};
       }
     } catch (e) {
       print('Error fetching preferences: $e');

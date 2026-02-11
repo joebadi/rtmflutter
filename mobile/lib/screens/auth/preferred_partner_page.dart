@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/premium_dropdown.dart';
+import '../../widgets/premium_multi_select.dart';
 
 class PreferredPartnerPage extends StatefulWidget {
   const PreferredPartnerPage({super.key});
@@ -16,16 +17,16 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
   final _formKey = GlobalKey<FormState>();
 
   RangeValues _ageRange = const RangeValues(25, 35);
-  final List<String> _selectedRelationshipStatuses = ['Single'];
+  final List<String> _selectedRelationshipStatuses = [];
   String _selectedCountry = 'Nigeria';
   final List<String> _selectedStates = [];
   final List<String> _selectedTribes = [];
-  String? _selectedReligion;
-  String? _selectedZodiac;
-  String? _selectedGenotype;
-  String? _selectedBloodGroup;
-  String? _selectedHeight;
-  String? _selectedBodyType;
+  final List<String> _selectedReligions = [];
+  final List<String> _selectedZodiacs = [];
+  final List<String> _selectedGenotypes = [];
+  final List<String> _selectedBloodGroups = [];
+  RangeValues _heightRange = const RangeValues(4, 19); // 5'0" to 6'0" default
+  final List<String> _selectedBodyTypes = [];
   bool? _preferredTattoos;
   bool? _preferredPiercings;
 
@@ -58,23 +59,82 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
     'UK',
   ];
   final List<String> _nigerianStates = [
-    'Lagos',
-    'Abuja',
-    'Kano',
-    'Rivers',
-    'Oyo',
-    'Ogun',
-    'Edo',
+    'Abia',
+    'Adamawa',
+    'Akwa Ibom',
     'Anambra',
+    'Bauchi',
+    'Bayelsa',
+    'Benue',
+    'Borno',
+    'Cross River',
+    'Delta',
+    'Ebonyi',
+    'Edo',
+    'Ekiti',
     'Enugu',
+    'FCT',
+    'Gombe',
+    'Imo',
+    'Jigawa',
+    'Kaduna',
+    'Kano',
+    'Katsina',
+    'Kebbi',
+    'Kogi',
+    'Kwara',
+    'Lagos',
+    'Nasarawa',
+    'Niger',
+    'Ogun',
+    'Ondo',
+    'Osun',
+    'Oyo',
+    'Plateau',
+    'Rivers',
+    'Sokoto',
+    'Taraba',
+    'Yobe',
+    'Zamfara',
   ];
   final List<String> _tribes = [
-    'Yoruba',
-    'Igbo',
-    'Hausa',
-    'Ijaw',
-    'Fulani',
+    'Annang',
+    'Awori',
+    'Bachama',
+    'Berom',
+    'Bini',
+    'Chamba',
+    'Ebira',
     'Edo',
+    'Efik',
+    'Egba',
+    'Egun',
+    'Ejagham',
+    'Esan',
+    'Fulani',
+    'Gbagyi',
+    'Hausa',
+    'Ibibio',
+    'Idoma',
+    'Igala',
+    'Igbo',
+    'Ijaw',
+    'Ijebu',
+    'Ikwerre',
+    'Isoko',
+    'Itsekiri',
+    'Jukun',
+    'Kalabari',
+    'Kanuri',
+    'Kilba',
+    'Margi',
+    'Mumuye',
+    'Nupe',
+    'Ogoni',
+    'Oron',
+    'Tiv',
+    'Urhobo',
+    'Yoruba',
   ];
   final List<String> _religions = [
     'Christianity',
@@ -96,7 +156,7 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
     'Aquarius',
     'Pisces',
   ];
-  final List<String> _genotypes = ['AA', 'AS', 'SS', 'AC'];
+  final List<String> _genotypes = ['AA', 'AS', 'SS', 'AC', 'SC'];
   final List<String> _bloodGroups = [
     'O+',
     'O-',
@@ -107,54 +167,98 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
     'AB+',
     'AB-',
   ];
-  final List<String> _heights = ['4\'0"', '5\'0"', '5\'6"', '6\'0"', '6\'6"'];
+  final List<String> _heights = [
+    '4\'7" (140 cm)',
+    '4\'8" (142 cm)',
+    '4\'9" (145 cm)',
+    '4\'10" (147 cm)',
+    '4\'11" (150 cm)',
+    '5\'0" (152 cm)',
+    '5\'1" (155 cm)',
+    '5\'2" (157 cm)',
+    '5\'3" (160 cm)',
+    '5\'4" (163 cm)',
+    '5\'5" (165 cm)',
+    '5\'6" (168 cm)',
+    '5\'7" (170 cm)',
+    '5\'8" (173 cm)',
+    '5\'9" (175 cm)',
+    '5\'10" (178 cm)',
+    '5\'11" (180 cm)',
+    '6\'0" (183 cm)',
+    '6\'1" (185 cm)',
+    '6\'2" (188 cm)',
+    '6\'3" (190 cm)',
+    '6\'4" (193 cm)',
+    '6\'5" (196 cm)',
+    '6\'6" (198 cm)',
+    '6\'7" (201 cm)',
+    '6\'8" (203 cm)',
+  ];
   final List<String> _bodyTypes = [
     'Slim',
+    'Petite',
     'Average',
     'Athletic',
+    'Muscular',
     'Curvy',
-    'Plus Size',
+    'Stocky',
+    'Full-figured',
+    'Heavyset',
   ];
 
   final ProfileService _profileService = ProfileService();
   bool _isSaving = false;
+
+  String _heightLabel(int index) {
+    if (index < 0 || index >= _heights.length) return '';
+    return _heights[index].split(' (').first;
+  }
+
+  int _heightToCm(int index) {
+    if (index < 0 || index >= _heights.length) return 0;
+    final match = RegExp(r'\((\d+) cm\)').firstMatch(_heights[index]);
+    return match != null ? int.parse(match.group(1)!) : 0;
+  }
 
   Future<void> _continue() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isSaving = true);
 
       try {
-        // Prepare preferences data
         final preferencesData = {
           'ageMin': _ageRange.start.round(),
           'ageMax': _ageRange.end.round(),
-          'ageIsDealBreaker': false, // Age is not typically a deal breaker
+          'ageIsDealBreaker': false,
           'relationshipStatus': _selectedRelationshipStatuses,
-          'relationshipIsDealBreaker': _dealBreakers['relationshipStatus'] ?? false,
+          'relationshipIsDealBreaker':
+              _dealBreakers['relationshipStatus'] ?? false,
           'locationCountry': _selectedCountry,
           'locationStates': _selectedStates,
           'locationTribes': _selectedTribes,
           'locationIsDealBreaker': _dealBreakers['location'] ?? false,
-          if (_selectedReligion != null) 'religion': [_selectedReligion],
+          'religion': _selectedReligions,
           'religionIsDealBreaker': _dealBreakers['religion'] ?? false,
-          if (_selectedZodiac != null) 'zodiac': [_selectedZodiac],
+          'zodiac': _selectedZodiacs,
           'zodiacIsDealBreaker': _dealBreakers['zodiac'] ?? false,
-          if (_selectedGenotype != null) 'genotype': [_selectedGenotype],
+          'genotype': _selectedGenotypes,
           'genotypeIsDealBreaker': _dealBreakers['genotype'] ?? false,
-          if (_selectedBloodGroup != null) 'bloodGroup': [_selectedBloodGroup],
+          'bloodGroup': _selectedBloodGroups,
           'bloodGroupIsDealBreaker': _dealBreakers['bloodGroup'] ?? false,
-          if (_selectedBodyType != null) 'bodyType': [_selectedBodyType],
+          'heightMin': _heightToCm(_heightRange.start.round()),
+          'heightMax': _heightToCm(_heightRange.end.round()),
+          'heightIsDealBreaker': _dealBreakers['height'] ?? false,
+          'bodyType': _selectedBodyTypes,
           'bodyTypeIsDealBreaker': _dealBreakers['bodyType'] ?? false,
           if (_preferredTattoos != null) 'tattoosAcceptable': _preferredTattoos,
           'tattoosIsDealBreaker': _dealBreakers['tattoos'] ?? false,
-          if (_preferredPiercings != null) 'piercingsAcceptable': _preferredPiercings,
+          if (_preferredPiercings != null)
+            'piercingsAcceptable': _preferredPiercings,
           'piercingsIsDealBreaker': _dealBreakers['piercings'] ?? false,
         };
 
-        // Save preferences to backend
         await _profileService.savePreferences(preferencesData);
 
-        // Navigate to home/dashboard
         if (mounted) {
           context.go('/video-verification');
         }
@@ -276,7 +380,7 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // Age Range
-                                  _buildSectionTitle('Age Range'),
+                                  _buildSectionTitle('Preferred Age Range'),
                                   Text(
                                     '${_ageRange.start.round()} - ${_ageRange.end.round()} years',
                                     style: GoogleFonts.poppins(
@@ -299,7 +403,7 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                   ),
                                   const SizedBox(height: 20),
 
-                                  // Relationship Status with Deal Breaker
+                                  // Relationship Status - multiselect
                                   _buildMultiSelectWithDealBreaker(
                                     'Relationship Status',
                                     _selectedRelationshipStatuses,
@@ -308,13 +412,13 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                   ),
                                   const SizedBox(height: 14),
 
-                                  // Location with Deal Breaker
+                                  // Location
                                   _buildDropdownWithDealBreaker(
-                                    'Partner\'s Location',
+                                    'Preferred Partner Location',
                                     _selectedCountry,
                                     _countries,
-                                    (v) =>
-                                        setState(() => _selectedCountry = v!),
+                                    (v) => setState(
+                                        () => _selectedCountry = v!),
                                     'location',
                                   ),
 
@@ -327,7 +431,7 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                     ),
                                     const SizedBox(height: 14),
                                     _buildMultiSelectField(
-                                      'Preferred Tribes',
+                                      'Preferred Tribe(s)',
                                       _selectedTribes,
                                       _tribes,
                                     ),
@@ -335,86 +439,71 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
 
                                   const SizedBox(height: 14),
 
-                                  // Religion with Deal Breaker
-                                  _buildDropdownWithDealBreaker(
+                                  // Religion - multiselect
+                                  _buildMultiSelectWithDealBreaker(
                                     'Preferred Religion',
-                                    _selectedReligion,
+                                    _selectedReligions,
                                     _religions,
-                                    (v) =>
-                                        setState(() => _selectedReligion = v),
                                     'religion',
                                   ),
                                   const SizedBox(height: 14),
 
-                                  // Zodiac with Deal Breaker
-                                  _buildDropdownWithDealBreaker(
+                                  // Zodiac - multiselect
+                                  _buildMultiSelectWithDealBreaker(
                                     'Preferred Zodiac',
-                                    _selectedZodiac,
+                                    _selectedZodiacs,
                                     _zodiacs,
-                                    (v) => setState(() => _selectedZodiac = v),
                                     'zodiac',
                                   ),
                                   const SizedBox(height: 14),
 
-                                  // Genotype with Deal Breaker
-                                  _buildDropdownWithDealBreaker(
+                                  // Genotype - multiselect
+                                  _buildMultiSelectWithDealBreaker(
                                     'Preferred Genotype',
-                                    _selectedGenotype,
+                                    _selectedGenotypes,
                                     _genotypes,
-                                    (v) =>
-                                        setState(() => _selectedGenotype = v),
                                     'genotype',
                                   ),
                                   const SizedBox(height: 14),
 
-                                  // Blood Group with Deal Breaker
-                                  _buildDropdownWithDealBreaker(
+                                  // Blood Group - multiselect
+                                  _buildMultiSelectWithDealBreaker(
                                     'Preferred Blood Group',
-                                    _selectedBloodGroup,
+                                    _selectedBloodGroups,
                                     _bloodGroups,
-                                    (v) =>
-                                        setState(() => _selectedBloodGroup = v),
                                     'bloodGroup',
                                   ),
                                   const SizedBox(height: 14),
 
-                                  // Height with Deal Breaker
-                                  _buildDropdownWithDealBreaker(
-                                    'Preferred Height',
-                                    _selectedHeight,
-                                    _heights,
-                                    (v) => setState(() => _selectedHeight = v),
-                                    'height',
-                                  ),
+                                  // Height - range slider
+                                  _buildHeightRangeWithDealBreaker(),
                                   const SizedBox(height: 14),
 
-                                  // Body Type with Deal Breaker
-                                  _buildDropdownWithDealBreaker(
+                                  // Body Type - multiselect
+                                  _buildMultiSelectWithDealBreaker(
                                     'Preferred Body Type',
-                                    _selectedBodyType,
+                                    _selectedBodyTypes,
                                     _bodyTypes,
-                                    (v) =>
-                                        setState(() => _selectedBodyType = v),
                                     'bodyType',
                                   ),
                                   const SizedBox(height: 14),
 
-                                  // Tattoos with Deal Breaker
+                                  // Tattoos
                                   _buildBooleanWithDealBreaker(
                                     'Tattoos',
                                     _preferredTattoos,
-                                    (v) =>
-                                        setState(() => _preferredTattoos = v),
+                                    (v) => setState(
+                                        () => _preferredTattoos = v),
                                     'tattoos',
                                   ),
                                   const SizedBox(height: 14),
 
-                                  // Piercings with Deal Breaker
+                                  // Piercings
                                   _buildBooleanWithDealBreaker(
                                     'Piercings',
                                     _preferredPiercings,
-                                    (v) =>
-                                        setState(() => _preferredPiercings = v),
+                                    (v) => setState(
+                                        () => _preferredPiercings = v),
                                     'piercings',
                                   ),
 
@@ -425,18 +514,19 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                     width: double.infinity,
                                     height: 50,
                                     child: ElevatedButton(
-                                      onPressed: _isSaving ? null : _continue,
+                                      onPressed:
+                                          _isSaving ? null : _continue,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(
                                           0xFFFF6B35,
                                         ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                         ),
                                         elevation: 0,
-                                        padding: const EdgeInsets.symmetric(
+                                        padding:
+                                            const EdgeInsets.symmetric(
                                           vertical: 14,
                                         ),
                                       ),
@@ -444,9 +534,12 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                           ? const SizedBox(
                                               height: 20,
                                               width: 20,
-                                              child: CircularProgressIndicator(
+                                              child:
+                                                  CircularProgressIndicator(
                                                 strokeWidth: 2,
-                                                valueColor: AlwaysStoppedAnimation<Color>(
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                        Color>(
                                                   Colors.white,
                                                 ),
                                               ),
@@ -531,7 +624,7 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
         PremiumDropdown(
           label: label,
           value: value,
-          hint: 'Select',
+          hint: 'Any',
           items: items,
           onChanged: onChanged,
           isDarkLabel: true,
@@ -550,89 +643,40 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Text(
-              label,
+              'Deal Breaker',
               style: GoogleFonts.poppins(
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w500,
+                color: _dealBreakers[dealBreakerKey]!
+                    ? const Color(0xFFFF6B35)
+                    : Colors.white.withOpacity(0.5),
               ),
             ),
-            Row(
-              children: [
-                Text(
-                  'Deal Breaker',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Transform.scale(
-                  scale: 0.7,
-                  child: Switch(
-                    value: _dealBreakers[dealBreakerKey]!,
-                    onChanged: (v) =>
-                        setState(() => _dealBreakers[dealBreakerKey] = v),
-                    activeColor: Colors.red,
-                  ),
-                ),
-              ],
+            const SizedBox(width: 4),
+            Transform.scale(
+              scale: 0.7,
+              child: Switch(
+                value: _dealBreakers[dealBreakerKey]!,
+                onChanged: (v) =>
+                    setState(() => _dealBreakers[dealBreakerKey] = v),
+                activeColor: const Color(0xFFFF6B35),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(10),
-            border: _dealBreakers[dealBreakerKey]!
-                ? Border.all(color: Colors.red, width: 2)
-                : null,
-          ),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: items.map((item) {
-              final isSelected = selectedValues.contains(item);
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    if (isSelected) {
-                      selectedValues.remove(item);
-                    } else {
-                      selectedValues.add(item);
-                    }
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFFFF6B35)
-                        : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    item,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: isSelected ? Colors.white : Colors.black,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
+        PremiumMultiSelect(
+          label: label,
+          selectedValues: selectedValues,
+          items: items,
+          hint: 'Any',
+          onChanged: (values) => setState(() {
+            selectedValues.clear();
+            selectedValues.addAll(values);
+          }),
+          isDarkLabel: true,
         ),
       ],
     );
@@ -643,63 +687,144 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
     List<String> selectedValues,
     List<String> items,
   ) {
+    return PremiumMultiSelect(
+      label: label,
+      selectedValues: selectedValues,
+      items: items,
+      hint: 'Any',
+      onChanged: (values) => setState(() {
+        selectedValues.clear();
+        selectedValues.addAll(values);
+      }),
+      isDarkLabel: true,
+    );
+  }
+
+  Widget _buildHeightRangeWithDealBreaker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              'Deal Breaker',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: _dealBreakers['height']!
+                    ? const Color(0xFFFF6B35)
+                    : Colors.white.withOpacity(0.5),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Transform.scale(
+              scale: 0.7,
+              child: Switch(
+                value: _dealBreakers['height']!,
+                onChanged: (v) =>
+                    setState(() => _dealBreakers['height'] = v),
+                activeColor: const Color(0xFFFF6B35),
+              ),
+            ),
+          ],
+        ),
         Text(
-          label,
+          'Preferred Height',
           style: GoogleFonts.poppins(
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             color: Colors.white.withOpacity(0.9),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(0xFFFF5722).withOpacity(0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF5722).withOpacity(0.06),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: items.map((item) {
-              final isSelected = selectedValues.contains(item);
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    if (isSelected) {
-                      selectedValues.remove(item);
-                    } else {
-                      selectedValues.add(item);
-                    }
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFFFF6B35)
-                        : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    item,
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _heightLabel(_heightRange.start.round()),
                     style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: isSelected ? Colors.white : Colors.black,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFFF5722),
                     ),
                   ),
+                  Text(
+                    'to',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  Text(
+                    _heightLabel(_heightRange.end.round()),
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFFF5722),
+                    ),
+                  ),
+                ],
+              ),
+              SliderTheme(
+                data: SliderThemeData(
+                  activeTrackColor: const Color(0xFFFF6B35),
+                  inactiveTrackColor: Colors.grey[300],
+                  thumbColor: const Color(0xFFFF6B35),
+                  overlayColor: const Color(0xFFFF6B35).withOpacity(0.2),
+                  trackHeight: 4,
+                  rangeThumbShape: const RoundRangeSliderThumbShape(
+                    enabledThumbRadius: 10,
+                  ),
                 ),
-              );
-            }).toList(),
+                child: RangeSlider(
+                  values: _heightRange,
+                  min: 0,
+                  max: (_heights.length - 1).toDouble(),
+                  divisions: _heights.length - 1,
+                  onChanged: (values) =>
+                      setState(() => _heightRange = values),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _heights.first.split(' (').first,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                  Text(
+                    _heights.last.split(' (').first,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ],
