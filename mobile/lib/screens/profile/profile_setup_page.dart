@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/profile_provider.dart';
+import '../../widgets/premium_dropdown.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -77,25 +78,23 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  DropdownButtonFormField<String>(
+                  PremiumDropdown(
+                    label: 'Gender',
                     value: _gender,
-                    decoration: const InputDecoration(labelText: 'Gender'),
-                    items: _genders
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                        .toList(),
+                    items: _genders,
                     onChanged: (v) => setState(() => _gender = v!),
                   ),
+                  const SizedBox(height: 16),
 
-                  DropdownButtonFormField<String>(
+                  PremiumDropdown(
+                    label: 'Country',
                     value: _country,
-                    decoration: const InputDecoration(labelText: 'Country'),
-                    items: _countries
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                        .toList(),
+                    items: _countries,
                     onChanged: (v) => setState(() => _country = v!),
                   ),
 
                   if (_country == 'Nigeria') ...[
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _stateCtrl,
                       decoration: const InputDecoration(
@@ -108,27 +107,23 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                     ),
                   ],
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
 
-                  DropdownButtonFormField<String>(
+                  PremiumDropdown(
+                    label: 'Genotype',
                     value: _genotype,
-                    decoration: const InputDecoration(labelText: 'Genotype'),
-                    items: _genotypes
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                        .toList(),
+                    items: _genotypes,
                     onChanged: (v) => setState(() => _genotype = v!),
                   ),
+                  const SizedBox(height: 16),
 
-                  DropdownButtonFormField<String>(
+                  PremiumDropdown(
+                    label: 'Relationship Status',
                     value: _relationshipStatus,
-                    decoration: const InputDecoration(
-                      labelText: 'Relationship Status',
-                    ),
-                    items: _statuses
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                        .toList(),
+                    items: _statuses,
                     onChanged: (v) => setState(() => _relationshipStatus = v!),
                   ),
+                  const SizedBox(height: 16),
 
                   TextFormField(
                     controller: _bioCtrl,

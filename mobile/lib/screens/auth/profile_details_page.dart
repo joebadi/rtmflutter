@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../services/profile_service.dart';
+import '../../widgets/premium_dropdown.dart';
 
 class ProfileDetailsPage extends StatefulWidget {
   final String? firstName;
@@ -894,43 +895,12 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
     List<String> items,
     ValueChanged<String?> onChanged,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: Colors.white.withOpacity(0.9),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              dropdownColor: Colors.white,
-              style: GoogleFonts.poppins(color: Colors.black, fontSize: 13),
-              icon: const Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.grey,
-                size: 20,
-              ),
-              items: items.map((String item) {
-                return DropdownMenuItem<String>(value: item, child: Text(item));
-              }).toList(),
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-      ],
+    return PremiumDropdown(
+      label: label,
+      value: value,
+      items: items,
+      onChanged: onChanged,
+      isDarkLabel: true,
     );
   }
 

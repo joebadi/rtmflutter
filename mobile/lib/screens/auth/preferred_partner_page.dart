@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/profile_service.dart';
+import '../../widgets/premium_dropdown.dart';
 
 class PreferredPartnerPage extends StatefulWidget {
   const PreferredPartnerPage({super.key});
@@ -503,70 +504,37 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Text(
-              label,
+              'Deal Breaker',
               style: GoogleFonts.poppins(
                 fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w500,
+                color: _dealBreakers[dealBreakerKey]!
+                    ? const Color(0xFFFF6B35)
+                    : Colors.white.withOpacity(0.5),
               ),
             ),
-            Row(
-              children: [
-                Text(
-                  'Deal Breaker',
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Transform.scale(
-                  scale: 0.7,
-                  child: Switch(
-                    value: _dealBreakers[dealBreakerKey]!,
-                    onChanged: (v) =>
-                        setState(() => _dealBreakers[dealBreakerKey] = v),
-                    activeColor: Colors.red,
-                  ),
-                ),
-              ],
+            const SizedBox(width: 4),
+            Transform.scale(
+              scale: 0.7,
+              child: Switch(
+                value: _dealBreakers[dealBreakerKey]!,
+                onChanged: (v) =>
+                    setState(() => _dealBreakers[dealBreakerKey] = v),
+                activeColor: const Color(0xFFFF6B35),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(10),
-            border: _dealBreakers[dealBreakerKey]!
-                ? Border.all(color: Colors.red, width: 2)
-                : null,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              hint: Text(
-                'Select',
-                style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
-              ),
-              dropdownColor: Colors.white,
-              style: GoogleFonts.poppins(color: Colors.black, fontSize: 13),
-              icon: const Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.grey,
-                size: 20,
-              ),
-              items: items.map((String item) {
-                return DropdownMenuItem<String>(value: item, child: Text(item));
-              }).toList(),
-              onChanged: onChanged,
-            ),
-          ),
+        PremiumDropdown(
+          label: label,
+          value: value,
+          hint: 'Select',
+          items: items,
+          onChanged: onChanged,
+          isDarkLabel: true,
         ),
       ],
     );

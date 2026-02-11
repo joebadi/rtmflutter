@@ -7,6 +7,7 @@ import '../../config/api_config.dart';
 import '../../services/profile_service.dart';
 import '../common/location_picker_screen.dart';
 import '../../services/location_search_service.dart';
+import '../../widgets/premium_dropdown.dart';
 
 class CompleteProfilePage extends StatefulWidget {
   final bool isEditing;
@@ -1230,44 +1231,11 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     List<String> items,
     ValueChanged<String?> onChanged,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
-          ),
-        ),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              dropdownColor: Colors.white,
-              style: GoogleFonts.poppins(color: Colors.black87, fontSize: 13),
-              icon: Icon(
-                Icons.keyboard_arrow_down,
-                color: Colors.grey[600],
-                size: 20,
-              ),
-              items: items.map((String item) {
-                return DropdownMenuItem<String>(value: item, child: Text(item));
-              }).toList(),
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-      ],
+    return PremiumDropdown(
+      label: label,
+      value: value,
+      items: items,
+      onChanged: onChanged,
     );
   }
 

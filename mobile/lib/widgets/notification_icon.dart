@@ -10,61 +10,64 @@ class NotificationIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unreadCount = context.watch<NotificationService>().unreadCount;
+    return Consumer<NotificationService>(
+      builder: (context, notificationService, child) {
+        final count = notificationService.unreadCount;
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconButton(
-          onPressed: () => context.push('/notifications'),
-          icon: Icon(
-            Icons.notifications_outlined,
-            color: isDark ? Colors.white : Colors.black87,
-          ),
-        ),
-        if (unreadCount > 0)
-          Positioned(
-            right: 8,
-            top: 8,
-            child: _PulsingDot(),
-          ),
-      ],
-    );
-  }
-}
-
-class _PulsingDot extends StatefulWidget {
-  @override
-  State<_PulsingDot> createState() => _PulsingDotState();
-}
-
-class _PulsingDotState extends State<_PulsingDot> {
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 1000),
-      builder: (context, value, child) {
-        return Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.red,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.red.withOpacity(0.6 * value),
-                blurRadius: 6 * value,
-                spreadRadius: 2 * value,
+        return Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              onPressed: () => context.push('/notifications'),
+              icon: Icon(
+                count > 0
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_outlined,
+                color: isDark ? Colors.white : Colors.black87,
+                size: 26,
               ),
-            ],
-          ),
+            ),
+            if (count > 0)
+              Positioned(
+                top: 6,
+                right: 6,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF5722),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? Colors.black : Colors.white,
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF5722).withOpacity(0.4),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Center(
+                    child: Text(
+                      count > 9 ? '9+' : '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         );
-      },
-      onEnd: () {
-        if (mounted) {
-          setState(() {}); // Restart animation
-        }
       },
     );
   }
