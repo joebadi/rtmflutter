@@ -404,12 +404,12 @@ class _UserProfilePageState extends State<UserProfilePage>
                     return Container(
                       color: Colors.grey[900],
                       child: Center(
-                        child: PremiumLoader(
+                        child: CircularProgressIndicator(
                           value: loadingProgress.expectedTotalBytes != null
                               ? loadingProgress.cumulativeBytesLoaded /
                                   loadingProgress.expectedTotalBytes!
                               : null,
-                          color: const Color(0xFFFF5722),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF5722)),
                         ),
                       ),
                     );

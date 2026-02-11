@@ -538,11 +538,7 @@ class _PreferredPartnerPageState extends State<PreferredPartnerPage> {
                                               child:
                                                   PremiumLoader(
                                                 strokeWidth: 2,
-                                                valueColor:
-                                                    AlwaysStoppedAnimation<
-                                                        Color>(
-                                                  Colors.white,
-                                                ),
+                                                color: Colors.white,
                                               ),
                                             )
                                           : Text(

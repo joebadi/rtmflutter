@@ -607,13 +607,13 @@ class _ChatScreenState extends State<ChatScreen> {
                               return Container(
                                 color: Colors.grey[200],
                                 child: Center(
-                                  child: PremiumLoader(
+                                  child: CircularProgressIndicator(
                                     value: loadingProgress.expectedTotalBytes != null
                                         ? loadingProgress.cumulativeBytesLoaded /
                                             loadingProgress.expectedTotalBytes!
                                         : null,
                                     strokeWidth: 2,
-                                    color: const Color(0xFFFF5722),
+                                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF5722)),
                                   ),
                                 ),
                               );

@@ -779,8 +779,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
                             height: 24,
                             child: PremiumLoader(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                              color: Colors.white,
                             ),
                           )
                         : Text(
