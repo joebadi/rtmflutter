@@ -22,7 +22,8 @@ class ExploreScreen extends StatefulWidget {
 }
 
 class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateMixin {
-  // 0 = Map (Default), 1 = Cards, 2 = Grid
+  // 0 = Map (Default), 1 = Swipe (Cards view)
+  // Grid view (2) removed from tabs - now accessible via overlay from map
   int _viewMode = 0; 
   final CardSwiperController swipeController = CardSwiperController();
   final MapController mapController = MapController();
@@ -589,9 +590,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         children: [
           _buildSwitchButton('Map', Icons.map, 0),
           const SizedBox(width: 10),
-          _buildSwitchButton('Cards', Icons.style, 1),
-          const SizedBox(width: 10),
-          _buildSwitchButton('Grid', Icons.grid_view, 2),
+          _buildSwitchButton('Swipe', Icons.style, 1),
+          // Grid view removed - now accessible via overlay button on map
         ],
       ),
     );
@@ -814,6 +814,50 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   final isSelected = userId == _selectedUserId;
                   return _buildHorizontalUserCard(user, isSelected: isSelected);
                 },
+              ),
+            ),
+          ),
+
+        // View Grid button - centered below horizontal slider
+        if (_nearbyUsers.isNotEmpty)
+          Positioned(
+            bottom: 195, // Position above horizontal slider
+            left: 0,
+            right: 0,
+            child: Center(
+              child: GestureDetector(
+                onTap: _showGridOverlay,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                    ),
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF5722).withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.grid_view, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'View Grid',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -2152,6 +2196,109 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
+  // Show grid view in full-screen dark overlay modal
+  void _showGridOverlay() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.95,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF1a1a1a),
+                const Color(0xFF2d2d2d),
+              ],
+            ),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(28),
+              topRight: Radius.circular(28),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Drag handle
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Browse Matches',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Grid view
+              Expanded(
+                child: _nearbyUsers.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.people_outline,
+                              size: 64,
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No users nearby yet',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                color: Colors.white.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(20),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.75,
+                        ),
+                        itemCount: _nearbyUsers.length,
+                        itemBuilder: (context, index) {
+                          final user = _nearbyUsers[index];
+                          return _buildGridItem(user);
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _showLocationSearch() {
     showModalBottomSheet(
       context: context,
@@ -2340,9 +2487,16 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           return Container(
-            height: MediaQuery.of(context).size.height * 0.92,
+            height: MediaQuery.of(context).size.height * 0.85,
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF1a1a1a),
+                  const Color(0xFF2d2d2d),
+                ],
+              ),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(28),
                 topRight: Radius.circular(28),
@@ -2350,38 +2504,35 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             ),
             child: Column(
               children: [
-                // Header with back button
+                // Drag handle
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(28),
-                      topRight: Radius.circular(28),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    color: Colors.white.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
                   ),
+                ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Row(
                     children: [
-                      // Back button
+                      // Close button
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.grey[100],
+                            color: Colors.white.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
-                            Icons.arrow_back_ios_new,
-                            size: 18,
-                            color: Color(0xFFFF5722),
+                            Icons.close,
+                            size: 20,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -2391,9 +2542,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         child: Text(
                           'Filter Matches',
                           style: GoogleFonts.poppins(
-                            fontSize: 22,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -2417,15 +2568,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             _showOnlyOnline = false;
                           });
                         },
-                        icon: const Icon(Icons.clear_all, size: 18),
+                        icon: const Icon(Icons.clear_all, size: 18, color: Color(0xFFFF5722)),
                         label: Text(
                           'Clear',
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w600,
+                            color: const Color(0xFFFF5722),
                           ),
-                        ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFFFF5722),
                         ),
                       ),
                     ],
@@ -2460,9 +2609,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('${_ageRange.start.round()} years',
-                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.7))),
                                 Text('${_ageRange.end.round()} years',
-                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.7))),
                               ],
                             ),
                           ],
@@ -2487,7 +2636,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               },
                             ),
                             Text('${_distance.round()} km away',
-                                style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+                                style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.7))),
                           ],
                         ),
                         icon: Icons.location_on_outlined,
@@ -2535,9 +2684,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('${_heightRange.start.round()} cm',
-                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.7))),
                                 Text('${_heightRange.end.round()} cm',
-                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
+                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.7))),
                               ],
                             ),
                           ],
@@ -2622,7 +2771,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               style: GoogleFonts.poppins(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.grey[600],
+                                color: Colors.white.withOpacity(0.6),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -2809,14 +2958,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, -5),
-                      ),
-                    ],
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        const Color(0xFF2d2d2d).withOpacity(0.8),
+                        const Color(0xFF1a1a1a),
+                      ],
+                    ),
                   ),
                   child: GestureDetector(
                     onTap: () {
@@ -2869,15 +3018,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2888,7 +3034,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF5722).withOpacity(0.1),
+                    color: const Color(0xFFFF5722).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -2904,7 +3050,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 style: GoogleFonts.poppins(
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: Colors.white,
                 ),
               ),
             ],
@@ -2929,24 +3075,18 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   end: Alignment.bottomRight,
                 )
               : null,
-          color: isSelected ? null : Colors.white,
+          color: isSelected ? null : Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? Colors.transparent : Colors.grey[200]!,
+            color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.2),
             width: 1.5,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFFFF5722).withOpacity(0.3),
+                color: const Color(0xFFFF5722).withOpacity(0.4),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
-              )
-            else
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
               ),
           ],
         ),
@@ -2955,7 +3095,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           style: GoogleFonts.poppins(
             fontSize: 14,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.black87,
+            color: isSelected ? Colors.white : Colors.white.withOpacity(0.9),
           ),
         ),
       ),
@@ -2972,7 +3112,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             label,
             style: GoogleFonts.poppins(
               fontSize: 15,
-              color: Colors.black87,
+              color: Colors.white.withOpacity(0.9),
             ),
           ),
           Switch(
