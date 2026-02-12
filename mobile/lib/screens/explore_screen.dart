@@ -53,6 +53,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   String? _educationFilter;
   String? _hasChildrenFilter;
   String? _relationshipStatusFilter;
+  String? _hivPartnerViewFilter;
   bool _showOnlyVerified = false;
   bool _showOnlyPremium = false;
   bool _showOnlyOnline = false;
@@ -276,6 +277,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
+  // Calculate distance between two coordinates (in kilometers)
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2) / 1000; // Convert meters to km
+  }
+
   Future<void> _fetchNearbyUsers() async {
     // Default to 0,0 (Atlantic Ocean) if location unavailable, just to fetch users!
     final double lat = _currentLocation?.latitude ?? 0.0;
@@ -287,19 +293,40 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         longitude: lng,
         radius: 50, // 50km
       );
-      
+
+      // Calculate distance for each user
+      final usersWithDistance = users.map((user) {
+        if (_currentLocation != null && user['latitude'] != null && user['longitude'] != null) {
+          final distance = _calculateDistance(
+            _currentLocation!.latitude,
+            _currentLocation!.longitude,
+            user['latitude'] as double,
+            user['longitude'] as double,
+          );
+          user['distance'] = distance.round(); // Store as integer km
+        } else {
+          user['distance'] = 0;
+        }
+        return user;
+      }).toList();
+
+      // Apply filters
+      final filteredUsers = _applyFilters(usersWithDistance);
+
       // DEBUG: Print full response to see data structure
       debugPrint('=== NEARBY USERS DEBUG ===');
-      debugPrint('Total users: ${users.length}');
-      if (users.isNotEmpty) {
-        debugPrint('First user data: ${users[0]}');
-        final firstUser = users[0];
+      debugPrint('Total users before filter: ${usersWithDistance.length}');
+      debugPrint('Total users after filter: ${filteredUsers.length}');
+      if (filteredUsers.isNotEmpty) {
+        debugPrint('First user data: ${filteredUsers[0]}');
+        final firstUser = filteredUsers[0];
         debugPrint('Profile: ${firstUser['profile']}');
         debugPrint('Photos: ${firstUser['profile']?['photos']}');
+        debugPrint('Distance: ${firstUser['distance']} km');
       }
       debugPrint('=========================');
-      
-      setState(() => _nearbyUsers = users);
+
+      setState(() => _nearbyUsers = filteredUsers);
     } catch (e) {
       debugPrint('Error fetching nearby users: $e');
       if (mounted) {
@@ -333,10 +360,105 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   Future<void> _fetchSuggestions() async {
     try {
       final users = await _matchService.getMatchSuggestions(limit: 10);
-      setState(() => _suggestions = users);
+      final filteredUsers = _applyFilters(users);
+      setState(() => _suggestions = filteredUsers);
     } catch (e) {
       debugPrint('Error fetching suggestions: $e');
     }
+  }
+
+  // Apply client-side filters to users
+  List<dynamic> _applyFilters(List<dynamic> users) {
+    return users.where((user) {
+      final profile = user['profile'] ?? {};
+
+      // Age filter
+      final age = user['age'];
+      if (age != null && (age < _ageRange.start || age > _ageRange.end)) {
+        return false;
+      }
+
+      // Distance filter
+      final distance = user['distance'] ?? 0;
+      if (distance > _distance.round()) {
+        return false;
+      }
+
+      // Gender filter
+      if (_genderFilter != null && user['gender'] != _genderFilter) {
+        return false;
+      }
+
+      // Height filter
+      if (profile['height'] != null) {
+        final heightStr = profile['height'] as String;
+        // Extract cm value from string like "5'6" (168 cm)"
+        final cmMatch = RegExp(r'\((\d+)\s*cm\)').firstMatch(heightStr);
+        if (cmMatch != null) {
+          final heightCm = int.parse(cmMatch.group(1)!);
+          if (heightCm < _heightRange.start || heightCm > _heightRange.end) {
+            return false;
+          }
+        }
+      }
+
+      // Body type filter
+      if (_bodyTypeFilter != null && profile['bodyType'] != _bodyTypeFilter) {
+        return false;
+      }
+
+      // Religion filter
+      if (_religionFilter != null && profile['religion'] != _religionFilter) {
+        return false;
+      }
+
+      // HIV Partner View filter
+      if (_hivPartnerViewFilter != null && profile['hivPartnerView'] != _hivPartnerViewFilter) {
+        return false;
+      }
+
+      // Smoking filter
+      if (_smokingFilter != null && profile['smoking'] != _smokingFilter) {
+        return false;
+      }
+
+      // Drinking filter
+      if (_drinkingFilter != null && profile['drinking'] != _drinkingFilter) {
+        return false;
+      }
+
+      // Education filter
+      if (_educationFilter != null && profile['education'] != _educationFilter) {
+        return false;
+      }
+
+      // Has children filter
+      if (_hasChildrenFilter != null && profile['hasChildren'] != _hasChildrenFilter) {
+        return false;
+      }
+
+      // Relationship status filter
+      if (_relationshipStatusFilter != null && profile['relationshipStatus'] != _relationshipStatusFilter) {
+        return false;
+      }
+
+      // Verified filter
+      if (_showOnlyVerified && user['isVerified'] != true) {
+        return false;
+      }
+
+      // Premium filter
+      if (_showOnlyPremium && user['isPremium'] != true) {
+        return false;
+      }
+
+      // Online filter
+      if (_showOnlyOnline && user['isOnline'] != true) {
+        return false;
+      }
+
+      return true;
+    }).toList();
   }
 
   @override
@@ -2147,42 +2269,64 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           return Container(
-            height: MediaQuery.of(context).size.height * 0.9,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(32),
-                topRight: Radius.circular(32),
+            height: MediaQuery.of(context).size.height * 0.92,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(28),
+                topRight: Radius.circular(28),
               ),
             ),
             child: Column(
               children: [
-                // Handle bar
+                // Header with back button
                 Container(
-                  margin: const EdgeInsets.only(top: 12),
-                  width: 40,
-                  height: 4,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(28),
+                      topRight: Radius.circular(28),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ),
-
-                // Header
-                Padding(
-                  padding: const EdgeInsets.all(20),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Filter Users',
-                        style: GoogleFonts.poppins(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                      // Back button
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new,
+                            size: 18,
+                            color: Color(0xFFFF5722),
+                          ),
                         ),
                       ),
-                      TextButton(
+                      const SizedBox(width: 16),
+                      // Title
+                      Expanded(
+                        child: Text(
+                          'Filter Matches',
+                          style: GoogleFonts.poppins(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
                         onPressed: () {
                           setModalState(() {
                             _ageRange = const RangeValues(18, 100);
@@ -2196,17 +2340,21 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             _educationFilter = null;
                             _hasChildrenFilter = null;
                             _relationshipStatusFilter = null;
+                            _hivPartnerViewFilter = null;
                             _showOnlyVerified = false;
                             _showOnlyPremium = false;
                             _showOnlyOnline = false;
                           });
                         },
-                        child: Text(
-                          'Clear All',
+                        icon: const Icon(Icons.clear_all, size: 18),
+                        label: Text(
+                          'Clear',
                           style: GoogleFonts.poppins(
-                            color: const Color(0xFFFF5722),
                             fontWeight: FontWeight.w600,
                           ),
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFFFF5722),
                         ),
                       ),
                     ],
@@ -2216,7 +2364,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 // Scrollable Filters
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.all(20),
                     children: [
                       // Age Range
                       _buildFilterSection(
@@ -2241,13 +2389,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('${_ageRange.start.round()} years',
-                                    style: GoogleFonts.poppins(fontSize: 13)),
+                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
                                 Text('${_ageRange.end.round()} years',
-                                    style: GoogleFonts.poppins(fontSize: 13)),
+                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
                               ],
                             ),
                           ],
                         ),
+                        icon: Icons.cake_outlined,
                       ),
 
                       // Distance
@@ -2267,9 +2416,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               },
                             ),
                             Text('${_distance.round()} km away',
-                                style: GoogleFonts.poppins(fontSize: 13)),
+                                style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
                           ],
                         ),
+                        icon: Icons.location_on_outlined,
                       ),
 
                       // Gender
@@ -2288,11 +2438,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             }),
                           ],
                         ),
+                        icon: Icons.people_outline,
                       ),
 
                       // Height Range
                       _buildFilterSection(
-                        'Height Range (cm)',
+                        'Height Range',
                         Column(
                           children: [
                             RangeSlider(
@@ -2313,13 +2464,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('${_heightRange.start.round()} cm',
-                                    style: GoogleFonts.poppins(fontSize: 13)),
+                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
                                 Text('${_heightRange.end.round()} cm',
-                                    style: GoogleFonts.poppins(fontSize: 13)),
+                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600])),
                               ],
                             ),
                           ],
                         ),
+                        icon: Icons.height,
                       ),
 
                       // Body Type
@@ -2353,6 +2505,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             }),
                           ],
                         ),
+                        icon: Icons.accessibility_new,
                       ),
 
                       // Religion
@@ -2384,6 +2537,45 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             }),
                           ],
                         ),
+                        icon: Icons.church_outlined,
+                      ),
+
+                      // HIV Partner View (Sensitive)
+                      _buildFilterSection(
+                        'Health Preferences',
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Views on HIV+ Partner',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildChip('Open to discussion', _hivPartnerViewFilter == 'Open to discussion', () {
+                                  setModalState(() => _hivPartnerViewFilter =
+                                      _hivPartnerViewFilter == 'Open to discussion' ? null : 'Open to discussion');
+                                }),
+                                _buildChip('Yes', _hivPartnerViewFilter == 'Yes', () {
+                                  setModalState(() => _hivPartnerViewFilter =
+                                      _hivPartnerViewFilter == 'Yes' ? null : 'Yes');
+                                }),
+                                _buildChip('No', _hivPartnerViewFilter == 'No', () {
+                                  setModalState(() => _hivPartnerViewFilter =
+                                      _hivPartnerViewFilter == 'No' ? null : 'No');
+                                }),
+                              ],
+                            ),
+                          ],
+                        ),
+                        icon: Icons.health_and_safety_outlined,
                       ),
 
                       // Smoking
@@ -2410,6 +2602,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             }),
                           ],
                         ),
+                        icon: Icons.smoking_rooms_outlined,
                       ),
 
                       // Drinking
@@ -2435,6 +2628,83 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             }),
                           ],
                         ),
+                        icon: Icons.local_bar_outlined,
+                      ),
+
+                      // Education
+                      _buildFilterSection(
+                        'Education',
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildChip('High School', _educationFilter == 'High School', () {
+                              setModalState(() => _educationFilter =
+                                  _educationFilter == 'High School' ? null : 'High School');
+                            }),
+                            _buildChip('Bachelor\'s Degree', _educationFilter == 'Bachelor\'s Degree', () {
+                              setModalState(() => _educationFilter =
+                                  _educationFilter == 'Bachelor\'s Degree' ? null : 'Bachelor\'s Degree');
+                            }),
+                            _buildChip('Master\'s Degree', _educationFilter == 'Master\'s Degree', () {
+                              setModalState(() => _educationFilter =
+                                  _educationFilter == 'Master\'s Degree' ? null : 'Master\'s Degree');
+                            }),
+                            _buildChip('PhD', _educationFilter == 'PhD', () {
+                              setModalState(() => _educationFilter =
+                                  _educationFilter == 'PhD' ? null : 'PhD');
+                            }),
+                          ],
+                        ),
+                        icon: Icons.school_outlined,
+                      ),
+
+                      // Has Children
+                      _buildFilterSection(
+                        'Has Children',
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildChip('Yes', _hasChildrenFilter == 'Yes', () {
+                              setModalState(() => _hasChildrenFilter =
+                                  _hasChildrenFilter == 'Yes' ? null : 'Yes');
+                            }),
+                            _buildChip('No', _hasChildrenFilter == 'No', () {
+                              setModalState(() => _hasChildrenFilter =
+                                  _hasChildrenFilter == 'No' ? null : 'No');
+                            }),
+                            _buildChip('Want children', _hasChildrenFilter == 'Want children', () {
+                              setModalState(() => _hasChildrenFilter =
+                                  _hasChildrenFilter == 'Want children' ? null : 'Want children');
+                            }),
+                          ],
+                        ),
+                        icon: Icons.child_care_outlined,
+                      ),
+
+                      // Relationship Status
+                      _buildFilterSection(
+                        'Relationship Status',
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildChip('Single', _relationshipStatusFilter == 'Single', () {
+                              setModalState(() => _relationshipStatusFilter =
+                                  _relationshipStatusFilter == 'Single' ? null : 'Single');
+                            }),
+                            _buildChip('Divorced', _relationshipStatusFilter == 'Divorced', () {
+                              setModalState(() => _relationshipStatusFilter =
+                                  _relationshipStatusFilter == 'Divorced' ? null : 'Divorced');
+                            }),
+                            _buildChip('Widowed', _relationshipStatusFilter == 'Widowed', () {
+                              setModalState(() => _relationshipStatusFilter =
+                                  _relationshipStatusFilter == 'Widowed' ? null : 'Widowed');
+                            }),
+                          ],
+                        ),
+                        icon: Icons.favorite_border,
                       ),
 
                       // Toggles Section
@@ -2456,9 +2726,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             }),
                           ],
                         ),
+                        icon: Icons.filter_list,
                       ),
 
-                      const SizedBox(height: 100),
+                      const SizedBox(height: 80),
                     ],
                   ),
                 ),
@@ -2522,22 +2793,55 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildFilterSection(String title, Widget content) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
+  Widget _buildFilterSection(String title, Widget content, {IconData? icon}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
           ),
-        ),
-        const SizedBox(height: 12),
-        content,
-        const SizedBox(height: 24),
-      ],
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF5722).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: const Color(0xFFFF5722),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          content,
+        ],
+      ),
     );
   }
 
@@ -2545,24 +2849,41 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         decoration: BoxDecoration(
           gradient: isSelected
               ? const LinearGradient(
                   colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 )
               : null,
-          color: isSelected ? null : Colors.grey[100],
-          borderRadius: BorderRadius.circular(20),
+          color: isSelected ? null : Colors.white,
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? Colors.transparent : Colors.grey[300]!,
+            color: isSelected ? Colors.transparent : Colors.grey[200]!,
+            width: 1.5,
           ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: const Color(0xFFFF5722).withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              )
+            else
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+          ],
         ),
         child: Text(
           label,
           style: GoogleFonts.poppins(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             color: isSelected ? Colors.white : Colors.black87,
           ),
         ),
