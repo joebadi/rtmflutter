@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:go_router/go_router.dart';
@@ -696,81 +697,66 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               subdomains: const ['a', 'b', 'c', 'd'],
               userAgentPackageName: 'com.rtm.mobile',
             ),
+            // User's own location marker (always on top)
             MarkerLayer(
               markers: [
-                // User's own location
                 Marker(
                   point: _currentLocation!,
                   width: 60,
                   height: 60,
                   child: _buildPulsingUserMarker(),
                 ),
-                ..._nearbyUsers.map((user) {
-                  // Parse backend user to marker
-                  final lat = (user['latitude'] as num?)?.toDouble() ?? 0.0;
-                  final lng = (user['longitude'] as num?)?.toDouble() ?? 0.0;
-                  final userId = (user['user']?['id'] ?? user['userId'])?.toString();
-                  final isSelected = userId == _selectedUserId;
-                  
-                  // Backend returns photos at root level now
-                  final photos = user['photos'] as List? ?? [];
-                  final rawUrl = photos.isNotEmpty
-                      ? (photos.firstWhere(
-                          (p) => p['isPrimary'] == true,
-                          orElse: () => photos.first,
-                        )['url'] ?? '')
-                      : '';
-                  final photoUrl = _getFullPhotoUrl(rawUrl);
-
-                  return Marker(
-                    point: LatLng(lat, lng),
-                    width: 50,
-                    height: 50,
-                    child: GestureDetector(
-                      onTap: () => _handleUserTap(user, fromCard: false),
-                      child: AnimatedBuilder(
-                        animation: _pulseAnimation,
-                        builder: (context, child) {
-                          return Transform.scale(
-                            scale: isSelected ? _pulseAnimation.value : 1.0,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected ? const Color(0xFFFF5722) : Colors.white,
-                                  width: isSelected ? 3 : 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: isSelected 
-                                        ? const Color(0xFFFF5722).withOpacity(0.6)
-                                        : Colors.black.withOpacity(0.3),
-                                    blurRadius: isSelected ? 12 : 4,
-                                    offset: const Offset(0, 2),
-                                    spreadRadius: isSelected ? 2 : 0,
-                                  ),
-                                ],
-                              ),
-                              child: photoUrl.isNotEmpty
-                                ? CircleAvatar(
-                                    backgroundImage: NetworkImage(photoUrl),
-                                  )
-                                : CircleAvatar(
-                                    backgroundColor: const Color(0xFFFF5722).withOpacity(0.2),
-                                    child: const Icon(
-                                      Icons.person,
-                                      color: Color(0xFFFF5722),
-                                      size: 30,
-                                    ),
-                                  ),
-                            ),
-                          );
-                        },
+              ],
+            ),
+            // Clustered markers for nearby users
+            MarkerClusterLayerWidget(
+              options: MarkerClusterLayerOptions(
+                maxClusterRadius: 80,
+                size: const Size(50, 50),
+                markers: _buildOrderedMarkers(),
+                builder: (context, markers) {
+                  // Custom cluster builder
+                  return Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFFF5722),
+                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${markers.length}',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   );
-                }),
-              ],
+                },
+                onMarkerTap: (marker) {
+                  // Find user from marker point
+                  final user = _nearbyUsers.firstWhere(
+                    (u) {
+                      final lat = (u['latitude'] as num?)?.toDouble() ?? 0.0;
+                      final lng = (u['longitude'] as num?)?.toDouble() ?? 0.0;
+                      return marker.point.latitude == lat && marker.point.longitude == lng;
+                    },
+                    orElse: () => null,
+                  );
+                  if (user != null) {
+                    _handleUserTap(user, fromCard: false);
+                  }
+                },
+              ),
             ),
           ],
         ),
@@ -833,6 +819,91 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           ),
       ],
     );
+  }
+
+  // Build markers with selected user last (for z-index on top)
+  List<Marker> _buildOrderedMarkers() {
+    List<Marker> allMarkers = [];
+    Marker? selectedMarker;
+
+    for (var user in _nearbyUsers) {
+      final lat = (user['latitude'] as num?)?.toDouble() ?? 0.0;
+      final lng = (user['longitude'] as num?)?.toDouble() ?? 0.0;
+      final userId = (user['user']?['id'] ?? user['userId'])?.toString();
+      final isSelected = userId == _selectedUserId;
+
+      // Backend returns photos at root level now
+      final photos = user['photos'] as List? ?? [];
+      final rawUrl = photos.isNotEmpty
+          ? (photos.firstWhere(
+              (p) => p['isPrimary'] == true,
+              orElse: () => photos.first,
+            )['url'] ?? '')
+          : '';
+      final photoUrl = _getFullPhotoUrl(rawUrl);
+
+      final marker = Marker(
+        point: LatLng(lat, lng),
+        width: 50,
+        height: 50,
+        child: GestureDetector(
+          onTap: () => _handleUserTap(user, fromCard: false),
+          child: AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: isSelected ? _pulseAnimation.value : 1.0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFFFF5722) : Colors.white,
+                      width: isSelected ? 3 : 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected
+                            ? const Color(0xFFFF5722).withOpacity(0.6)
+                            : Colors.black.withOpacity(0.3),
+                        blurRadius: isSelected ? 12 : 4,
+                        offset: const Offset(0, 2),
+                        spreadRadius: isSelected ? 2 : 0,
+                      ),
+                    ],
+                  ),
+                  child: photoUrl.isNotEmpty
+                      ? CircleAvatar(
+                          backgroundImage: NetworkImage(photoUrl),
+                        )
+                      : CircleAvatar(
+                          backgroundColor: const Color(0xFFFF5722).withOpacity(0.2),
+                          child: const Icon(
+                            Icons.person,
+                            color: Color(0xFFFF5722),
+                            size: 30,
+                          ),
+                        ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      // Keep selected marker separate to add last
+      if (isSelected) {
+        selectedMarker = marker;
+      } else {
+        allMarkers.add(marker);
+      }
+    }
+
+    // Add selected marker last so it renders on top
+    if (selectedMarker != null) {
+      allMarkers.add(selectedMarker);
+    }
+
+    return allMarkers;
   }
 
   Widget _buildHorizontalUserCard(dynamic user, {bool isSelected = false}) {
