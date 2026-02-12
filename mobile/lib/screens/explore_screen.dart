@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -44,10 +45,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   late Animation<double> _pulseAnimation;
 
   // Filter State
-  RangeValues _ageRange = const RangeValues(18, 100);
+  RangeValues _ageRange = const RangeValues(25, 35);
   double _distance = 50;
   String? _genderFilter;
-  RangeValues _heightRange = const RangeValues(140, 220);
+  RangeValues _heightRange = const RangeValues(160, 185);
   String? _bodyTypeFilter;
   String? _religionFilter;
   String? _smokingFilter;
@@ -818,7 +819,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             ),
           ),
 
-        // View Grid link - simple text below horizontal slider
+        // View Grid button - small orange rounded button below horizontal slider
         if (_nearbyUsers.isNotEmpty)
           Positioned(
             bottom: 12,
@@ -827,14 +828,35 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             child: Center(
               child: GestureDetector(
                 onTap: _showGridOverlay,
-                child: Text(
-                  'View Grid',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.white.withOpacity(0.6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF5722).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.grid_view, color: Colors.white, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        'View Grid',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -2564,22 +2586,28 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.85,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xFF1a1a1a),
-                  const Color(0xFF2d2d2d),
-                ],
+          return BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.70,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF1a1a1a).withOpacity(0.85),
+                    const Color(0xFF2d2d2d).withOpacity(0.90),
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
+                ),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.1),
+                  width: 1.5,
+                ),
               ),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(28),
-                topRight: Radius.circular(28),
-              ),
-            ),
             child: Column(
               children: [
                 // Drag handle
@@ -2629,10 +2657,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                       TextButton.icon(
                         onPressed: () {
                           setModalState(() {
-                            _ageRange = const RangeValues(18, 100);
+                            _ageRange = const RangeValues(25, 35);
                             _distance = 50;
                             _genderFilter = null;
-                            _heightRange = const RangeValues(140, 220);
+                            _heightRange = const RangeValues(160, 185);
                             _bodyTypeFilter = null;
                             _religionFilter = null;
                             _smokingFilter = null;
@@ -3085,6 +3113,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   ),
                 ),
               ],
+            ),
             ),
           );
         },
