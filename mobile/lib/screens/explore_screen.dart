@@ -2302,44 +2302,45 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   // Major cities database for autocomplete
   final List<Map<String, dynamic>> _worldCities = [
-    {'name': 'New York, USA', 'lat': 40.7128, 'lng': -74.0060, 'country': 'USA'},
-    {'name': 'Los Angeles, USA', 'lat': 34.0522, 'lng': -118.2437, 'country': 'USA'},
-    {'name': 'Chicago, USA', 'lat': 41.8781, 'lng': -87.6298, 'country': 'USA'},
-    {'name': 'Miami, USA', 'lat': 25.7617, 'lng': -80.1918, 'country': 'USA'},
-    {'name': 'London, UK', 'lat': 51.5074, 'lng': -0.1278, 'country': 'UK'},
-    {'name': 'Paris, France', 'lat': 48.8566, 'lng': 2.3522, 'country': 'France'},
-    {'name': 'Berlin, Germany', 'lat': 52.5200, 'lng': 13.4050, 'country': 'Germany'},
-    {'name': 'Madrid, Spain', 'lat': 40.4168, 'lng': -3.7038, 'country': 'Spain'},
-    {'name': 'Rome, Italy', 'lat': 41.9028, 'lng': 12.4964, 'country': 'Italy'},
-    {'name': 'Amsterdam, Netherlands', 'lat': 52.3676, 'lng': 4.9041, 'country': 'Netherlands'},
-    {'name': 'Dubai, UAE', 'lat': 25.2048, 'lng': 55.2708, 'country': 'UAE'},
-    {'name': 'Tokyo, Japan', 'lat': 35.6762, 'lng': 139.6503, 'country': 'Japan'},
-    {'name': 'Singapore', 'lat': 1.3521, 'lng': 103.8198, 'country': 'Singapore'},
-    {'name': 'Hong Kong', 'lat': 22.3193, 'lng': 114.1694, 'country': 'Hong Kong'},
-    {'name': 'Sydney, Australia', 'lat': -33.8688, 'lng': 151.2093, 'country': 'Australia'},
-    {'name': 'Melbourne, Australia', 'lat': -37.8136, 'lng': 144.9631, 'country': 'Australia'},
-    {'name': 'Lagos, Nigeria', 'lat': 6.5244, 'lng': 3.3792, 'country': 'Nigeria'},
-    {'name': 'Johannesburg, South Africa', 'lat': -26.2041, 'lng': 28.0473, 'country': 'South Africa'},
-    {'name': 'Cairo, Egypt', 'lat': 30.0444, 'lng': 31.2357, 'country': 'Egypt'},
-    {'name': 'Mumbai, India', 'lat': 19.0760, 'lng': 72.8777, 'country': 'India'},
-    {'name': 'Delhi, India', 'lat': 28.7041, 'lng': 77.1025, 'country': 'India'},
-    {'name': 'Bangalore, India', 'lat': 12.9716, 'lng': 77.5946, 'country': 'India'},
-    {'name': 'Toronto, Canada', 'lat': 43.6532, 'lng': -79.3832, 'country': 'Canada'},
-    {'name': 'Vancouver, Canada', 'lat': 49.2827, 'lng': -123.1207, 'country': 'Canada'},
-    {'name': 'São Paulo, Brazil', 'lat': -23.5505, 'lng': -46.6333, 'country': 'Brazil'},
-    {'name': 'Rio de Janeiro, Brazil', 'lat': -22.9068, 'lng': -43.1729, 'country': 'Brazil'},
-    {'name': 'Mexico City, Mexico', 'lat': 19.4326, 'lng': -99.1332, 'country': 'Mexico'},
-    {'name': 'Buenos Aires, Argentina', 'lat': -34.6037, 'lng': -58.3816, 'country': 'Argentina'},
-    {'name': 'Seoul, South Korea', 'lat': 37.5665, 'lng': 126.9780, 'country': 'South Korea'},
-    {'name': 'Bangkok, Thailand', 'lat': 13.7563, 'lng': 100.5018, 'country': 'Thailand'},
-    {'name': 'Manila, Philippines', 'lat': 14.5995, 'lng': 120.9842, 'country': 'Philippines'},
-    {'name': 'Jakarta, Indonesia', 'lat': -6.2088, 'lng': 106.8456, 'country': 'Indonesia'},
-    {'name': 'Istanbul, Turkey', 'lat': 41.0082, 'lng': 28.9784, 'country': 'Turkey'},
-    {'name': 'Moscow, Russia', 'lat': 55.7558, 'lng': 37.6173, 'country': 'Russia'},
-    {'name': 'Warsaw, Poland', 'lat': 52.2297, 'lng': 21.0122, 'country': 'Poland'},
-    {'name': 'Abuja, Nigeria', 'lat': 9.0765, 'lng': 7.3986, 'country': 'Nigeria'},
-    {'name': 'Accra, Ghana', 'lat': 5.6037, 'lng': -0.1870, 'country': 'Ghana'},
-    {'name': 'Nairobi, Kenya', 'lat': -1.2864, 'lng': 36.8172, 'country': 'Kenya'},
+    {'city': 'New York', 'state': 'NY', 'country': 'USA', 'display': 'New York, NY, USA', 'lat': 40.7128, 'lng': -74.0060},
+    {'city': 'Los Angeles', 'state': 'CA', 'country': 'USA', 'display': 'Los Angeles, CA, USA', 'lat': 34.0522, 'lng': -118.2437},
+    {'city': 'Chicago', 'state': 'IL', 'country': 'USA', 'display': 'Chicago, IL, USA', 'lat': 41.8781, 'lng': -87.6298},
+    {'city': 'Miami', 'state': 'FL', 'country': 'USA', 'display': 'Miami, FL, USA', 'lat': 25.7617, 'lng': -80.1918},
+    {'city': 'Houston', 'state': 'TX', 'country': 'USA', 'display': 'Houston, TX, USA', 'lat': 29.7604, 'lng': -95.3698},
+    {'city': 'London', 'state': null, 'country': 'UK', 'display': 'London, UK', 'lat': 51.5074, 'lng': -0.1278},
+    {'city': 'Paris', 'state': null, 'country': 'France', 'display': 'Paris, France', 'lat': 48.8566, 'lng': 2.3522},
+    {'city': 'Berlin', 'state': null, 'country': 'Germany', 'display': 'Berlin, Germany', 'lat': 52.5200, 'lng': 13.4050},
+    {'city': 'Madrid', 'state': null, 'country': 'Spain', 'display': 'Madrid, Spain', 'lat': 40.4168, 'lng': -3.7038},
+    {'city': 'Rome', 'state': null, 'country': 'Italy', 'display': 'Rome, Italy', 'lat': 41.9028, 'lng': 12.4964},
+    {'city': 'Amsterdam', 'state': null, 'country': 'Netherlands', 'display': 'Amsterdam, Netherlands', 'lat': 52.3676, 'lng': 4.9041},
+    {'city': 'Dubai', 'state': null, 'country': 'UAE', 'display': 'Dubai, UAE', 'lat': 25.2048, 'lng': 55.2708},
+    {'city': 'Tokyo', 'state': null, 'country': 'Japan', 'display': 'Tokyo, Japan', 'lat': 35.6762, 'lng': 139.6503},
+    {'city': 'Singapore', 'state': null, 'country': 'Singapore', 'display': 'Singapore, Singapore', 'lat': 1.3521, 'lng': 103.8198},
+    {'city': 'Hong Kong', 'state': null, 'country': 'China', 'display': 'Hong Kong, China', 'lat': 22.3193, 'lng': 114.1694},
+    {'city': 'Sydney', 'state': 'NSW', 'country': 'Australia', 'display': 'Sydney, NSW, Australia', 'lat': -33.8688, 'lng': 151.2093},
+    {'city': 'Melbourne', 'state': 'VIC', 'country': 'Australia', 'display': 'Melbourne, VIC, Australia', 'lat': -37.8136, 'lng': 144.9631},
+    {'city': 'Lagos', 'state': null, 'country': 'Nigeria', 'display': 'Lagos, Nigeria', 'lat': 6.5244, 'lng': 3.3792},
+    {'city': 'Johannesburg', 'state': null, 'country': 'South Africa', 'display': 'Johannesburg, South Africa', 'lat': -26.2041, 'lng': 28.0473},
+    {'city': 'Cairo', 'state': null, 'country': 'Egypt', 'display': 'Cairo, Egypt', 'lat': 30.0444, 'lng': 31.2357},
+    {'city': 'Mumbai', 'state': 'Maharashtra', 'country': 'India', 'display': 'Mumbai, Maharashtra, India', 'lat': 19.0760, 'lng': 72.8777},
+    {'city': 'Delhi', 'state': null, 'country': 'India', 'display': 'Delhi, India', 'lat': 28.7041, 'lng': 77.1025},
+    {'city': 'Bangalore', 'state': 'Karnataka', 'country': 'India', 'display': 'Bangalore, Karnataka, India', 'lat': 12.9716, 'lng': 77.5946},
+    {'city': 'Toronto', 'state': 'ON', 'country': 'Canada', 'display': 'Toronto, ON, Canada', 'lat': 43.6532, 'lng': -79.3832},
+    {'city': 'Vancouver', 'state': 'BC', 'country': 'Canada', 'display': 'Vancouver, BC, Canada', 'lat': 49.2827, 'lng': -123.1207},
+    {'city': 'São Paulo', 'state': 'SP', 'country': 'Brazil', 'display': 'São Paulo, SP, Brazil', 'lat': -23.5505, 'lng': -46.6333},
+    {'city': 'Rio de Janeiro', 'state': 'RJ', 'country': 'Brazil', 'display': 'Rio de Janeiro, RJ, Brazil', 'lat': -22.9068, 'lng': -43.1729},
+    {'city': 'Mexico City', 'state': null, 'country': 'Mexico', 'display': 'Mexico City, Mexico', 'lat': 19.4326, 'lng': -99.1332},
+    {'city': 'Buenos Aires', 'state': null, 'country': 'Argentina', 'display': 'Buenos Aires, Argentina', 'lat': -34.6037, 'lng': -58.3816},
+    {'city': 'Seoul', 'state': null, 'country': 'South Korea', 'display': 'Seoul, South Korea', 'lat': 37.5665, 'lng': 126.9780},
+    {'city': 'Bangkok', 'state': null, 'country': 'Thailand', 'display': 'Bangkok, Thailand', 'lat': 13.7563, 'lng': 100.5018},
+    {'city': 'Manila', 'state': null, 'country': 'Philippines', 'display': 'Manila, Philippines', 'lat': 14.5995, 'lng': 120.9842},
+    {'city': 'Jakarta', 'state': null, 'country': 'Indonesia', 'display': 'Jakarta, Indonesia', 'lat': -6.2088, 'lng': 106.8456},
+    {'city': 'Istanbul', 'state': null, 'country': 'Turkey', 'display': 'Istanbul, Turkey', 'lat': 41.0082, 'lng': 28.9784},
+    {'city': 'Moscow', 'state': null, 'country': 'Russia', 'display': 'Moscow, Russia', 'lat': 55.7558, 'lng': 37.6173},
+    {'city': 'Warsaw', 'state': null, 'country': 'Poland', 'display': 'Warsaw, Poland', 'lat': 52.2297, 'lng': 21.0122},
+    {'city': 'Abuja', 'state': null, 'country': 'Nigeria', 'display': 'Abuja, Nigeria', 'lat': 9.0765, 'lng': 7.3986},
+    {'city': 'Accra', 'state': null, 'country': 'Ghana', 'display': 'Accra, Ghana', 'lat': 5.6037, 'lng': -0.1870},
+    {'city': 'Nairobi', 'state': null, 'country': 'Kenya', 'display': 'Nairobi, Kenya', 'lat': -1.2864, 'lng': 36.8172},
   ];
 
   void _showLocationSearch() {
@@ -2502,8 +2503,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             } else {
                               // Real-time autocomplete from cities database
                               searchResults = _worldCities
-                                  .where((city) =>
-                                      city['name'].toString().toLowerCase().contains(value.toLowerCase()))
+                                  .where((city) {
+                                    final searchTerm = value.toLowerCase();
+                                    return city['display'].toString().toLowerCase().contains(searchTerm);
+                                  })
                                   .take(8)
                                   .toList();
                             }
@@ -2516,7 +2519,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             mapController.move(newLocation, 11.0);
                             setState(() {
                               _currentLocation = newLocation;
-                              _locationName = result['name'];
+                              _locationName = result['display'];
                             });
                             _fetchNearbyUsers();
                             Navigator.pop(context);
@@ -2592,7 +2595,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         mapController.move(newLocation, 11.0);
         setState(() {
           _currentLocation = newLocation;
-          _locationName = city['name'];
+          _locationName = city['display'];
         });
         _fetchNearbyUsers();
         Navigator.pop(context);
@@ -2637,7 +2640,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    city['name'],
+                    city['city'],
                     style: GoogleFonts.cabin(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -2646,7 +2649,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    city['country'],
+                    city['state'] != null
+                        ? '${city['state']}, ${city['country']}'
+                        : city['country'],
                     style: GoogleFonts.cabin(
                       fontSize: 13,
                       color: Colors.grey[600],
