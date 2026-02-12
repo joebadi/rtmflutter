@@ -2300,9 +2300,52 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
+  // Major cities database for autocomplete
+  final List<Map<String, dynamic>> _worldCities = [
+    {'name': 'New York, USA', 'lat': 40.7128, 'lng': -74.0060, 'country': 'USA'},
+    {'name': 'Los Angeles, USA', 'lat': 34.0522, 'lng': -118.2437, 'country': 'USA'},
+    {'name': 'Chicago, USA', 'lat': 41.8781, 'lng': -87.6298, 'country': 'USA'},
+    {'name': 'Miami, USA', 'lat': 25.7617, 'lng': -80.1918, 'country': 'USA'},
+    {'name': 'London, UK', 'lat': 51.5074, 'lng': -0.1278, 'country': 'UK'},
+    {'name': 'Paris, France', 'lat': 48.8566, 'lng': 2.3522, 'country': 'France'},
+    {'name': 'Berlin, Germany', 'lat': 52.5200, 'lng': 13.4050, 'country': 'Germany'},
+    {'name': 'Madrid, Spain', 'lat': 40.4168, 'lng': -3.7038, 'country': 'Spain'},
+    {'name': 'Rome, Italy', 'lat': 41.9028, 'lng': 12.4964, 'country': 'Italy'},
+    {'name': 'Amsterdam, Netherlands', 'lat': 52.3676, 'lng': 4.9041, 'country': 'Netherlands'},
+    {'name': 'Dubai, UAE', 'lat': 25.2048, 'lng': 55.2708, 'country': 'UAE'},
+    {'name': 'Tokyo, Japan', 'lat': 35.6762, 'lng': 139.6503, 'country': 'Japan'},
+    {'name': 'Singapore', 'lat': 1.3521, 'lng': 103.8198, 'country': 'Singapore'},
+    {'name': 'Hong Kong', 'lat': 22.3193, 'lng': 114.1694, 'country': 'Hong Kong'},
+    {'name': 'Sydney, Australia', 'lat': -33.8688, 'lng': 151.2093, 'country': 'Australia'},
+    {'name': 'Melbourne, Australia', 'lat': -37.8136, 'lng': 144.9631, 'country': 'Australia'},
+    {'name': 'Lagos, Nigeria', 'lat': 6.5244, 'lng': 3.3792, 'country': 'Nigeria'},
+    {'name': 'Johannesburg, South Africa', 'lat': -26.2041, 'lng': 28.0473, 'country': 'South Africa'},
+    {'name': 'Cairo, Egypt', 'lat': 30.0444, 'lng': 31.2357, 'country': 'Egypt'},
+    {'name': 'Mumbai, India', 'lat': 19.0760, 'lng': 72.8777, 'country': 'India'},
+    {'name': 'Delhi, India', 'lat': 28.7041, 'lng': 77.1025, 'country': 'India'},
+    {'name': 'Bangalore, India', 'lat': 12.9716, 'lng': 77.5946, 'country': 'India'},
+    {'name': 'Toronto, Canada', 'lat': 43.6532, 'lng': -79.3832, 'country': 'Canada'},
+    {'name': 'Vancouver, Canada', 'lat': 49.2827, 'lng': -123.1207, 'country': 'Canada'},
+    {'name': 'São Paulo, Brazil', 'lat': -23.5505, 'lng': -46.6333, 'country': 'Brazil'},
+    {'name': 'Rio de Janeiro, Brazil', 'lat': -22.9068, 'lng': -43.1729, 'country': 'Brazil'},
+    {'name': 'Mexico City, Mexico', 'lat': 19.4326, 'lng': -99.1332, 'country': 'Mexico'},
+    {'name': 'Buenos Aires, Argentina', 'lat': -34.6037, 'lng': -58.3816, 'country': 'Argentina'},
+    {'name': 'Seoul, South Korea', 'lat': 37.5665, 'lng': 126.9780, 'country': 'South Korea'},
+    {'name': 'Bangkok, Thailand', 'lat': 13.7563, 'lng': 100.5018, 'country': 'Thailand'},
+    {'name': 'Manila, Philippines', 'lat': 14.5995, 'lng': 120.9842, 'country': 'Philippines'},
+    {'name': 'Jakarta, Indonesia', 'lat': -6.2088, 'lng': 106.8456, 'country': 'Indonesia'},
+    {'name': 'Istanbul, Turkey', 'lat': 41.0082, 'lng': 28.9784, 'country': 'Turkey'},
+    {'name': 'Moscow, Russia', 'lat': 55.7558, 'lng': 37.6173, 'country': 'Russia'},
+    {'name': 'Warsaw, Poland', 'lat': 52.2297, 'lng': 21.0122, 'country': 'Poland'},
+    {'name': 'Abuja, Nigeria', 'lat': 9.0765, 'lng': 7.3986, 'country': 'Nigeria'},
+    {'name': 'Accra, Ghana', 'lat': 5.6037, 'lng': -0.1870, 'country': 'Ghana'},
+    {'name': 'Nairobi, Kenya', 'lat': -1.2864, 'lng': 36.8172, 'country': 'Kenya'},
+  ];
+
   void _showLocationSearch() {
     final searchController = TextEditingController();
     List<Map<String, dynamic>> searchResults = [];
+    bool isSearching = false;
 
     showModalBottomSheet(
       context: context,
@@ -2310,219 +2353,311 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.7,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(32),
-                topRight: Radius.circular(32),
+          return BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white,
+                    Colors.grey[50]!,
+                  ],
+                ),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
               ),
-            ),
-            child: Column(
-              children: [
-                // Handle bar
-                Container(
-                  margin: const EdgeInsets.only(top: 12),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-
-                // Header
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Search Location',
-                        style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Search input with live autocomplete
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: TextField(
-                    controller: searchController,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      hintText: 'Type city name...',
-                      hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFFFF5722)),
-                      suffixIcon: searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 20),
-                              onPressed: () {
-                                searchController.clear();
-                                setModalState(() {
-                                  searchResults = [];
-                                });
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                children: [
+                  // Handle bar
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 50,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(3),
                     ),
-                    onChanged: (value) async {
-                      if (value.length >= 3) {
-                        try {
-                          final locations = await locationFromAddress(value);
-                          setModalState(() {
-                            searchResults = locations.take(5).map((loc) => {
-                              'latitude': loc.latitude,
-                              'longitude': loc.longitude,
-                              'name': value,
-                            }).toList();
-                          });
-                        } catch (e) {
-                          debugPrint('Error searching: $e');
-                          setModalState(() {
-                            searchResults = [];
-                          });
-                        }
-                      } else {
-                        setModalState(() {
-                          searchResults = [];
-                        });
-                      }
-                    },
-                    onSubmitted: (value) async {
-                      if (value.isNotEmpty) {
-                        try {
-                          final locations = await locationFromAddress(value);
-                          if (locations.isNotEmpty) {
-                            final loc = locations.first;
-                            final newLocation = LatLng(loc.latitude, loc.longitude);
-                            mapController.move(newLocation, 11.0);
-                            setState(() {
-                              _currentLocation = newLocation;
-                              _locationName = value;
-                            });
-                            await _fetchNearbyUsers();
-                            if (mounted) Navigator.pop(context);
-                          }
-                        } catch (e) {
-                          debugPrint('Error: $e');
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Location not found'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      }
-                    },
                   ),
-                ),
 
-                const SizedBox(height: 16),
-
-                // Search results
-                Expanded(
-                  child: searchResults.isEmpty
-                      ? Center(
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.explore, color: Colors.white, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.search, size: 64, color: Colors.grey[300]),
-                              const SizedBox(height: 16),
                               Text(
-                                'Type at least 3 characters to search',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  color: Colors.grey[500],
+                                'Explore Locations',
+                                style: GoogleFonts.cabin(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                              Text(
+                                'Find matches anywhere',
+                                style: GoogleFonts.cabin(
+                                  fontSize: 13,
+                                  color: Colors.grey[600],
                                 ),
                               ),
                             ],
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          itemCount: searchResults.length,
-                          itemBuilder: (context, index) {
-                            final result = searchResults[index];
-                            return GestureDetector(
-                              onTap: () async {
-                                final newLocation = LatLng(
-                                  result['latitude'],
-                                  result['longitude'],
-                                );
-                                mapController.move(newLocation, 11.0);
-                                setState(() {
-                                  _currentLocation = newLocation;
-                                  _locationName = result['name'];
-                                });
-                                await _fetchNearbyUsers();
-                                Navigator.pop(context);
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.grey[200]!),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFF5722).withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(
-                                        Icons.location_on,
-                                        color: Color(0xFFFF5722),
-                                        size: 20,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Text(
-                                        result['name'],
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                    ),
-                                    Icon(Icons.arrow_forward_ios,
-                                        size: 16, color: Colors.grey[400]),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
                         ),
-                ),
-              ],
+                        IconButton(
+                          icon: Icon(Icons.close_rounded, color: Colors.grey[700]),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Premium Search Field
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF5722).withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: isSearching ? const Color(0xFFFF5722) : Colors.grey[200]!,
+                          width: 2,
+                        ),
+                      ),
+                      child: TextField(
+                        controller: searchController,
+                        autofocus: true,
+                        style: GoogleFonts.cabin(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search city, country...',
+                          hintStyle: GoogleFonts.cabin(
+                            color: Colors.grey[400],
+                            fontSize: 16,
+                          ),
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Icon(
+                              Icons.search_rounded,
+                              color: isSearching ? const Color(0xFFFF5722) : Colors.grey[400],
+                              size: 24,
+                            ),
+                          ),
+                          suffixIcon: searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.cancel_rounded, color: Colors.grey[400], size: 22),
+                                  onPressed: () {
+                                    searchController.clear();
+                                    setModalState(() {
+                                      searchResults = [];
+                                      isSearching = false;
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 18),
+                        ),
+                        onChanged: (value) {
+                          setModalState(() {
+                            isSearching = value.isNotEmpty;
+                            if (value.isEmpty) {
+                              searchResults = [];
+                            } else {
+                              // Real-time autocomplete from cities database
+                              searchResults = _worldCities
+                                  .where((city) =>
+                                      city['name'].toString().toLowerCase().contains(value.toLowerCase()))
+                                  .take(8)
+                                  .toList();
+                            }
+                          });
+                        },
+                        onSubmitted: (value) {
+                          if (value.isNotEmpty && searchResults.isNotEmpty) {
+                            final result = searchResults.first;
+                            final newLocation = LatLng(result['lat'], result['lng']);
+                            mapController.move(newLocation, 11.0);
+                            setState(() {
+                              _currentLocation = newLocation;
+                              _locationName = result['name'];
+                            });
+                            _fetchNearbyUsers();
+                            Navigator.pop(context);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Results or Popular Cities
+                  Expanded(
+                    child: searchResults.isEmpty
+                        ? _buildPopularCities(setModalState)
+                        : _buildSearchResults(searchResults, setModalState),
+                  ),
+                ],
+              ),
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildPopularCities(StateSetter setModalState) {
+    final popularCities = _worldCities.take(12).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            'Popular Destinations',
+            style: GoogleFonts.cabin(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            itemCount: popularCities.length,
+            itemBuilder: (context, index) {
+              final city = popularCities[index];
+              return _buildCityCard(city, isPopular: true);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchResults(List<Map<String, dynamic>> results, StateSetter setModalState) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final city = results[index];
+        return _buildCityCard(city);
+      },
+    );
+  }
+
+  Widget _buildCityCard(Map<String, dynamic> city, {bool isPopular = false}) {
+    return GestureDetector(
+      onTap: () {
+        final newLocation = LatLng(city['lat'], city['lng']);
+        mapController.move(newLocation, 11.0);
+        setState(() {
+          _currentLocation = newLocation;
+          _locationName = city['name'];
+        });
+        _fetchNearbyUsers();
+        Navigator.pop(context);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey[200]!, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFFFF5722).withOpacity(0.1),
+                    const Color(0xFFFF7043).withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                isPopular ? Icons.location_city_rounded : Icons.location_on_rounded,
+                color: const Color(0xFFFF5722),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    city['name'],
+                    style: GoogleFonts.cabin(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    city['country'],
+                    style: GoogleFonts.cabin(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, size: 18, color: Colors.grey[400]),
+          ],
+        ),
       ),
     );
   }
