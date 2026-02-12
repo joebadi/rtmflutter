@@ -785,14 +785,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           ),
         ),
 
-        // Horizontal Scrollable User Cards at Bottom
+        // Horizontal Scrollable User Cards - shifted up to make room for link below
         if (_nearbyUsers.isNotEmpty)
           Positioned(
-            bottom: 0,
+            bottom: 35, // Shifted up to make room for View Grid link
             left: 0,
             right: 0,
             child: Container(
-              height: 180,
+              height: 165, // Slightly reduced height
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -818,44 +818,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             ),
           ),
 
-        // View Grid button - centered below horizontal slider
+        // View Grid link - simple text below horizontal slider
         if (_nearbyUsers.isNotEmpty)
           Positioned(
-            bottom: 195, // Position above horizontal slider
+            bottom: 12,
             left: 0,
             right: 0,
             child: Center(
               child: GestureDetector(
                 onTap: _showGridOverlay,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
-                    ),
-                    borderRadius: BorderRadius.circular(25),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF5722).withOpacity(0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.grid_view, color: Colors.white, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'View Grid',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+                child: Text(
+                  'View Grid',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                    decoration: TextDecoration.underline,
+                    decorationColor: Colors.white.withOpacity(0.6),
                   ),
                 ),
               ),
@@ -2300,130 +2279,229 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   void _showLocationSearch() {
+    final searchController = TextEditingController();
+    List<Map<String, dynamic>> searchResults = [];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(32),
-              topRight: Radius.circular(32),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(32),
+                topRight: Radius.circular(32),
+              ),
             ),
-          ),
-          child: Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Select Location',
-                      style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Search input
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search city or location...',
-                    hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
-                    prefixIcon: const Icon(Icons.search, color: Color(0xFFFF5722)),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                  onSubmitted: (value) async {
-                    if (value.isNotEmpty) {
-                      try {
-                        final locations = await locationFromAddress(value);
-                        if (locations.isNotEmpty) {
-                          final loc = locations.first;
-                          final newLocation = LatLng(loc.latitude, loc.longitude);
-                          mapController.move(newLocation, 11.0);
-                          await _updateLocationName(newLocation);
-                          await _fetchNearbyUsers();
-                          if (mounted) Navigator.pop(context);
+                ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Search Location',
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Search input with live autocomplete
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: TextField(
+                    controller: searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Type city name...',
+                      hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFFFF5722)),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 20),
+                              onPressed: () {
+                                searchController.clear();
+                                setModalState(() {
+                                  searchResults = [];
+                                });
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    onChanged: (value) async {
+                      if (value.length >= 3) {
+                        try {
+                          final locations = await locationFromAddress(value);
+                          setModalState(() {
+                            searchResults = locations.take(5).map((loc) => {
+                              'latitude': loc.latitude,
+                              'longitude': loc.longitude,
+                              'name': value,
+                            }).toList();
+                          });
+                        } catch (e) {
+                          debugPrint('Error searching: $e');
+                          setModalState(() {
+                            searchResults = [];
+                          });
                         }
-                      } catch (e) {
-                        debugPrint('Error searching location: $e');
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Location not found'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
+                      } else {
+                        setModalState(() {
+                          searchResults = [];
+                        });
+                      }
+                    },
+                    onSubmitted: (value) async {
+                      if (value.isNotEmpty) {
+                        try {
+                          final locations = await locationFromAddress(value);
+                          if (locations.isNotEmpty) {
+                            final loc = locations.first;
+                            final newLocation = LatLng(loc.latitude, loc.longitude);
+                            mapController.move(newLocation, 11.0);
+                            setState(() {
+                              _currentLocation = newLocation;
+                              _locationName = value;
+                            });
+                            await _fetchNearbyUsers();
+                            if (mounted) Navigator.pop(context);
+                          }
+                        } catch (e) {
+                          debugPrint('Error: $e');
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Location not found'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         }
                       }
-                    }
-                  },
+                    },
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-              // Popular locations
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  children: [
-                    Text(
-                      'Popular Locations',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildLocationItem('New York, USA', 40.7128, -74.0060),
-                    _buildLocationItem('London, UK', 51.5074, -0.1278),
-                    _buildLocationItem('Paris, France', 48.8566, 2.3522),
-                    _buildLocationItem('Tokyo, Japan', 35.6762, 139.6503),
-                    _buildLocationItem('Dubai, UAE', 25.2048, 55.2708),
-                    _buildLocationItem('Sydney, Australia', -33.8688, 151.2093),
-                    _buildLocationItem('Lagos, Nigeria', 6.5244, 3.3792),
-                    _buildLocationItem('Mumbai, India', 19.0760, 72.8777),
-                  ],
+                // Search results
+                Expanded(
+                  child: searchResults.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.search, size: 64, color: Colors.grey[300]),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Type at least 3 characters to search',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          itemCount: searchResults.length,
+                          itemBuilder: (context, index) {
+                            final result = searchResults[index];
+                            return GestureDetector(
+                              onTap: () async {
+                                final newLocation = LatLng(
+                                  result['latitude'],
+                                  result['longitude'],
+                                );
+                                mapController.move(newLocation, 11.0);
+                                setState(() {
+                                  _currentLocation = newLocation;
+                                  _locationName = result['name'];
+                                });
+                                await _fetchNearbyUsers();
+                                Navigator.pop(context);
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.grey[200]!),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFF5722).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.location_on,
+                                        color: Color(0xFFFF5722),
+                                        size: 20,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Text(
+                                        result['name'],
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                    Icon(Icons.arrow_forward_ios,
+                                        size: 16, color: Colors.grey[400]),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -2517,33 +2595,33 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
                 // Header
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Row(
                     children: [
                       // Close button
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
                         child: Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
                             Icons.close,
-                            size: 20,
+                            size: 18,
                             color: Colors.white,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       // Title
                       Expanded(
                         child: Text(
                           'Filter Matches',
                           style: GoogleFonts.poppins(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
@@ -2568,11 +2646,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             _showOnlyOnline = false;
                           });
                         },
-                        icon: const Icon(Icons.clear_all, size: 18, color: Color(0xFFFF5722)),
+                        icon: const Icon(Icons.clear_all, size: 16, color: Color(0xFFFF5722)),
                         label: Text(
                           'Clear',
                           style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
                             color: const Color(0xFFFF5722),
                           ),
                         ),
@@ -2584,7 +2663,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 // Scrollable Filters
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                     children: [
                       // Age Range
                       _buildFilterSection(
@@ -2609,9 +2688,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('${_ageRange.start.round()} years',
-                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.7))),
+                                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withOpacity(0.6))),
                                 Text('${_ageRange.end.round()} years',
-                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.7))),
+                                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withOpacity(0.6))),
                               ],
                             ),
                           ],
@@ -2636,7 +2715,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               },
                             ),
                             Text('${_distance.round()} km away',
-                                style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.7))),
+                                style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withOpacity(0.6))),
                           ],
                         ),
                         icon: Icons.location_on_outlined,
@@ -2684,9 +2763,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('${_heightRange.start.round()} cm',
-                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.7))),
+                                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withOpacity(0.6))),
                                 Text('${_heightRange.end.round()} cm',
-                                    style: GoogleFonts.poppins(fontSize: 13, color: Colors.white.withOpacity(0.7))),
+                                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withOpacity(0.6))),
                               ],
                             ),
                           ],
@@ -2769,9 +2848,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             Text(
                               'Views on HIV+ Partner',
                               style: GoogleFonts.poppins(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white.withOpacity(0.6),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.white.withOpacity(0.5),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -2949,7 +3028,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         icon: Icons.filter_list,
                       ),
 
-                      const SizedBox(height: 80),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
@@ -2978,17 +3057,17 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                     },
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
                         ),
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFF5722).withOpacity(0.4),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
+                            color: const Color(0xFFFF5722).withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
@@ -2996,10 +3075,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         'Apply Filters',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                           color: Colors.white,
-                          letterSpacing: 0.5,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ),
@@ -3015,13 +3094,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   Widget _buildFilterSection(String title, Widget content, {IconData? icon}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withOpacity(0.08),
           width: 1,
         ),
       ),
@@ -3032,30 +3111,30 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             children: [
               if (icon != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFF5722).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
+                    color: const Color(0xFFFF5722).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     icon,
-                    size: 20,
+                    size: 16,
                     color: const Color(0xFFFF5722),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
               ],
               Text(
                 title,
                 style: GoogleFonts.poppins(
-                  fontSize: 17,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: const Color(0xFFFF5722),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           content,
         ],
       ),
@@ -3066,7 +3145,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
           gradient: isSelected
               ? const LinearGradient(
@@ -3075,27 +3154,27 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   end: Alignment.bottomRight,
                 )
               : null,
-          color: isSelected ? null : Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(24),
+          color: isSelected ? null : Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.2),
-            width: 1.5,
+            color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.15),
+            width: 1,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFFFF5722).withOpacity(0.4),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+                color: const Color(0xFFFF5722).withOpacity(0.3),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
           ],
         ),
         child: Text(
           label,
           style: GoogleFonts.poppins(
-            fontSize: 14,
+            fontSize: 12,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.white.withOpacity(0.9),
+            color: isSelected ? Colors.white : Colors.white.withOpacity(0.85),
           ),
         ),
       ),
@@ -3104,21 +3183,25 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   Widget _buildToggle(String label, bool value, Function(bool) onChanged) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: GoogleFonts.poppins(
-              fontSize: 15,
-              color: Colors.white.withOpacity(0.9),
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withOpacity(0.85),
             ),
           ),
-          Switch(
-            value: value,
-            activeColor: const Color(0xFFFF5722),
-            onChanged: onChanged,
+          Transform.scale(
+            scale: 0.9,
+            child: Switch(
+              value: value,
+              activeColor: const Color(0xFFFF5722),
+              onChanged: onChanged,
+            ),
           ),
         ],
       ),
