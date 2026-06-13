@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'dart:ui';
+import '../../providers/wallet_provider.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key});
@@ -13,13 +15,13 @@ class WalletPage extends StatefulWidget {
 class _WalletPageState extends State<WalletPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _shimmerController;
-  int _currentBalance = 250; // User's current diamond balance
 
-  final List<Map<String, dynamic>> _diamondPackages = [
-    {'diamonds': 100, 'price': 1500, 'bonus': 0, 'popular': false},
-    {'diamonds': 500, 'price': 6500, 'bonus': 50, 'popular': true},
-    {'diamonds': 1000, 'price': 12000, 'bonus': 150, 'popular': false},
-    {'diamonds': 2500, 'price': 28000, 'bonus': 500, 'popular': false},
+  // Fallback packages shown only until the backend catalogue loads.
+  static const List<Map<String, dynamic>> _fallbackPackages = [
+    {'id': 'dp_100', 'diamonds': 100, 'price': 1500, 'bonus': 0, 'popular': false},
+    {'id': 'dp_500', 'diamonds': 500, 'price': 6500, 'bonus': 50, 'popular': true},
+    {'id': 'dp_1000', 'diamonds': 1000, 'price': 12000, 'bonus': 150, 'popular': false},
+    {'id': 'dp_2500', 'diamonds': 2500, 'price': 28000, 'bonus': 500, 'popular': false},
   ];
 
   @override
@@ -29,6 +31,10 @@ class _WalletPageState extends State<WalletPage>
       duration: const Duration(seconds: 2),
       vsync: this,
     )..repeat();
+    // Load the real balance + packages from the backend.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<WalletProvider>().refresh();
+    });
   }
 
   @override
@@ -39,6 +45,10 @@ class _WalletPageState extends State<WalletPage>
 
   @override
   Widget build(BuildContext context) {
+    final wallet = context.watch<WalletProvider>();
+    final balance = wallet.balance;
+    final List<dynamic> packages =
+        wallet.packages.isNotEmpty ? wallet.packages : _fallbackPackages;
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0A),
       appBar: AppBar(
@@ -142,7 +152,7 @@ class _WalletPageState extends State<WalletPage>
                                 Row(
                                   children: [
                                     Text(
-                                      '$_currentBalance',
+                                      '$balance',
                                       style: GoogleFonts.poppins(
                                         fontSize: 40,
                                         fontWeight: FontWeight.bold,
@@ -249,15 +259,16 @@ class _WalletPageState extends State<WalletPage>
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ...List.generate(_diamondPackages.length, (index) {
-                    final package = _diamondPackages[index];
+                  ...List.generate(packages.length, (index) {
+                    final package = packages[index] as Map;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _buildDiamondPackage(
-                        diamonds: package['diamonds'],
-                        price: package['price'],
-                        bonus: package['bonus'],
-                        isPopular: package['popular'],
+                        packageId: (package['id'] ?? '').toString(),
+                        diamonds: package['diamonds'] ?? 0,
+                        price: (package['price'] ?? 0).toInt(),
+                        bonus: package['bonus'] ?? 0,
+                        isPopular: package['popular'] ?? false,
                       ),
                     );
                   }),
@@ -493,6 +504,7 @@ class _WalletPageState extends State<WalletPage>
   }
 
   Widget _buildDiamondPackage({
+    required String packageId,
     required int diamonds,
     required int price,
     required int bonus,
@@ -500,7 +512,7 @@ class _WalletPageState extends State<WalletPage>
   }) {
     return GestureDetector(
       onTap: () {
-        _showPurchaseDialog(diamonds, price, bonus);
+        _showPurchaseDialog(packageId, diamonds, price, bonus);
       },
       child: Container(
         decoration: BoxDecoration(
@@ -777,7 +789,7 @@ class _WalletPageState extends State<WalletPage>
     );
   }
 
-  void _showPurchaseDialog(int diamonds, int price, int bonus) {
+  void _showPurchaseDialog(String packageId, int diamonds, int price, int bonus) {
     showDialog(
       context: context,
       builder: (context) => BackdropFilter(
@@ -908,7 +920,7 @@ class _WalletPageState extends State<WalletPage>
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          _processPurchase(diamonds, bonus);
+                          _processPurchase(packageId, diamonds, bonus);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFF5722),
@@ -938,22 +950,127 @@ class _WalletPageState extends State<WalletPage>
     );
   }
 
-  void _processPurchase(int diamonds, int bonus) {
-    // TODO: Implement actual payment processing
-    setState(() {
-      _currentBalance += diamonds + bonus;
-    });
+  Future<void> _processPurchase(String packageId, int diamonds, int bonus) async {
+    final wallet = context.read<WalletProvider>();
+    final messenger = ScaffoldMessenger.of(context);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${diamonds + bonus} diamonds added to your wallet!',
-          style: GoogleFonts.poppins(),
-        ),
-        backgroundColor: const Color(0xFFFF5722),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    // Show a brief loading indicator.
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFF5722)),
       ),
     );
+
+    try {
+      final result = await wallet.service.initializePurchase(packageId);
+      if (mounted) Navigator.pop(context); // dismiss loader
+
+      final authorizationUrl = result['authorizationUrl']?.toString();
+      final reference = result['reference']?.toString() ?? '';
+
+      if (authorizationUrl == null || reference.isEmpty) {
+        throw Exception('Could not start payment');
+      }
+
+      // Payment requires opening Paystack checkout (authorizationUrl) in a
+      // browser/webview, then verifying. We surface the reference and a verify
+      // action; integrating url_launcher/webview makes this seamless.
+      if (mounted) _showVerifyDialog(reference, authorizationUrl);
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // dismiss loader
+      final msg = e.toString();
+      if (msg.contains('PAYMENT_NOT_CONFIGURED')) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Diamond purchases aren\'t enabled yet. Please check back soon.',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: const Color(0xFF333333),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not start purchase: ${msg.replaceAll('Exception: ', '')}',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showVerifyDialog(String reference, String authorizationUrl) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Complete Payment',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Open the secure checkout to pay, then tap "I\'ve Paid" to credit your diamonds.\n\nCheckout link:\n$authorizationUrl',
+          style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[700]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF5722)),
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _verifyPayment(reference);
+            },
+            child: Text("I've Paid", style: GoogleFonts.poppins(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _verifyPayment(String reference) async {
+    final wallet = context.read<WalletProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await wallet.service.verifyPurchase(reference);
+      final newBalance = (result['balance'] ?? wallet.balance) as int;
+      wallet.setBalance(newBalance);
+      final diamonds = result['diamonds'] ?? 0;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            '$diamonds diamonds added to your wallet!',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: const Color(0xFFFF5722),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Payment not confirmed yet: ${e.toString().replaceAll('Exception: ', '')}',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
   }
 }

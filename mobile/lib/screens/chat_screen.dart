@@ -6,6 +6,7 @@ import '../services/like_service.dart';
 import '../config/api_config.dart';
 import 'package:provider/provider.dart';
 import '../providers/message_provider.dart';
+import '../providers/wallet_provider.dart';
 import '../widgets/premium_loader.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -54,6 +55,10 @@ class _ChatScreenState extends State<ChatScreen> {
     debugPrint('[ChatScreen] - receiverPhoto: ${widget.receiverPhoto}');
     _setupSocketListener();
     _loadMessages();
+    // Keep the diamond balance fresh so the chip + pay-per-message UX are accurate.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<WalletProvider>().refresh();
+    });
   }
 
   void _setupSocketListener() {
@@ -178,12 +183,18 @@ class _ChatScreenState extends State<ChatScreen> {
     debugPrint('[ChatScreen] Sending message to ${widget.receiverId}');
 
     try {
-      await _messageService.sendMessage(
+      final result = await _messageService.sendMessage(
         receiverId: widget.receiverId,
         content: content,
       );
 
       debugPrint('[ChatScreen] Message sent successfully');
+
+      // If the server charged diamonds, sync the new balance locally.
+      final newBalance = result['diamondBalance'];
+      if (newBalance is int && mounted) {
+        context.read<WalletProvider>().setBalance(newBalance);
+      }
 
       // Reload messages from server to get the actual conversation
       await _loadMessages();
@@ -192,9 +203,18 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       debugPrint('[ChatScreen] Error sending message: $e');
       setState(() => _isSending = false);
-      
-      // Handle match required error
-      if (e.toString().contains('MATCH_REQUIRED')) {
+
+      // Restore the text the user tried to send so they don't lose it.
+      if (_messageController.text.trim().isEmpty) {
+        _messageController.text = content;
+      }
+
+      // Handle errors
+      if (e.toString().contains('INSUFFICIENT_DIAMONDS')) {
+        // Refresh balance then prompt a top-up.
+        if (mounted) context.read<WalletProvider>().refresh();
+        _showInsufficientDiamondsDialog();
+      } else if (e.toString().contains('MATCH_REQUIRED')) {
         _showMatchRequiredDialog();
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -572,6 +592,101 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Future<void> _showInsufficientDiamondsDialog() async {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+          ),
+          padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFFFF5722).withOpacity(0.12),
+                ),
+                child: const Icon(Icons.diamond, color: Color(0xFFFF5722), size: 40),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Out of Diamonds',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'You\'ve used your free message. Top up diamonds to keep chatting with ${widget.receiverName}, or match with them to chat for free.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5722),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    context.push('/wallet');
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.diamond, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Get Diamonds',
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(
+                  'Maybe Later',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -654,6 +769,36 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
         actions: [
+          // Diamond balance chip — taps through to the wallet.
+          Consumer<WalletProvider>(
+            builder: (context, wallet, _) => GestureDetector(
+              onTap: () => context.push('/wallet'),
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5722).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.diamond, color: Color(0xFFFF5722), size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${wallet.balance}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFFFF5722),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.black87),
             onPressed: _loadMessages,

@@ -90,16 +90,17 @@ class MessageService {
       debugPrint('[MessageService] Response status: ${response.statusCode}');
       debugPrint('[MessageService] Response data: ${response.data}');
 
-      // Accept both 200 and 201 status codes
-      if ((response.statusCode == 200 || response.statusCode == 201) && 
+      // Accept both 200 and 201 status codes. Returns the full data payload:
+      // { message, diamondsSpent, diamondBalance }.
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
           response.data['success'] == true) {
-        return response.data['data']['message'];
+        return Map<String, dynamic>.from(response.data['data']);
       } else {
         throw Exception(response.data['message'] ?? 'Failed to send message');
       }
     } catch (e) {
       debugPrint('[MessageService] Error: $e');
-      
+
       if (e is DioException) {
         // Handle 401 Unauthorized
         if (e.response?.statusCode == 401) {
@@ -107,13 +108,24 @@ class MessageService {
           await _storage.delete(key: 'refresh_token');
           throw Exception('UNAUTHORIZED');
         }
-        
+
+        // Not enough diamonds to send a paid message.
+        if (e.response?.statusCode == 402) {
+          throw Exception('INSUFFICIENT_DIAMONDS');
+        }
+
         // Check for 403 match-required error (by status code or error code)
         if (e.response?.statusCode == 403) {
           final errorData = e.response!.data;
           if (errorData is Map && errorData['code'] == 'MATCH_REQUIRED') {
             throw Exception('MATCH_REQUIRED');
           }
+        }
+
+        // Also detect insufficient-diamonds via error code.
+        final ed = e.response?.data;
+        if (ed is Map && ed['code'] == 'INSUFFICIENT_DIAMONDS') {
+          throw Exception('INSUFFICIENT_DIAMONDS');
         }
 
         // Extract error message from response

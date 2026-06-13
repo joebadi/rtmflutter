@@ -21,6 +21,8 @@ import 'screens/premium/premium_page.dart';
 import 'screens/wallet/wallet_page.dart';
 import 'screens/explore_screen.dart';
 import 'screens/live_dates_screen.dart';
+import 'screens/live/live_call_screen.dart';
+import 'screens/live/live_event_room_screen.dart';
 import 'screens/likes_screen.dart';
 import 'screens/messages_screen.dart';
 import 'screens/chat_screen.dart';
@@ -29,6 +31,7 @@ import 'screens/notifications_screen.dart';
 import 'screens/main_shell.dart';
 import 'providers/profile_provider.dart';
 import 'providers/message_provider.dart';
+import 'providers/wallet_provider.dart';
 import 'config/theme.dart';
 
 import 'services/notification_service.dart';
@@ -127,6 +130,28 @@ final _router = GoRouter(
     GoRoute(path: '/premium', builder: (context, state) => const PremiumPage()),
     GoRoute(path: '/wallet', builder: (context, state) => const WalletPage()),
     GoRoute(
+      path: '/live-call',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return LiveCallScreen(
+          channelName: extra?['channelName'] as String? ?? '',
+          partnerName: extra?['partnerName'] as String? ?? 'Your date',
+          audioOnly: extra?['audioOnly'] as bool? ?? false,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/live-room',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return LiveEventRoomScreen(
+          eventId: extra?['eventId'] as String? ?? '',
+          eventTitle: extra?['eventTitle'] as String? ?? 'Live Date',
+          audioOnly: extra?['audioOnly'] as bool? ?? false,
+        );
+      },
+    ),
+    GoRoute(
       path: '/chat/:conversationId',
       builder: (context, state) {
         final conversationId = state.pathParameters['conversationId'] ?? '';
@@ -207,6 +232,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => NotificationService()..init()),
         ChangeNotifierProvider(create: (_) => MessageProvider()..init()),
+        ChangeNotifierProvider(create: (_) => WalletProvider()),
       ],
       child: MaterialApp.router(
         title: 'Ready to Marry',
