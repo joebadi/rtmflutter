@@ -36,6 +36,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isSending = false;
   List<dynamic> _messages = [];
   String? _error;
+  dynamic _socket;
 
   // Helper function to convert relative URLs to full URLs
   String _getFullPhotoUrl(String? url) {
@@ -64,6 +65,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _setupSocketListener() {
     final messageProvider = context.read<MessageProvider>();
     final socket = messageProvider.socket;
+    _socket = socket;
 
     if (socket != null && socket.connected) {
       debugPrint('[ChatScreen] Setting up socket listener');
@@ -1293,11 +1295,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
-    // Remove listener to prevent memory leaks or unwanted updates
-    final messageProvider = context.read<MessageProvider>();
-    final socket = messageProvider.socket;
-    socket?.off('new_message');
-    
+    _socket?.off('new_message');
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
