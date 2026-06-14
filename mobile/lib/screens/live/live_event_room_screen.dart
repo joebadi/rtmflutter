@@ -8,6 +8,7 @@ import '../../config/theme.dart';
 import '../../config/api_config.dart';
 import '../../services/live_service.dart';
 import '../../providers/message_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../widgets/premium_loader.dart';
 
 enum _Phase { lobby, inCall, interest, ended }
@@ -54,6 +55,10 @@ class _LiveEventRoomScreenState extends State<LiveEventRoomScreen> {
 
   int _matches = 0;
   String? _matchBanner;
+
+  // Blind-date in-call unveil
+  bool _unveilBusy = false;
+  String? _revealedPhotoUrl; // set once the current partner is unveiled
 
   dynamic get _socket => context.read<MessageProvider>().socket;
 
@@ -133,6 +138,8 @@ class _LiveEventRoomScreenState extends State<LiveEventRoomScreen> {
       _remoteUid = null;
       _muted = false;
       _videoOff = false;
+      _unveilBusy = false;
+      _revealedPhotoUrl = null;
     });
 
     final audioOnly = pairing['audioOnly'] == true || widget.audioOnly;
@@ -226,6 +233,75 @@ class _LiveEventRoomScreenState extends State<LiveEventRoomScreen> {
       debugPrint('[LiveRoom] interest error: $e');
     }
     if (mounted) setState(() => _phase = _Phase.lobby);
+  }
+
+  /// Spend an unveil to reveal the current blind-date partner mid-call.
+  Future<void> _unveilInCall() async {
+    final pairing = _pairing;
+    if (pairing == null || _unveilBusy || _revealedPhotoUrl != null) return;
+    final pairingId = pairing['pairingId']?.toString();
+    if (pairingId == null) return;
+
+    setState(() => _unveilBusy = true);
+    try {
+      final result = await _live.unveilPartner(pairingId);
+      if (!mounted) return;
+      if (result['diamondBalance'] != null) {
+        context.read<WalletProvider>().setBalance(result['diamondBalance'] as int);
+      }
+      final photo = _fullUrl(result['partner']?['photoUrl']?.toString());
+      setState(() {
+        _revealedPhotoUrl = photo;
+        // keep the partner card in sync so the interest screen shows the photo too
+        if (_pairing?['partner'] is Map) {
+          _pairing!['partner'] = Map<String, dynamic>.from(result['partner']);
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      if (e.toString().contains('INSUFFICIENT_DIAMONDS')) {
+        context.read<WalletProvider>().refresh();
+        _showUnveilTopUp();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _unveilBusy = false);
+    }
+  }
+
+  void _showUnveilTopUp() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.darkSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Not enough diamonds',
+            style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text('Top up to reveal who you\'re talking to.',
+            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Later', style: GoogleFonts.poppins(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.push('/wallet');
+            },
+            child: Text('Get Diamonds',
+                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _toggleMute() {
@@ -420,6 +496,7 @@ class _LiveEventRoomScreenState extends State<LiveEventRoomScreen> {
       );
 
   Widget _audioStage(String name) {
+    final revealed = _revealedPhotoUrl != null && _revealedPhotoUrl!.isNotEmpty;
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -435,12 +512,17 @@ class _LiveEventRoomScreenState extends State<LiveEventRoomScreen> {
             Container(
               width: 140,
               height: 140,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withOpacity(0.12),
                 border: Border.all(color: Colors.white24, width: 2),
               ),
-              child: const Icon(Icons.visibility_off_rounded, color: Colors.white70, size: 64),
+              child: revealed
+                  ? Image.network(_revealedPhotoUrl!, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.person, color: Colors.white70, size: 64))
+                  : const Icon(Icons.visibility_off_rounded, color: Colors.white70, size: 64),
             ),
             const SizedBox(height: 24),
             Text(name, style: GoogleFonts.poppins(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
@@ -448,8 +530,43 @@ class _LiveEventRoomScreenState extends State<LiveEventRoomScreen> {
             Text(_remoteUid != null ? 'Connected · say hello 👋' : 'Connecting…',
                 style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14)),
             const SizedBox(height: 6),
-            Text('Photos stay hidden — see who you click with after',
-                style: GoogleFonts.poppins(color: Colors.white38, fontSize: 12)),
+            if (revealed)
+              Text('Revealed · is it a vibe? 👀',
+                  style: GoogleFonts.poppins(color: Colors.white60, fontSize: 12))
+            else
+              Text('Photos stay hidden — see who you click with after',
+                  style: GoogleFonts.poppins(color: Colors.white38, fontSize: 12)),
+            const SizedBox(height: 22),
+            if (!revealed) _unveilPill(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _unveilPill() {
+    return GestureDetector(
+      onTap: _unveilBusy ? null : _unveilInCall,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.14),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: Colors.white30),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_unveilBusy)
+              const SizedBox(
+                width: 18, height: 18,
+                child: PremiumLoader(strokeWidth: 2.2, color: Colors.white),
+              )
+            else
+              const Icon(Icons.visibility_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text('Unveil my date',
+                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
           ],
         ),
       ),
@@ -493,7 +610,6 @@ class _LiveEventRoomScreenState extends State<LiveEventRoomScreen> {
   // ----- Interest / rating -----
   Widget _buildInterest() {
     final name = (_interestPartner?['firstName'] ?? 'your date').toString();
-    final blind = widget.audioOnly;
     final photo = _fullUrl(_interestPartner?['photoUrl']?.toString());
 
     return Column(
@@ -514,7 +630,7 @@ class _LiveEventRoomScreenState extends State<LiveEventRoomScreen> {
                     color: Colors.white12,
                     border: Border.all(color: Colors.white24, width: 2),
                   ),
-                  child: (blind || photo.isEmpty)
+                  child: photo.isEmpty
                       ? const Icon(Icons.person, color: Colors.white38, size: 56)
                       : Image.network(photo, fit: BoxFit.cover,
                           errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white38, size: 56)),
@@ -612,21 +728,25 @@ class _LiveEventRoomScreenState extends State<LiveEventRoomScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.accent,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      onPressed: () => context.go('/messages'),
-                      child: Text('Go to Messages',
+                      onPressed: () => context.pushReplacement('/live-results', extra: {
+                        'eventId': widget.eventId,
+                        'eventTitle': widget.eventTitle,
+                      }),
+                      icon: const Icon(Icons.celebration_rounded, color: Colors.white, size: 20),
+                      label: Text('See your results',
                           style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ),
                 TextButton(
-                  onPressed: () => context.pop(),
-                  child: Text('Back to Live Dates', style: GoogleFonts.poppins(color: Colors.white54)),
+                  onPressed: () => context.go('/messages'),
+                  child: Text('Go to Messages', style: GoogleFonts.poppins(color: Colors.white54)),
                 ),
               ],
             ),

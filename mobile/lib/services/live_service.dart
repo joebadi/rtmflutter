@@ -109,4 +109,37 @@ class LiveService {
     await _attachToken();
     await _dio.post('/live/pairings/$pairingId/rate', data: {'rating': rating});
   }
+
+  /// Reveal a blind-date partner. Throws 'INSUFFICIENT_DIAMONDS' when a paid
+  /// unveil can't be afforded. Returns { partner, charged, free, diamondBalance,
+  /// unveilsRemaining, unveilCost, ... }.
+  Future<Map<String, dynamic>> unveilPartner(String pairingId) async {
+    await _attachToken();
+    try {
+      final response = await _dio.post('/live/pairings/$pairingId/unveil');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return Map<String, dynamic>.from(response.data['data']);
+      }
+      throw Exception(response.data['message'] ?? 'Failed to unveil');
+    } catch (e) {
+      if (e is DioException && e.response?.data is Map) {
+        final data = e.response!.data as Map;
+        if (data['code'] == 'INSUFFICIENT_DIAMONDS') {
+          throw Exception('INSUFFICIENT_DIAMONDS');
+        }
+        throw Exception(data['message'] ?? 'Failed to unveil');
+      }
+      rethrow;
+    }
+  }
+
+  /// Post-event results: { event, blind, matches, unveils, pairings: [...] }.
+  Future<Map<String, dynamic>> getEventResults(String eventId) async {
+    await _attachToken();
+    final response = await _dio.get('/live/events/$eventId/results');
+    if (response.statusCode == 200 && response.data['success'] == true) {
+      return Map<String, dynamic>.from(response.data['data']);
+    }
+    throw Exception(response.data['message'] ?? 'Failed to load results');
+  }
 }

@@ -23,6 +23,7 @@ import 'screens/explore_screen.dart';
 import 'screens/live_dates_screen.dart';
 import 'screens/live/live_call_screen.dart';
 import 'screens/live/live_event_room_screen.dart';
+import 'screens/live/live_event_results_screen.dart';
 import 'screens/likes_screen.dart';
 import 'screens/messages_screen.dart';
 import 'screens/chat_screen.dart';
@@ -148,6 +149,16 @@ final _router = GoRouter(
           eventId: extra?['eventId'] as String? ?? '',
           eventTitle: extra?['eventTitle'] as String? ?? 'Live Date',
           audioOnly: extra?['audioOnly'] as bool? ?? false,
+        );
+      },
+    ),
+    GoRoute(
+      path: '/live-results',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return LiveEventResultsScreen(
+          eventId: extra?['eventId'] as String? ?? '',
+          eventTitle: extra?['eventTitle'] as String? ?? 'Live Date',
         );
       },
     ),

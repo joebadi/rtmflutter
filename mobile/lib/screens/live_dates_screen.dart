@@ -9,6 +9,7 @@ import '../services/live_service.dart';
 import '../providers/wallet_provider.dart';
 import '../widgets/notification_icon.dart';
 import '../widgets/premium_loader.dart';
+import '../widgets/live_dates_collage.dart';
 
 /// The Live Dates lobby — a dating-event hub where users discover and book
 /// admin-scheduled speed-dating / blind-date events.
@@ -214,20 +215,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
         child: Column(
           children: [
             _buildHeader(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: PremiumLoader())
-                  : RefreshIndicator(
-                      color: AppTheme.accent,
-                      backgroundColor: AppTheme.darkSurface,
-                      onRefresh: _load,
-                      child: _error != null
-                          ? _buildError()
-                          : _events.isEmpty
-                              ? _buildEmpty()
-                              : _buildEventList(),
-                    ),
-            ),
+            Expanded(child: _buildBody()),
           ],
         ),
       ),
@@ -698,34 +686,20 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
     );
   }
 
-  Widget _buildEmpty() {
-    return ListView(
-      children: [
-        const SizedBox(height: 100),
-        Center(
-          child: Column(
-            children: [
-              Container(
-                width: 110, height: 110,
-                decoration: const BoxDecoration(gradient: AppTheme.accentGradient, shape: BoxShape.circle),
-                child: const Icon(Icons.event_rounded, size: 54, color: Colors.white),
-              ),
-              const SizedBox(height: 24),
-              Text('No live dates yet',
-                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 48),
-                child: Text(
-                  'New speed-dating and blind-date events drop regularly. Check back soon — or pull to refresh.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(color: Colors.white54, fontSize: 14, height: 1.5),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+  Widget _buildBody() {
+    if (_isLoading) return const Center(child: PremiumLoader());
+
+    // Empty state: full-bleed animated dating collage (manages its own
+    // "check for events" action, so it lives outside the RefreshIndicator).
+    if (_error == null && _events.isEmpty) {
+      return LiveDatesCollage(onRefresh: _load);
+    }
+
+    return RefreshIndicator(
+      color: AppTheme.accent,
+      backgroundColor: AppTheme.darkSurface,
+      onRefresh: _load,
+      child: _error != null ? _buildError() : _buildEventList(),
     );
   }
 
