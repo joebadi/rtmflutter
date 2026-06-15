@@ -636,9 +636,12 @@ class _UserProfilePageState extends State<UserProfilePage>
                               Expanded(
                                 child: Row(
                                   children: [
+                                    // Only the name truncates; the age is a
+                                    // separate fixed widget so the match badge
+                                    // can never clip it.
                                     Flexible(
                                       child: Text(
-                                        '$fullName, $age',
+                                        fullName,
                                         style: GoogleFonts.poppins(
                                           fontSize: 28,
                                           fontWeight: FontWeight.bold,
@@ -653,6 +656,21 @@ class _UserProfilePageState extends State<UserProfilePage>
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(
+                                      ', $age',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.black.withOpacity(0.5),
+                                            offset: const Offset(0, 2),
+                                            blurRadius: 4,
+                                          ),
+                                        ],
                                       ),
                                     ),
                                     if (isVerified) ...[
@@ -1004,9 +1022,11 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   // Name and Verification
                                   Row(
                                     children: [
+                                      // Name truncates; age stays fixed so the
+                                      // match badge can't clip it.
                                       Flexible(
                                         child: Text(
-                                          '$fullName, $age',
+                                          fullName,
                                           style: GoogleFonts.poppins(
                                             fontSize: 28,
                                             fontWeight: FontWeight.bold,
@@ -1014,6 +1034,14 @@ class _UserProfilePageState extends State<UserProfilePage>
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Text(
+                                        ', $age',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
                                         ),
                                       ),
                                       if (isVerified) ...[
