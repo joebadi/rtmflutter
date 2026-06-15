@@ -73,8 +73,19 @@ class _WalletPageState extends State<WalletPage> with TickerProviderStateMixin {
                     Text('Pay once. No subscription.',
                         style: GoogleFonts.poppins(color: Colors.white38, fontSize: 13)),
                     const SizedBox(height: 16),
-                    ...List.generate(packages.length, (i) => _packageCard(packages[i] as Map)),
-                    const SizedBox(height: 16),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      childAspectRatio: 0.82,
+                      children: List.generate(
+                        packages.length,
+                        (i) => _packageCard(packages[i] as Map),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     _historyButton(),
                   ],
                 ),
@@ -250,6 +261,7 @@ class _WalletPageState extends State<WalletPage> with TickerProviderStateMixin {
 
   // ----- Packages --------------------------------------------------------
 
+  /// A single top-up package rendered as a vertical card (two per row).
   Widget _packageCard(Map pkg) {
     final id = (pkg['id'] ?? '').toString();
     final diamonds = (pkg['diamonds'] ?? 0) as int;
@@ -259,69 +271,126 @@ class _WalletPageState extends State<WalletPage> with TickerProviderStateMixin {
     final total = diamonds + bonus;
     final busy = _selectedId == id;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: busy ? null : () => _showPurchaseSheet(id, diamonds, price, bonus),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: popular
-                    ? [AppTheme.accent.withOpacity(0.18), AppTheme.darkSurface]
-                    : [AppTheme.darkSurface, AppTheme.darkSurface2],
-              ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: popular ? AppTheme.accent.withOpacity(0.55) : Colors.white.withOpacity(0.06),
-                width: popular ? 1.6 : 1,
-              ),
-              boxShadow: popular
-                  ? [BoxShadow(color: AppTheme.accent.withOpacity(0.2), blurRadius: 22, offset: const Offset(0, 8))]
-                  : null,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: busy ? null : () => _showPurchaseSheet(id, diamonds, price, bonus),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: popular
+                  ? [AppTheme.accent.withOpacity(0.22), AppTheme.darkSurface]
+                  : [AppTheme.darkSurface, AppTheme.darkSurface2],
             ),
-            child: Row(
-              children: [
-                _diamondStack(popular),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text('$total',
-                              style: GoogleFonts.poppins(
-                                  color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800)),
-                          const SizedBox(width: 6),
-                          Text('diamonds',
-                              style: GoogleFonts.poppins(color: Colors.white54, fontSize: 13)),
-                          if (popular) ...[
-                            const SizedBox(width: 8),
-                            _ribbon('POPULAR'),
-                          ],
-                        ],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: popular
+                  ? AppTheme.accent.withOpacity(0.6)
+                  : Colors.white.withOpacity(0.07),
+              width: popular ? 1.6 : 1,
+            ),
+            boxShadow: popular
+                ? [
+                    BoxShadow(
+                        color: AppTheme.accent.withOpacity(0.22),
+                        blurRadius: 22,
+                        offset: const Offset(0, 8))
+                  ]
+                : null,
+          ),
+          child: Stack(
+            children: [
+              if (popular)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.accentGradient,
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(20),
+                        bottomLeft: Radius.circular(12),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        bonus > 0
-                            ? '$diamonds + $bonus bonus'
-                            : '₦${(price / max(diamonds, 1)).toStringAsFixed(0)} per diamond',
+                    ),
+                    child: Text('POPULAR',
                         style: GoogleFonts.poppins(
-                            color: bonus > 0 ? AppTheme.accentBright : Colors.white38, fontSize: 12.5,
-                            fontWeight: bonus > 0 ? FontWeight.w600 : FontWeight.w400),
-                      ),
-                    ],
+                            color: Colors.white,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5)),
                   ),
                 ),
-                _priceTag(price, popular, busy),
-              ],
-            ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _diamondStack(popular),
+                    const Spacer(),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Flexible(
+                          child: Text('$total',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1)),
+                        ),
+                        const SizedBox(width: 5),
+                        Text('💎',
+                            style: GoogleFonts.poppins(fontSize: 13)),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      bonus > 0
+                          ? '$diamonds + $bonus bonus'
+                          : '₦${(price / max(diamonds, 1)).toStringAsFixed(0)} / diamond',
+                      style: GoogleFonts.poppins(
+                          color: bonus > 0 ? AppTheme.accentBright : Colors.white38,
+                          fontSize: 11.5,
+                          fontWeight: bonus > 0 ? FontWeight.w600 : FontWeight.w400),
+                    ),
+                    const SizedBox(height: 12),
+                    // Price button
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: popular ? AppTheme.accentGradient : null,
+                        color: popular ? null : Colors.white.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(13),
+                        border: popular
+                            ? null
+                            : Border.all(color: Colors.white.withOpacity(0.12)),
+                      ),
+                      child: Center(
+                        child: busy
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : Text('₦${_money(price)}',
+                                style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -330,47 +399,18 @@ class _WalletPageState extends State<WalletPage> with TickerProviderStateMixin {
 
   Widget _diamondStack(bool popular) {
     return Container(
-      width: 56,
-      height: 56,
+      width: 46,
+      height: 46,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [AppTheme.accent.withOpacity(0.3), AppTheme.accentLight.withOpacity(0.12)],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.accent.withOpacity(0.4)),
       ),
-      child: const Icon(Icons.diamond, color: AppTheme.accent, size: 28),
-    );
-  }
-
-  Widget _ribbon(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(gradient: AppTheme.accentGradient, borderRadius: BorderRadius.circular(7)),
-      child: Text(label,
-          style: GoogleFonts.poppins(
-              color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
-    );
-  }
-
-  Widget _priceTag(int price, bool popular, bool busy) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-      decoration: BoxDecoration(
-        gradient: popular ? AppTheme.accentGradient : null,
-        color: popular ? null : Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: popular ? null : Border.all(color: Colors.white.withOpacity(0.12)),
-      ),
-      child: busy
-          ? const SizedBox(
-              width: 18, height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-          : Text('₦${_money(price)}',
-              style: GoogleFonts.poppins(
-                  color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+      child: const Icon(Icons.diamond, color: AppTheme.accent, size: 24),
     );
   }
 
