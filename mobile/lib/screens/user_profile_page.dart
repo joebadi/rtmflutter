@@ -1022,39 +1022,46 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   // Name and Verification
                                   Row(
                                     children: [
-                                      // Name truncates; age stays fixed so the
-                                      // match badge can't clip it.
-                                      Flexible(
-                                        child: Text(
-                                          fullName,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 28,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                      // Name + age + verified take all space
+                                      // except the badge; only the name shrinks.
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                fullName,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 28,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.white,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            Text(
+                                              ', $age',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 28,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            if (isVerified) ...[
+                                              const SizedBox(width: 6),
+                                              const Icon(
+                                                Icons.verified,
+                                                color: Color(0xFFFF5722),
+                                                size: 28,
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
-                                      Text(
-                                        ', $age',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      if (isVerified) ...[
-                                        const SizedBox(width: 6),
-                                        const Icon(
-                                          Icons.verified,
-                                          color: Color(0xFFFF5722),
-                                          size: 28,
-                                        ),
-                                      ],
-                                      const Spacer(),
-                                      if (_theyMatchYou != null)
+                                      if (_theyMatchYou != null) ...[
+                                        const SizedBox(width: 8),
                                         _matchBadge(_theyMatchYou!),
+                                      ],
                                     ],
                                   ),
                                   const SizedBox(height: 8),
