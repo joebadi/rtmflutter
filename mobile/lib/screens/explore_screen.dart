@@ -373,22 +373,28 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   // Apply client-side filters to users
   List<dynamic> _applyFilters(List<dynamic> users) {
     return users.where((user) {
-      final profile = user['profile'] ?? {};
+      // Profile fields may be spread at the top level of the item (nearby /
+      // suggestions without prefs) or nested under ['profile'] (suggestions
+      // with prefs). Resolve a single base map for all profile reads, and the
+      // nested user object for account-level flags.
+      final profile = (user['profile'] ?? user) as Map;
+      final userObj = (profile['user'] ?? user['user'] ?? {}) as Map;
 
       // Age filter
-      final age = user['age'];
+      final age = user['age'] ?? profile['age'];
       if (age != null && (age < _ageRange.start || age > _ageRange.end)) {
         return false;
       }
 
-      // Distance filter
+      // Distance filter (only computed for nearby users; top-level)
       final distance = user['distance'] ?? 0;
       if (distance > _distance.round()) {
         return false;
       }
 
       // Gender filter
-      if (_genderFilter != null && user['gender'] != _genderFilter) {
+      final gender = user['gender'] ?? profile['gender'];
+      if (_genderFilter != null && gender != _genderFilter) {
         return false;
       }
 
@@ -416,17 +422,19 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       }
 
       // HIV Partner View filter
-      if (_hivPartnerViewFilter != null && profile['hivPartnerView'] != _hivPartnerViewFilter) {
+      if (_hivPartnerViewFilter != null &&
+          profile['hivPartnerView'] != _hivPartnerViewFilter) {
         return false;
       }
 
-      // Smoking filter
-      if (_smokingFilter != null && profile['smoking'] != _smokingFilter) {
+      // Smoking filter (Prisma field: smokingStatus)
+      if (_smokingFilter != null && profile['smokingStatus'] != _smokingFilter) {
         return false;
       }
 
-      // Drinking filter
-      if (_drinkingFilter != null && profile['drinking'] != _drinkingFilter) {
+      // Drinking filter (Prisma field: drinkingStatus)
+      if (_drinkingFilter != null &&
+          profile['drinkingStatus'] != _drinkingFilter) {
         return false;
       }
 
@@ -436,27 +444,32 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       }
 
       // Has children filter
-      if (_hasChildrenFilter != null && profile['hasChildren'] != _hasChildrenFilter) {
+      if (_hasChildrenFilter != null &&
+          profile['hasChildren'] != _hasChildrenFilter) {
         return false;
       }
 
       // Relationship status filter
-      if (_relationshipStatusFilter != null && profile['relationshipStatus'] != _relationshipStatusFilter) {
+      if (_relationshipStatusFilter != null &&
+          profile['relationshipStatus'] != _relationshipStatusFilter) {
         return false;
       }
 
       // Verified filter
-      if (_showOnlyVerified && user['isVerified'] != true) {
+      if (_showOnlyVerified &&
+          (user['isVerified'] ?? profile['isVerified'] ?? userObj['isVerified']) != true) {
         return false;
       }
 
-      // Premium filter
-      if (_showOnlyPremium && user['isPremium'] != true) {
+      // Premium filter (account flag lives on the nested user object)
+      if (_showOnlyPremium &&
+          (userObj['isPremium'] ?? user['isPremium']) != true) {
         return false;
       }
 
-      // Online filter
-      if (_showOnlyOnline && user['isOnline'] != true) {
+      // Online filter (account flag lives on the nested user object)
+      if (_showOnlyOnline &&
+          (userObj['isOnline'] ?? user['isOnline']) != true) {
         return false;
       }
 
