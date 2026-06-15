@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../config/api_config.dart';
 import '../services/like_service.dart';
+import '../services/match_service.dart';
+import '../data/nigeria_locations.dart';
 import '../widgets/premium_loader.dart';
 
 class UserProfilePage extends StatefulWidget {
@@ -26,8 +28,15 @@ class _UserProfilePageState extends State<UserProfilePage>
   late PageController _pageController;
 
   final LikeService _likeService = LikeService();
+  final MatchService _matchService = MatchService();
   bool _isLiked = false;
   bool _isLiking = false;
+
+  // Mutual compatibility: how well they fit YOUR prefs (headline) and how well
+  // YOU fit theirs (reciprocal, shown on the Preferences tab).
+  int? _theyMatchYou;
+  int? _youMatchThem;
+  Set<String> _youMatchThemMatches = {};
 
   List<String> _images = [];
   late Map<String, dynamic> _user;
@@ -56,6 +65,30 @@ class _UserProfilePageState extends State<UserProfilePage>
 
     // Check if already liked
     _checkLikeStatus();
+
+    // Load mutual match compatibility
+    _loadCompatibility();
+  }
+
+  Future<void> _loadCompatibility() async {
+    final userId = _userObj['id'] ?? _user['userId'];
+    if (userId == null) return;
+    final data = await _matchService.getCompatibility(userId.toString());
+    if (data.isEmpty || !mounted) return;
+    final they = data['theyMatchYou'] as Map<String, dynamic>?;
+    final you = data['youMatchThem'] as Map<String, dynamic>?;
+    setState(() {
+      if (they != null && they['score'] is num) {
+        _theyMatchYou = (they['score'] as num).round();
+      }
+      if (you != null) {
+        if (you['score'] is num) _youMatchThem = (you['score'] as num).round();
+        if (you['matches'] is List) {
+          _youMatchThemMatches =
+              (you['matches'] as List).map((e) => e.toString()).toSet();
+        }
+      }
+    });
   }
 
   Future<void> _checkLikeStatus() async {
@@ -630,6 +663,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                                         size: 24,
                                       ),
                                     ],
+                                    if (_theyMatchYou != null) ...[
+                                      const SizedBox(width: 8),
+                                      _matchBadge(_theyMatchYou!),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -967,7 +1004,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   // Name and Verification
                                   Row(
                                     children: [
-                                      Expanded(
+                                      Flexible(
                                         child: Text(
                                           '$fullName, $age',
                                           style: GoogleFonts.poppins(
@@ -975,14 +1012,21 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             fontWeight: FontWeight.bold,
                                             color: Colors.white,
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      if (isVerified)
+                                      if (isVerified) ...[
+                                        const SizedBox(width: 6),
                                         const Icon(
                                           Icons.verified,
                                           color: Color(0xFFFF5722),
                                           size: 28,
                                         ),
+                                      ],
+                                      const Spacer(),
+                                      if (_theyMatchYou != null)
+                                        _matchBadge(_theyMatchYou!),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
@@ -1387,7 +1431,47 @@ class _UserProfilePageState extends State<UserProfilePage>
     return value.toString();
   }
 
-  Widget _buildPreferenceItem(IconData icon, String label, String value) {
+  /// Gold "match %" pill shown next to the user's name.
+  Widget _matchBadge(int score) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFA500).withOpacity(0.45),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.favorite_rounded, color: Colors.white, size: 13),
+          const SizedBox(width: 4),
+          Text(
+            '$score% match',
+            style: GoogleFonts.poppins(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreferenceItem(
+    IconData icon,
+    String label,
+    String value, {
+    bool? matched,
+  }) {
     if (value == 'Any' || value.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -1416,6 +1500,110 @@ class _UserProfilePageState extends State<UserProfilePage>
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: Colors.white.withOpacity(0.95),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (matched != null) ...[
+            const SizedBox(width: 8),
+            Icon(
+              matched ? Icons.check_circle_rounded : Icons.cancel_rounded,
+              color: matched
+                  ? const Color(0xFF4CAF50)
+                  : Colors.white.withOpacity(0.28),
+              size: 18,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Whether the viewer's own profile satisfies the target's preference on
+  /// [fieldKey]. Returns null when we have no reciprocal data yet (no marker
+  /// shown), so the row renders cleanly before/without compatibility info.
+  bool? _reciprocalMatch(String fieldKey) {
+    if (_youMatchThem == null) return null;
+    return _youMatchThemMatches.contains(fieldKey);
+  }
+
+  /// "Nigeria (Edo, Delta, Lagos)" — country grouped with preferred states.
+  String _formatPreferredLocation(Map prefs) {
+    final country = prefs['locationCountry']?.toString() ?? '';
+    final states = (prefs['locationStates'] is List)
+        ? (prefs['locationStates'] as List).map((e) => e.toString()).toList()
+        : <String>[];
+    if (country.isEmpty && states.isEmpty) return 'Any';
+    if (states.isEmpty) return country.isEmpty ? 'Any' : country;
+    final base = country.isEmpty ? 'Anywhere' : country;
+    return '$base (${states.join(', ')})';
+  }
+
+  /// "Edo (Esan), Delta (All)" — grouped by state of origin, falling back to the
+  /// legacy flat tribe list when the structured map is absent.
+  String _formatPreferredTribes(Map prefs) {
+    final map = parseTribePreferences(prefs['tribePreferences']);
+    if (map.isNotEmpty) return formatTribePreferences(map);
+    return _formatList(prefs['locationTribes']);
+  }
+
+  /// Reciprocal "you fit their preferences" card shown atop the Preferences tab.
+  Widget _reciprocalMatchCard() {
+    final score = _youMatchThem ?? 0;
+    final name = _user['firstName'] ?? 'them';
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFFFD700).withOpacity(0.18),
+            const Color(0xFFFFA500).withOpacity(0.10),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.35)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$score%',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "You're a $score% match for $name",
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'How well your profile fits their preferences',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.white.withOpacity(0.6),
                   ),
                 ),
               ],
@@ -1467,7 +1655,11 @@ class _UserProfilePageState extends State<UserProfilePage>
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+
+          if (hasPrefs && _youMatchThem != null) _reciprocalMatchCard(),
+
+          if (hasPrefs && _youMatchThem != null) const SizedBox(height: 16),
 
           if (!hasPrefs)
             Center(
@@ -1499,6 +1691,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 Icons.calendar_today,
                 'Preferred Age',
                 '${prefs['ageMin']} - ${prefs['ageMax']} years',
+                matched: _reciprocalMatch('age'),
               ),
 
             // Relationship Status
@@ -1508,26 +1701,20 @@ class _UserProfilePageState extends State<UserProfilePage>
               _formatList(prefs['relationshipStatus']),
             ),
 
-            // Location
-            if (prefs['locationCountry'] != null)
-              _buildPreferenceItem(
-                Icons.location_on,
-                'Preferred Location',
-                prefs['locationCountry'].toString(),
-              ),
-
-            // States
+            // Location — country grouped with preferred states
             _buildPreferenceItem(
-              Icons.map,
-              'Preferred States',
-              _formatList(prefs['locationStates']),
+              Icons.location_on,
+              'Preferred Location',
+              _formatPreferredLocation(prefs),
+              matched: _reciprocalMatch('location'),
             ),
 
-            // Tribes
+            // Tribe(s) — grouped by state of origin
             _buildPreferenceItem(
               Icons.people,
               'Preferred Tribe(s)',
-              _formatList(prefs['locationTribes']),
+              _formatPreferredTribes(prefs),
+              matched: _reciprocalMatch('tribe'),
             ),
 
             // Religion
@@ -1535,6 +1722,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               Icons.auto_awesome,
               'Preferred Religion',
               _formatList(prefs['religion']),
+              matched: _reciprocalMatch('religion'),
             ),
 
             // Zodiac
@@ -1542,6 +1730,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               Icons.stars,
               'Preferred Zodiac',
               _formatList(prefs['zodiac']),
+              matched: _reciprocalMatch('zodiac'),
             ),
 
             // Genotype
@@ -1549,6 +1738,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               Icons.medical_services,
               'Preferred Genotype',
               _formatList(prefs['genotype']),
+              matched: _reciprocalMatch('genotype'),
             ),
 
             // Blood Group
@@ -1556,6 +1746,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               Icons.bloodtype,
               'Preferred Blood Group',
               _formatList(prefs['bloodGroup']),
+              matched: _reciprocalMatch('bloodGroup'),
             ),
 
             // Height
@@ -1571,6 +1762,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               Icons.accessibility_new,
               'Preferred Body Type',
               _formatList(prefs['bodyType']),
+              matched: _reciprocalMatch('bodyType'),
             ),
 
             // Tattoos
@@ -1579,6 +1771,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 Icons.brush,
                 'Tattoos',
                 prefs['tattoosAcceptable'] == true ? 'Yes' : 'No',
+                matched: _reciprocalMatch('tattoos'),
               ),
 
             // Piercings
@@ -1587,6 +1780,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 Icons.circle,
                 'Piercings',
                 prefs['piercingsAcceptable'] == true ? 'Yes' : 'No',
+                matched: _reciprocalMatch('piercings'),
               ),
           ],
 

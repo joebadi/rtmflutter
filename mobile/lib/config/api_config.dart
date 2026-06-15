@@ -33,6 +33,8 @@ class ApiConfig {
   // Match Endpoints
   static const String exploreMatches = '$matchBase/explore';
   static const String myMatches = matchBase;
+  static String compatibility(String targetUserId) =>
+      '$matchBase/compatibility/$targetUserId';
   static String likeUser(String userId) => '$matchBase/like/$userId';
   static String passUser(String userId) => '$matchBase/pass/$userId';
   static String unmatch(String matchId) => '$matchBase/unmatch/$matchId';

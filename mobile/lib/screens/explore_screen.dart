@@ -1936,6 +1936,18 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
+  /// Extracts a compatibility percentage from a user payload when present
+  /// (match suggestions include `compatibility.score`); null otherwise.
+  int? _matchScoreOf(dynamic user) {
+    try {
+      final c = user['compatibility'];
+      if (c is Map && c['score'] is num) {
+        return (c['score'] as num).round();
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Widget _buildGridItem(dynamic user) {
     // Better data extraction with fallbacks
     final profile = user['profile'] ?? user;
@@ -1960,6 +1972,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     final distance = user['distance']?.toString() ?? '0';
     final isOnline = userObj['isOnline'] ?? false;
     final isPremium = userObj['isPremium'] ?? false;
+    final matchScore = _matchScoreOf(user);
 
     return GestureDetector(
       onTap: () => context.push('/user-profile', extra: user),
@@ -2141,6 +2154,35 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (matchScore != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.favorite_rounded,
+                                  color: Colors.white, size: 9),
+                              const SizedBox(width: 3),
+                              Text(
+                                '$matchScore% match',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 9.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                      ],
                       Row(
                         children: [
                           Flexible(
@@ -2149,25 +2191,27 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontSize: 15,
                                 height: 1.2,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF4CAF50),
-                              shape: BoxShape.circle,
+                          if (isOnline) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF4CAF50),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 9,
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 10,
-                            ),
-                          ),
+                          ],
                         ],
                       ),
                     ],
@@ -2204,99 +2248,161 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.95,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xFF1a1a1a),
-                const Color(0xFF2d2d2d),
-              ],
-            ),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(28),
-              topRight: Radius.circular(28),
-            ),
-          ),
-          child: Column(
-            children: [
-              // Drag handle
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
+        return StatefulBuilder(
+          builder: (context, setGridState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.95,
+              decoration: const BoxDecoration(
+                color: AppTheme.darkBg,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Browse Matches',
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Grid view
-              Expanded(
-                child: _nearbyUsers.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                  ),
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 12, 12, 10),
+                    child: Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: 64,
-                              color: Colors.white.withOpacity(0.3),
-                            ),
-                            const SizedBox(height: 16),
                             Text(
-                              'No users nearby yet',
+                              'Browse Matches',
                               style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                color: Colors.white.withOpacity(0.6),
+                                fontSize: 19,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              '${_nearbyUsers.length} ${_nearbyUsers.length == 1 ? 'person' : 'people'} found',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.5,
+                                color: Colors.white.withOpacity(0.5),
                               ),
                             ),
                           ],
                         ),
-                      )
-                    : GridView.builder(
-                        padding: const EdgeInsets.all(20),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 0.75,
+                        const Spacer(),
+                        // In-page filter
+                        GestureDetector(
+                          onTap: () => _showFilterModal(
+                            onApplied: () async {
+                              await _fetchNearbyUsers();
+                              await _fetchSuggestions();
+                              setGridState(() {});
+                            },
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 13, vertical: 8),
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.accentGradient,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.tune_rounded,
+                                    color: Colors.white, size: 15),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Filter',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        itemCount: _nearbyUsers.length,
-                        itemBuilder: (context, index) {
-                          final user = _nearbyUsers[index];
-                          return _buildGridItem(user);
-                        },
-                      ),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.close_rounded,
+                                size: 17, color: Colors.white70),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Grid view
+                  Expanded(
+                    child: _nearbyUsers.isEmpty
+                        ? _browseEmptyState()
+                        : GridView.builder(
+                            padding: const EdgeInsets.fromLTRB(14, 4, 14, 20),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 0.72,
+                            ),
+                            itemCount: _nearbyUsers.length,
+                            itemBuilder: (context, index) =>
+                                _buildGridItem(_nearbyUsers[index]),
+                          ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _browseEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: AppTheme.accent.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.people_outline_rounded,
+                size: 44, color: AppTheme.accent.withOpacity(0.8)),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No matches found',
+            style: GoogleFonts.poppins(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Try widening your filters',
+            style: GoogleFonts.poppins(
+              fontSize: 12.5,
+              color: Colors.white.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2719,541 +2825,344 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
-  void _showFilterModal() {
-    showModalBottomSheet(
+  /// Compact dark filter sheet. When [onApplied] is supplied (e.g. opened from
+  /// Browse Matches), it's invoked on Apply instead of the default refetch so
+  /// the caller can refresh its own view.
+  Future<void> _showFilterModal({VoidCallback? onApplied}) {
+    return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
-          return BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.70,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0xFF1a1a1a).withOpacity(0.85),
-                    const Color(0xFF2d2d2d).withOpacity(0.90),
-                  ],
-                ),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(28),
-                  topRight: Radius.circular(28),
-                ),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.1),
-                  width: 1.5,
-                ),
-              ),
+          // Single-select chip group helper bound to this modal's setState.
+          Widget group(String? current, List<String> options,
+              ValueChanged<String?> onPick) {
+            return Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: options
+                  .map((o) => _buildChip(o, current == o,
+                      () => setModalState(() => onPick(current == o ? null : o))))
+                  .toList(),
+            );
+          }
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.86,
+            decoration: const BoxDecoration(
+              color: AppTheme.darkBg,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
             child: Column(
               children: [
-                // Drag handle
+                const SizedBox(height: 10),
                 Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 8),
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white24,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-
                 // Header
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.fromLTRB(18, 12, 12, 8),
                   child: Row(
                     children: [
-                      // Close button
+                      Text(
+                        'Filters',
+                        style: GoogleFonts.poppins(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => setModalState(() {
+                          _ageRange = const RangeValues(25, 35);
+                          _distance = 50;
+                          _genderFilter = null;
+                          _heightRange = const RangeValues(160, 185);
+                          _bodyTypeFilter = null;
+                          _religionFilter = null;
+                          _smokingFilter = null;
+                          _drinkingFilter = null;
+                          _educationFilter = null;
+                          _hasChildrenFilter = null;
+                          _relationshipStatusFilter = null;
+                          _hivPartnerViewFilter = null;
+                          _showOnlyVerified = false;
+                          _showOnlyPremium = false;
+                          _showOnlyOnline = false;
+                        }),
+                        child: Text(
+                          'Reset',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.accent,
+                          ),
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
                         child: Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(5),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
+                            color: Colors.white.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(9),
                           ),
-                          child: const Icon(
-                            Icons.close,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Title
-                      Expanded(
-                        child: Text(
-                          'Filter Matches',
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      TextButton.icon(
-                        onPressed: () {
-                          setModalState(() {
-                            _ageRange = const RangeValues(25, 35);
-                            _distance = 50;
-                            _genderFilter = null;
-                            _heightRange = const RangeValues(160, 185);
-                            _bodyTypeFilter = null;
-                            _religionFilter = null;
-                            _smokingFilter = null;
-                            _drinkingFilter = null;
-                            _educationFilter = null;
-                            _hasChildrenFilter = null;
-                            _relationshipStatusFilter = null;
-                            _hivPartnerViewFilter = null;
-                            _showOnlyVerified = false;
-                            _showOnlyPremium = false;
-                            _showOnlyOnline = false;
-                          });
-                        },
-                        icon: const Icon(Icons.clear_all, size: 16, color: Color(0xFFFF5722)),
-                        label: Text(
-                          'Clear',
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFFFF5722),
-                          ),
+                          child: const Icon(Icons.close_rounded,
+                              size: 16, color: Colors.white70),
                         ),
                       ),
                     ],
                   ),
                 ),
-
-                // Scrollable Filters
+                // Filters
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
                     children: [
-                      // Age Range
                       _buildFilterSection(
-                        'Age Range',
+                        'Age',
                         Column(
                           children: [
-                            RangeSlider(
-                              values: _ageRange,
-                              min: 18,
-                              max: 100,
-                              divisions: 82,
-                              activeColor: const Color(0xFFFF5722),
-                              labels: RangeLabels(
-                                _ageRange.start.round().toString(),
-                                _ageRange.end.round().toString(),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '${_ageRange.start.round()} – ${_ageRange.end.round()} years',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.accent),
                               ),
-                              onChanged: (values) {
-                                setModalState(() => _ageRange = values);
-                              },
                             ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('${_ageRange.start.round()} years',
-                                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withOpacity(0.6))),
-                                Text('${_ageRange.end.round()} years',
-                                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withOpacity(0.6))),
-                              ],
+                            _slimSlider(
+                              RangeSlider(
+                                values: _ageRange,
+                                min: 18,
+                                max: 100,
+                                divisions: 82,
+                                activeColor: AppTheme.accent,
+                                inactiveColor: Colors.white24,
+                                labels: RangeLabels('${_ageRange.start.round()}',
+                                    '${_ageRange.end.round()}'),
+                                onChanged: (v) =>
+                                    setModalState(() => _ageRange = v),
+                              ),
                             ),
                           ],
                         ),
                         icon: Icons.cake_outlined,
                       ),
-
-                      // Distance
                       _buildFilterSection(
                         'Distance',
                         Column(
                           children: [
-                            Slider(
-                              value: _distance,
-                              min: 1,
-                              max: 500,
-                              divisions: 499,
-                              activeColor: const Color(0xFFFF5722),
-                              label: '${_distance.round()} km',
-                              onChanged: (value) {
-                                setModalState(() => _distance = value);
-                              },
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Within ${_distance.round()} km',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.accent),
+                              ),
                             ),
-                            Text('${_distance.round()} km away',
-                                style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withOpacity(0.6))),
+                            _slimSlider(
+                              Slider(
+                                value: _distance,
+                                min: 1,
+                                max: 500,
+                                divisions: 499,
+                                activeColor: AppTheme.accent,
+                                inactiveColor: Colors.white24,
+                                label: '${_distance.round()} km',
+                                onChanged: (v) =>
+                                    setModalState(() => _distance = v),
+                              ),
+                            ),
                           ],
                         ),
                         icon: Icons.location_on_outlined,
                       ),
-
-                      // Gender
                       _buildFilterSection(
                         'Gender',
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            _buildChip('Male', _genderFilter == 'MALE', () {
-                              setModalState(() => _genderFilter =
-                                  _genderFilter == 'MALE' ? null : 'MALE');
-                            }),
-                            _buildChip('Female', _genderFilter == 'FEMALE', () {
-                              setModalState(() => _genderFilter =
-                                  _genderFilter == 'FEMALE' ? null : 'FEMALE');
-                            }),
-                          ],
-                        ),
+                        group(_genderFilter, const ['MALE', 'FEMALE'],
+                            (v) => _genderFilter = v),
                         icon: Icons.people_outline,
                       ),
-
-                      // Height Range
                       _buildFilterSection(
-                        'Height Range',
+                        'Height',
                         Column(
                           children: [
-                            RangeSlider(
-                              values: _heightRange,
-                              min: 140,
-                              max: 220,
-                              divisions: 80,
-                              activeColor: const Color(0xFFFF5722),
-                              labels: RangeLabels(
-                                _heightRange.start.round().toString(),
-                                _heightRange.end.round().toString(),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                '${_heightRange.start.round()} – ${_heightRange.end.round()} cm',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.accent),
                               ),
-                              onChanged: (values) {
-                                setModalState(() => _heightRange = values);
-                              },
                             ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('${_heightRange.start.round()} cm',
-                                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withOpacity(0.6))),
-                                Text('${_heightRange.end.round()} cm',
-                                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.white.withOpacity(0.6))),
-                              ],
+                            _slimSlider(
+                              RangeSlider(
+                                values: _heightRange,
+                                min: 140,
+                                max: 220,
+                                divisions: 80,
+                                activeColor: AppTheme.accent,
+                                inactiveColor: Colors.white24,
+                                labels: RangeLabels(
+                                    '${_heightRange.start.round()}',
+                                    '${_heightRange.end.round()}'),
+                                onChanged: (v) =>
+                                    setModalState(() => _heightRange = v),
+                              ),
                             ),
                           ],
                         ),
                         icon: Icons.height,
                       ),
-
-                      // Body Type
                       _buildFilterSection(
                         'Body Type',
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _buildChip('Slim', _bodyTypeFilter == 'Slim', () {
-                              setModalState(() => _bodyTypeFilter =
-                                  _bodyTypeFilter == 'Slim' ? null : 'Slim');
-                            }),
-                            _buildChip('Athletic', _bodyTypeFilter == 'Athletic',
-                                () {
-                              setModalState(() => _bodyTypeFilter =
-                                  _bodyTypeFilter == 'Athletic'
-                                      ? null
-                                      : 'Athletic');
-                            }),
-                            _buildChip('Average', _bodyTypeFilter == 'Average',
-                                () {
-                              setModalState(() => _bodyTypeFilter =
-                                  _bodyTypeFilter == 'Average'
-                                      ? null
-                                      : 'Average');
-                            }),
-                            _buildChip('Curvy', _bodyTypeFilter == 'Curvy', () {
-                              setModalState(() => _bodyTypeFilter =
-                                  _bodyTypeFilter == 'Curvy' ? null : 'Curvy');
-                            }),
-                          ],
-                        ),
+                        group(
+                            _bodyTypeFilter,
+                            const ['Slim', 'Athletic', 'Average', 'Curvy'],
+                            (v) => _bodyTypeFilter = v),
                         icon: Icons.accessibility_new,
                       ),
-
-                      // Religion
                       _buildFilterSection(
                         'Religion',
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _buildChip(
-                                'Christianity', _religionFilter == 'Christianity',
-                                () {
-                              setModalState(() => _religionFilter =
-                                  _religionFilter == 'Christianity'
-                                      ? null
-                                      : 'Christianity');
-                            }),
-                            _buildChip('Islam', _religionFilter == 'Islam', () {
-                              setModalState(() => _religionFilter =
-                                  _religionFilter == 'Islam' ? null : 'Islam');
-                            }),
-                            _buildChip('Hindu', _religionFilter == 'Hindu', () {
-                              setModalState(() => _religionFilter =
-                                  _religionFilter == 'Hindu' ? null : 'Hindu');
-                            }),
-                            _buildChip('Other', _religionFilter == 'Other', () {
-                              setModalState(() => _religionFilter =
-                                  _religionFilter == 'Other' ? null : 'Other');
-                            }),
-                          ],
-                        ),
+                        group(
+                            _religionFilter,
+                            const ['Christianity', 'Islam', 'Hindu', 'Other'],
+                            (v) => _religionFilter = v),
                         icon: Icons.church_outlined,
                       ),
-
-                      // HIV Partner View (Sensitive)
                       _buildFilterSection(
-                        'Health Preferences',
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Views on HIV+ Partner',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.white.withOpacity(0.5),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                _buildChip('Open to discussion', _hivPartnerViewFilter == 'Open to discussion', () {
-                                  setModalState(() => _hivPartnerViewFilter =
-                                      _hivPartnerViewFilter == 'Open to discussion' ? null : 'Open to discussion');
-                                }),
-                                _buildChip('Yes', _hivPartnerViewFilter == 'Yes', () {
-                                  setModalState(() => _hivPartnerViewFilter =
-                                      _hivPartnerViewFilter == 'Yes' ? null : 'Yes');
-                                }),
-                                _buildChip('No', _hivPartnerViewFilter == 'No', () {
-                                  setModalState(() => _hivPartnerViewFilter =
-                                      _hivPartnerViewFilter == 'No' ? null : 'No');
-                                }),
-                              ],
-                            ),
-                          ],
-                        ),
+                        'Views on HIV+ Partner',
+                        group(
+                            _hivPartnerViewFilter,
+                            const ['Open to discussion', 'Yes', 'No'],
+                            (v) => _hivPartnerViewFilter = v),
                         icon: Icons.health_and_safety_outlined,
                       ),
-
-                      // Smoking
                       _buildFilterSection(
                         'Smoking',
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            _buildChip('Yes', _smokingFilter == 'Yes', () {
-                              setModalState(() => _smokingFilter =
-                                  _smokingFilter == 'Yes' ? null : 'Yes');
-                            }),
-                            _buildChip('No', _smokingFilter == 'No', () {
-                              setModalState(() => _smokingFilter =
-                                  _smokingFilter == 'No' ? null : 'No');
-                            }),
-                            _buildChip(
-                                'Occasionally', _smokingFilter == 'Occasionally',
-                                () {
-                              setModalState(() => _smokingFilter =
-                                  _smokingFilter == 'Occasionally'
-                                      ? null
-                                      : 'Occasionally');
-                            }),
-                          ],
-                        ),
+                        group(_smokingFilter,
+                            const ['Yes', 'No', 'Occasionally'],
+                            (v) => _smokingFilter = v),
                         icon: Icons.smoking_rooms_outlined,
                       ),
-
-                      // Drinking
                       _buildFilterSection(
                         'Drinking',
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            _buildChip('Yes', _drinkingFilter == 'Yes', () {
-                              setModalState(() => _drinkingFilter =
-                                  _drinkingFilter == 'Yes' ? null : 'Yes');
-                            }),
-                            _buildChip('No', _drinkingFilter == 'No', () {
-                              setModalState(() => _drinkingFilter =
-                                  _drinkingFilter == 'No' ? null : 'No');
-                            }),
-                            _buildChip('Socially', _drinkingFilter == 'Socially',
-                                () {
-                              setModalState(() => _drinkingFilter =
-                                  _drinkingFilter == 'Socially'
-                                      ? null
-                                      : 'Socially');
-                            }),
-                          ],
-                        ),
+                        group(_drinkingFilter, const ['Yes', 'No', 'Socially'],
+                            (v) => _drinkingFilter = v),
                         icon: Icons.local_bar_outlined,
                       ),
-
-                      // Education
                       _buildFilterSection(
                         'Education',
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _buildChip('High School', _educationFilter == 'High School', () {
-                              setModalState(() => _educationFilter =
-                                  _educationFilter == 'High School' ? null : 'High School');
-                            }),
-                            _buildChip('Bachelor\'s Degree', _educationFilter == 'Bachelor\'s Degree', () {
-                              setModalState(() => _educationFilter =
-                                  _educationFilter == 'Bachelor\'s Degree' ? null : 'Bachelor\'s Degree');
-                            }),
-                            _buildChip('Master\'s Degree', _educationFilter == 'Master\'s Degree', () {
-                              setModalState(() => _educationFilter =
-                                  _educationFilter == 'Master\'s Degree' ? null : 'Master\'s Degree');
-                            }),
-                            _buildChip('PhD', _educationFilter == 'PhD', () {
-                              setModalState(() => _educationFilter =
-                                  _educationFilter == 'PhD' ? null : 'PhD');
-                            }),
-                          ],
-                        ),
+                        group(
+                            _educationFilter,
+                            const [
+                              'High School',
+                              'Bachelor\'s Degree',
+                              'Master\'s Degree',
+                              'PhD'
+                            ],
+                            (v) => _educationFilter = v),
                         icon: Icons.school_outlined,
                       ),
-
-                      // Has Children
                       _buildFilterSection(
-                        'Has Children',
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _buildChip('Yes', _hasChildrenFilter == 'Yes', () {
-                              setModalState(() => _hasChildrenFilter =
-                                  _hasChildrenFilter == 'Yes' ? null : 'Yes');
-                            }),
-                            _buildChip('No', _hasChildrenFilter == 'No', () {
-                              setModalState(() => _hasChildrenFilter =
-                                  _hasChildrenFilter == 'No' ? null : 'No');
-                            }),
-                            _buildChip('Want children', _hasChildrenFilter == 'Want children', () {
-                              setModalState(() => _hasChildrenFilter =
-                                  _hasChildrenFilter == 'Want children' ? null : 'Want children');
-                            }),
-                          ],
-                        ),
+                        'Children',
+                        group(
+                            _hasChildrenFilter,
+                            const ['Yes', 'No', 'Want children'],
+                            (v) => _hasChildrenFilter = v),
                         icon: Icons.child_care_outlined,
                       ),
-
-                      // Relationship Status
                       _buildFilterSection(
                         'Relationship Status',
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _buildChip('Single', _relationshipStatusFilter == 'Single', () {
-                              setModalState(() => _relationshipStatusFilter =
-                                  _relationshipStatusFilter == 'Single' ? null : 'Single');
-                            }),
-                            _buildChip('Divorced', _relationshipStatusFilter == 'Divorced', () {
-                              setModalState(() => _relationshipStatusFilter =
-                                  _relationshipStatusFilter == 'Divorced' ? null : 'Divorced');
-                            }),
-                            _buildChip('Widowed', _relationshipStatusFilter == 'Widowed', () {
-                              setModalState(() => _relationshipStatusFilter =
-                                  _relationshipStatusFilter == 'Widowed' ? null : 'Widowed');
-                            }),
-                          ],
-                        ),
+                        group(
+                            _relationshipStatusFilter,
+                            const ['Single', 'Divorced', 'Widowed'],
+                            (v) => _relationshipStatusFilter = v),
                         icon: Icons.favorite_border,
                       ),
-
-                      // Toggles Section
                       _buildFilterSection(
-                        'Show Only',
+                        'Show only',
                         Column(
                           children: [
-                            _buildToggle('Verified Users', _showOnlyVerified,
-                                (value) {
-                              setModalState(() => _showOnlyVerified = value);
-                            }),
-                            _buildToggle('Premium Users', _showOnlyPremium,
-                                (value) {
-                              setModalState(() => _showOnlyPremium = value);
-                            }),
-                            _buildToggle('Online Users', _showOnlyOnline,
-                                (value) {
-                              setModalState(() => _showOnlyOnline = value);
-                            }),
+                            _buildToggle('Verified users', _showOnlyVerified,
+                                (v) => setModalState(() => _showOnlyVerified = v)),
+                            _buildToggle('Premium users', _showOnlyPremium,
+                                (v) => setModalState(() => _showOnlyPremium = v)),
+                            _buildToggle('Online now', _showOnlyOnline,
+                                (v) => setModalState(() => _showOnlyOnline = v)),
                           ],
                         ),
                         icon: Icons.filter_list,
                       ),
-
-                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
-
-                // Apply Button
+                // Apply footer
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        const Color(0xFF2d2d2d).withOpacity(0.8),
-                        const Color(0xFF1a1a1a),
-                      ],
-                    ),
+                    color: AppTheme.darkBg,
+                    border: Border(
+                        top: BorderSide(color: Colors.white.withOpacity(0.06))),
                   ),
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        // Apply filters to state
-                      });
-                      Navigator.pop(context);
-                      _fetchNearbyUsers();
-                      _fetchSuggestions();
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
+                        gradient: AppTheme.accentGradient,
+                        borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFF5722).withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
+                              color: AppTheme.accent.withOpacity(0.35),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6)),
                         ],
                       ),
-                      child: Text(
-                        'Apply Filters',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          letterSpacing: 0.3,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(15),
+                          onTap: () {
+                            Navigator.pop(context);
+                            if (onApplied != null) {
+                              onApplied();
+                            } else {
+                              setState(() {});
+                              _fetchNearbyUsers();
+                              _fetchSuggestions();
+                            }
+                          },
+                          child: Center(
+                            child: Text(
+                              'Apply Filters',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ],
-            ),
             ),
           );
         },
@@ -3261,17 +3170,27 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
+  /// Wraps a slider in a compact theme so it doesn't dominate the sheet.
+  Widget _slimSlider(Widget slider) {
+    return SliderTheme(
+      data: SliderThemeData(
+        trackHeight: 3,
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+        rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 8),
+      ),
+      child: slider,
+    );
+  }
+
   Widget _buildFilterSection(String title, Widget content, {IconData? icon}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(13, 11, 13, 13),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.08),
-          width: 1,
-        ),
+        color: AppTheme.darkSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3279,31 +3198,20 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           Row(
             children: [
               if (icon != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF5722).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 16,
-                    color: const Color(0xFFFF5722),
-                  ),
-                ),
-                const SizedBox(width: 10),
+                Icon(icon, size: 15, color: AppTheme.accent),
+                const SizedBox(width: 8),
               ],
               Text(
                 title,
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFFFF5722),
+                  color: Colors.white.withOpacity(0.9),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           content,
         ],
       ),
@@ -3313,37 +3221,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   Widget _buildChip(String label, bool isSelected, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          gradient: isSelected
-              ? const LinearGradient(
-                  colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: isSelected ? null : Colors.white.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(20),
+          gradient: isSelected ? AppTheme.accentGradient : null,
+          color: isSelected ? null : AppTheme.darkSurface2,
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.15),
-            width: 1,
+            color: isSelected ? Colors.transparent : Colors.white.withOpacity(0.1),
           ),
-          boxShadow: [
-            if (isSelected)
-              BoxShadow(
-                color: const Color(0xFFFF5722).withOpacity(0.3),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-          ],
         ),
         child: Text(
           label,
           style: GoogleFonts.poppins(
-            fontSize: 12,
+            fontSize: 11.5,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.white.withOpacity(0.85),
+            color: isSelected ? Colors.white : Colors.white.withOpacity(0.75),
           ),
         ),
       ),
@@ -3352,23 +3246,24 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   Widget _buildToggle(String label, bool value, Function(bool) onChanged) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: GoogleFonts.poppins(
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: FontWeight.w500,
               color: Colors.white.withOpacity(0.85),
             ),
           ),
           Transform.scale(
-            scale: 0.9,
+            scale: 0.78,
             child: Switch(
               value: value,
-              activeColor: const Color(0xFFFF5722),
+              activeColor: AppTheme.accent,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               onChanged: onChanged,
             ),
           ),

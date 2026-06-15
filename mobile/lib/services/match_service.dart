@@ -68,6 +68,28 @@ class MatchService {
       throw Exception('Error fetching suggestions: $e');
     }
   }
+  /// Get mutual compatibility with another user.
+  /// Returns `{ theyMatchYou: {score, matches, dealBreakers},
+  ///            youMatchThem: {score, matches, dealBreakers} }`.
+  /// Returns an empty map on failure so callers can fall back gracefully.
+  Future<Map<String, dynamic>> getCompatibility(String targetUserId) async {
+    try {
+      final token = await _storage.read(key: 'access_token');
+      _dio.options.headers['Authorization'] = 'Bearer $token';
+
+      final response = await _dio.get(ApiConfig.compatibility(targetUserId));
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return Map<String, dynamic>.from(response.data['data'] ?? {});
+      }
+      return {};
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error fetching compatibility: $e');
+      return {};
+    }
+  }
+
   // Get match preferences
   Future<Map<String, dynamic>> getPreferences() async {
     try {
