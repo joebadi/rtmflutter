@@ -52,23 +52,24 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   // Filter State
   RangeValues _ageRange = const RangeValues(25, 35);
   double _distance = 50;
-  String? _genderFilter; // mandatory; defaults to the opposite of the user
+  String? _genderFilter; // mandatory single choice; defaults to the opposite user
   String? _userGender; // current user's gender, for the default above
   RangeValues _heightRange = const RangeValues(160, 185);
-  String? _bodyTypeFilter;
-  String? _religionFilter;
-  String? _smokingFilter;
-  String? _drinkingFilter;
-  String? _educationFilter;
-  String? _hasChildrenFilter;
-  String? _relationshipStatusFilter;
-  String? _hivPartnerViewFilter;
-  String? _residenceStateFilter; // search by location (where they live)
-  String? _stateOfOriginFilter;
-  String? _tribeFilter;
-  String? _zodiacFilter;
-  String? _genotypeFilter;
-  String? _bloodGroupFilter;
+  // Multi-select facets (empty list = "Any").
+  final List<String> _bodyTypeFilter = [];
+  final List<String> _religionFilter = [];
+  final List<String> _smokingFilter = [];
+  final List<String> _drinkingFilter = [];
+  final List<String> _educationFilter = [];
+  final List<String> _hasChildrenFilter = [];
+  final List<String> _relationshipStatusFilter = [];
+  final List<String> _hivPartnerViewFilter = [];
+  final List<String> _residenceStateFilter = []; // where they live
+  final List<String> _stateOfOriginFilter = [];
+  final List<String> _tribeFilter = [];
+  final List<String> _zodiacFilter = [];
+  final List<String> _genotypeFilter = [];
+  final List<String> _bloodGroupFilter = [];
   bool _showOnlyVerified = false;
   bool _showOnlyPremium = false;
   bool _showOnlyOnline = false;
@@ -443,80 +444,25 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         }
       }
 
-      // Body type filter
-      if (_bodyTypeFilter != null && profile['bodyType'] != _bodyTypeFilter) {
-        return false;
-      }
+      // Multi-select facets: empty list = no constraint; otherwise the
+      // candidate's value must be one of the selected options.
+      bool fails(List<String> selected, dynamic value) =>
+          selected.isNotEmpty && !selected.contains(value);
 
-      // Religion filter
-      if (_religionFilter != null && profile['religion'] != _religionFilter) {
-        return false;
-      }
-
-      // Location — residence state (Prisma field: state)
-      if (_residenceStateFilter != null &&
-          profile['state'] != _residenceStateFilter) {
-        return false;
-      }
-
-      // State of origin
-      if (_stateOfOriginFilter != null &&
-          profile['stateOfOrigin'] != _stateOfOriginFilter) {
-        return false;
-      }
-
-      // Tribe
-      if (_tribeFilter != null && profile['tribe'] != _tribeFilter) {
-        return false;
-      }
-
-      // Zodiac (Prisma field: zodiacSign)
-      if (_zodiacFilter != null && profile['zodiacSign'] != _zodiacFilter) {
-        return false;
-      }
-
-      // Genotype
-      if (_genotypeFilter != null && profile['genotype'] != _genotypeFilter) {
-        return false;
-      }
-
-      // Blood group
-      if (_bloodGroupFilter != null &&
-          profile['bloodGroup'] != _bloodGroupFilter) {
-        return false;
-      }
-
-      // HIV Partner View filter
-      if (_hivPartnerViewFilter != null &&
-          profile['hivPartnerView'] != _hivPartnerViewFilter) {
-        return false;
-      }
-
-      // Smoking filter (Prisma field: smokingStatus)
-      if (_smokingFilter != null && profile['smokingStatus'] != _smokingFilter) {
-        return false;
-      }
-
-      // Drinking filter (Prisma field: drinkingStatus)
-      if (_drinkingFilter != null &&
-          profile['drinkingStatus'] != _drinkingFilter) {
-        return false;
-      }
-
-      // Education filter
-      if (_educationFilter != null && profile['education'] != _educationFilter) {
-        return false;
-      }
-
-      // Has children filter
-      if (_hasChildrenFilter != null &&
-          profile['hasChildren'] != _hasChildrenFilter) {
-        return false;
-      }
-
-      // Relationship status filter
-      if (_relationshipStatusFilter != null &&
-          profile['relationshipStatus'] != _relationshipStatusFilter) {
+      if (fails(_bodyTypeFilter, profile['bodyType'])) return false;
+      if (fails(_religionFilter, profile['religion'])) return false;
+      if (fails(_residenceStateFilter, profile['state'])) return false;
+      if (fails(_stateOfOriginFilter, profile['stateOfOrigin'])) return false;
+      if (fails(_tribeFilter, profile['tribe'])) return false;
+      if (fails(_zodiacFilter, profile['zodiacSign'])) return false;
+      if (fails(_genotypeFilter, profile['genotype'])) return false;
+      if (fails(_bloodGroupFilter, profile['bloodGroup'])) return false;
+      if (fails(_hivPartnerViewFilter, profile['hivPartnerView'])) return false;
+      if (fails(_smokingFilter, profile['smokingStatus'])) return false;
+      if (fails(_drinkingFilter, profile['drinkingStatus'])) return false;
+      if (fails(_educationFilter, profile['education'])) return false;
+      if (fails(_hasChildrenFilter, profile['hasChildren'])) return false;
+      if (fails(_relationshipStatusFilter, profile['relationshipStatus'])) {
         return false;
       }
 
@@ -2870,16 +2816,95 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
-          // Whitish-grey dropdown field with a dark label/value.
-          Widget dropdownField(
+          // Whitish-grey multi-select field; opens a checkbox sheet.
+          Widget multiField(
             String label,
             IconData icon,
-            String? value,
-            List<String> options,
-            ValueChanged<String?> onPick, {
-            bool allowAny = true,
-            Map<String, String>? display,
+            List<String> selected,
+            List<String> options, {
+            List<({String? header, List<String> options})>? sections,
           }) {
+            final summary = selected.isEmpty ? 'Any' : selected.join(', ');
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEDEFF2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.black.withOpacity(0.05)),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () async {
+                    await _openMultiSelect(
+                      title: label,
+                      sections:
+                          sections ?? [(header: null, options: options)],
+                      selected: selected,
+                    );
+                    setModalState(() {});
+                  },
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    child: Row(
+                      children: [
+                        Icon(icon, size: 18, color: AppTheme.accent),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(label,
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF7A7F87))),
+                              const SizedBox(height: 1),
+                              Text(
+                                summary,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                    fontSize: 13.5,
+                                    fontWeight: selected.isEmpty
+                                        ? FontWeight.w500
+                                        : FontWeight.w600,
+                                    color: selected.isEmpty
+                                        ? const Color(0xFF9AA0A6)
+                                        : const Color(0xFF1A1D1E)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (selected.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(right: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text('${selected.length}',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white)),
+                          ),
+                        const Icon(Icons.keyboard_arrow_down_rounded,
+                            color: Color(0xFF7A7F87)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+
+          // Gender stays a single mandatory choice (defaults to opposite user).
+          Widget genderField() {
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -2890,13 +2915,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               ),
               child: Row(
                 children: [
-                  Icon(icon, size: 18, color: AppTheme.accent),
+                  const Icon(Icons.wc_rounded, size: 18, color: AppTheme.accent),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(label,
+                        Text('Gender',
                             style: GoogleFonts.poppins(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w500,
@@ -2904,37 +2929,27 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         SizedBox(
                           height: 30,
                           child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String?>(
+                            child: DropdownButton<String>(
                               isExpanded: true,
                               isDense: true,
-                              value: value,
-                              hint: Text('Any',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 13.5,
-                                      color: const Color(0xFF9AA0A6))),
+                              value: _genderFilter ?? _defaultGender,
                               dropdownColor: Colors.white,
                               borderRadius: BorderRadius.circular(14),
-                              icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                              icon: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
                                   color: Color(0xFF7A7F87)),
                               style: GoogleFonts.poppins(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF1A1D1E)),
-                              items: [
-                                if (allowAny)
-                                  DropdownMenuItem<String?>(
-                                      value: null,
-                                      child: Text('Any',
-                                          style: GoogleFonts.poppins(
-                                              fontSize: 13.5,
-                                              color: const Color(0xFF9AA0A6)))),
-                                ...options.map((o) => DropdownMenuItem<String?>(
-                                      value: o,
-                                      child: Text(display?[o] ?? o,
-                                          overflow: TextOverflow.ellipsis),
-                                    )),
+                              items: const [
+                                DropdownMenuItem(
+                                    value: 'MALE', child: Text('Male')),
+                                DropdownMenuItem(
+                                    value: 'FEMALE', child: Text('Female')),
                               ],
-                              onChanged: (v) => setModalState(() => onPick(v)),
+                              onChanged: (v) => setModalState(
+                                  () => _genderFilter = v ?? _defaultGender),
                             ),
                           ),
                         ),
@@ -2944,6 +2959,19 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 ],
               ),
             );
+          }
+
+          // Tribe: sectionalized under each selected state of origin.
+          Widget tribeField() {
+            final sections = _stateOfOriginFilter.isEmpty
+                ? [(header: null, options: allTribes)]
+                : [
+                    for (final s in _stateOfOriginFilter)
+                      (header: s, options: tribesForState(s))
+                  ];
+            return multiField('Tribe', Icons.diversity_3_outlined, _tribeFilter,
+                allTribes,
+                sections: sections);
           }
 
           Widget sliderField(
@@ -2982,11 +3010,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             );
           }
 
-          final tribeOptions = (_stateOfOriginFilter != null &&
-                  kStateTribes.containsKey(_stateOfOriginFilter))
-              ? tribesForState(_stateOfOriginFilter!)
-              : allTribes;
-
           return Container(
             height: MediaQuery.of(context).size.height * 0.9,
             decoration: const BoxDecoration(
@@ -3020,20 +3043,20 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           _distance = 50;
                           _genderFilter = _defaultGender;
                           _heightRange = const RangeValues(160, 185);
-                          _bodyTypeFilter = null;
-                          _religionFilter = null;
-                          _smokingFilter = null;
-                          _drinkingFilter = null;
-                          _educationFilter = null;
-                          _hasChildrenFilter = null;
-                          _relationshipStatusFilter = null;
-                          _hivPartnerViewFilter = null;
-                          _residenceStateFilter = null;
-                          _stateOfOriginFilter = null;
-                          _tribeFilter = null;
-                          _zodiacFilter = null;
-                          _genotypeFilter = null;
-                          _bloodGroupFilter = null;
+                          _bodyTypeFilter.clear();
+                          _religionFilter.clear();
+                          _smokingFilter.clear();
+                          _drinkingFilter.clear();
+                          _educationFilter.clear();
+                          _hasChildrenFilter.clear();
+                          _relationshipStatusFilter.clear();
+                          _hivPartnerViewFilter.clear();
+                          _residenceStateFilter.clear();
+                          _stateOfOriginFilter.clear();
+                          _tribeFilter.clear();
+                          _zodiacFilter.clear();
+                          _genotypeFilter.clear();
+                          _bloodGroupFilter.clear();
                           _showOnlyVerified = false;
                           _showOnlyPremium = false;
                           _showOnlyOnline = false;
@@ -3063,41 +3086,27 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
                     children: [
-                      // Descriptive intro
                       Padding(
                         padding: const EdgeInsets.fromLTRB(2, 0, 2, 14),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Find your kind of person',
-                              style: GoogleFonts.poppins(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
+                            Text('Find your kind of person',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white)),
                             const SizedBox(height: 3),
                             Text(
-                              'Dial in the details and we\'ll surface the matches that fit.',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: Colors.white.withOpacity(0.55),
-                                height: 1.35,
-                              ),
-                            ),
+                                'Dial in the details and we\'ll surface the matches that fit.',
+                                style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Colors.white.withOpacity(0.55),
+                                    height: 1.35)),
                           ],
                         ),
                       ),
-                      dropdownField(
-                        'Gender',
-                        Icons.wc_rounded,
-                        _genderFilter ?? _defaultGender,
-                        const ['MALE', 'FEMALE'],
-                        (v) => _genderFilter = v ?? _defaultGender,
-                        allowAny: false,
-                        display: const {'MALE': 'Male', 'FEMALE': 'Female'},
-                      ),
+                      genderField(),
                       sliderField(
                         'Age',
                         Icons.cake_outlined,
@@ -3129,20 +3138,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           onChanged: (v) => setModalState(() => _distance = v),
                         ),
                       ),
-                      dropdownField('Location (lives in)', Icons.place_outlined,
-                          _residenceStateFilter, kNigerianStates,
-                          (v) => _residenceStateFilter = v),
-                      dropdownField('State of Origin', Icons.flag_outlined,
-                          _stateOfOriginFilter, kNigerianStates, (v) {
-                        _stateOfOriginFilter = v;
-                        if (_tribeFilter != null &&
-                            !tribesForState(v ?? '').contains(_tribeFilter)) {
-                          _tribeFilter = null;
-                        }
-                      }),
-                      dropdownField('Tribe', Icons.diversity_3_outlined,
-                          _tribeFilter, tribeOptions, (v) => _tribeFilter = v),
-                      dropdownField(
+                      multiField('Location (lives in)', Icons.place_outlined,
+                          _residenceStateFilter, kNigerianStates),
+                      multiField('State of Origin', Icons.flag_outlined,
+                          _stateOfOriginFilter, kNigerianStates),
+                      tribeField(),
+                      multiField(
                           'Zodiac',
                           Icons.star_outline_rounded,
                           _zodiacFilter,
@@ -3150,23 +3151,19 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo',
                             'Virgo', 'Libra', 'Scorpio', 'Sagittarius',
                             'Capricorn', 'Aquarius', 'Pisces'
-                          ],
-                          (v) => _zodiacFilter = v),
-                      dropdownField(
+                          ]),
+                      multiField(
                           'Religion',
                           Icons.church_outlined,
                           _religionFilter,
-                          const ['Christianity', 'Islam', 'Traditional', 'Other'],
-                          (v) => _religionFilter = v),
-                      dropdownField('Genotype', Icons.biotech_outlined,
-                          _genotypeFilter, const ['AA', 'AS', 'SS', 'AC', 'SC'],
-                          (v) => _genotypeFilter = v),
-                      dropdownField(
+                          const ['Christianity', 'Islam', 'Traditional', 'Other']),
+                      multiField('Genotype', Icons.biotech_outlined,
+                          _genotypeFilter, const ['AA', 'AS', 'SS', 'AC', 'SC']),
+                      multiField(
                           'Blood Group',
                           Icons.bloodtype_outlined,
                           _bloodGroupFilter,
-                          const ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'],
-                          (v) => _bloodGroupFilter = v),
+                          const ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']),
                       sliderField(
                         'Height',
                         Icons.height_rounded,
@@ -3184,46 +3181,39 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               setModalState(() => _heightRange = v),
                         ),
                       ),
-                      dropdownField(
+                      multiField(
                           'Body Type',
                           Icons.accessibility_new_rounded,
                           _bodyTypeFilter,
                           const [
                             'Slim', 'Petite', 'Average', 'Athletic', 'Muscular',
                             'Curvy', 'Stocky', 'Full-figured', 'Heavyset'
-                          ],
-                          (v) => _bodyTypeFilter = v),
-                      dropdownField(
+                          ]),
+                      multiField(
                           'Education',
                           Icons.school_outlined,
                           _educationFilter,
                           const [
                             'High School', 'Bachelor\'s Degree',
                             'Master\'s Degree', 'PhD'
-                          ],
-                          (v) => _educationFilter = v),
-                      dropdownField(
+                          ]),
+                      multiField(
                           'Relationship Status',
                           Icons.favorite_border_rounded,
                           _relationshipStatusFilter,
-                          const ['Single', 'Divorced', 'Widowed', 'Separated'],
-                          (v) => _relationshipStatusFilter = v),
-                      dropdownField('Children', Icons.child_care_outlined,
+                          const ['Single', 'Divorced', 'Widowed', 'Separated']),
+                      multiField('Children', Icons.child_care_outlined,
                           _hasChildrenFilter,
-                          const ['Yes', 'No', 'Want children'],
-                          (v) => _hasChildrenFilter = v),
-                      dropdownField('Smoking', Icons.smoking_rooms_outlined,
-                          _smokingFilter, const ['Yes', 'No', 'Occasionally'],
-                          (v) => _smokingFilter = v),
-                      dropdownField('Drinking', Icons.local_bar_outlined,
-                          _drinkingFilter, const ['Yes', 'No', 'Socially'],
-                          (v) => _drinkingFilter = v),
-                      dropdownField(
+                          const ['Yes', 'No', 'Want children']),
+                      multiField('Smoking', Icons.smoking_rooms_outlined,
+                          _smokingFilter, const ['Yes', 'No', 'Occasionally']),
+                      multiField('Drinking', Icons.local_bar_outlined,
+                          _drinkingFilter, const ['Yes', 'No', 'Socially']),
+                      multiField(
                           'Views on HIV+ Partner',
                           Icons.health_and_safety_outlined,
                           _hivPartnerViewFilter,
-                          const ['Open to discussion', 'Yes', 'No'],
-                          (v) => _hivPartnerViewFilter = v),
+                          const ['Open to discussion', 'Yes', 'No']),
                       Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
@@ -3281,6 +3271,158 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                     fontSize: 14.5,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Opens a checkbox bottom sheet for a multi-select facet. [sections] lets the
+  /// tribe picker group options under each selected state of origin. Mutates
+  /// [selected] in place; returns when the user is done.
+  Future<void> _openMultiSelect({
+    required String title,
+    required List<({String? header, List<String> options})> sections,
+    required List<String> selected,
+  }) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheet) {
+          return Container(
+            height: MediaQuery.of(sheetCtx).size.height * 0.7,
+            decoration: const BoxDecoration(
+              color: AppTheme.darkBg,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 12, 12, 6),
+                  child: Row(
+                    children: [
+                      Text(title,
+                          style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      const Spacer(),
+                      if (selected.isNotEmpty)
+                        TextButton(
+                          onPressed: () => setSheet(() => selected.clear()),
+                          child: Text('Clear',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.accent)),
+                        ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    children: [
+                      for (final section in sections) ...[
+                        if (section.header != null)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+                            child: Text(section.header!.toUpperCase(),
+                                style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.6,
+                                    color: AppTheme.accent)),
+                          ),
+                        ...section.options.map((o) {
+                          final on = selected.contains(o);
+                          return GestureDetector(
+                            onTap: () => setSheet(() =>
+                                on ? selected.remove(o) : selected.add(o)),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 13),
+                              decoration: BoxDecoration(
+                                color: on
+                                    ? AppTheme.accent.withOpacity(0.16)
+                                    : AppTheme.darkSurface,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: on
+                                        ? AppTheme.accent
+                                        : Colors.white.withOpacity(0.07)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    on
+                                        ? Icons.check_box_rounded
+                                        : Icons.check_box_outline_blank_rounded,
+                                    color: on ? AppTheme.accent : Colors.white38,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(o,
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 13.5,
+                                            fontWeight: on
+                                                ? FontWeight.w600
+                                                : FontWeight.w500,
+                                            color: Colors.white)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.accentGradient,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () => Navigator.pop(sheetCtx),
+                          child: Center(
+                            child: Text(
+                              selected.isEmpty
+                                  ? 'Done'
+                                  : 'Done · ${selected.length} selected',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white),
+                            ),
                           ),
                         ),
                       ),
