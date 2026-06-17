@@ -16,6 +16,7 @@ import '../services/location_search_service.dart';
 import '../services/profile_service.dart';
 import '../data/nigeria_locations.dart';
 import '../widgets/notification_icon.dart';
+import '../widgets/premium_message.dart';
 import '../widgets/premium_loader.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -889,80 +890,86 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           ),
         ),
 
-        // Horizontal Scrollable User Cards - shifted up to make room for link below
+        // Bottom feature box: "View Grid" on top, then horizontal cards,
+        // flush against the bottom nav bar (no padding below).
         if (_nearbyUsers.isNotEmpty)
           Positioned(
-            bottom: 35, // Shifted up to make room for View Grid link
+            bottom: 0,
             left: 0,
             right: 0,
-            child: Container(
-              height: 165, // Slightly reduced height
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.1),
-                  ],
-                ),
-              ),
-              child: ListView.builder(
-                controller: _horizontalScrollController,
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                itemCount: _nearbyUsers.length,
-                itemBuilder: (context, index) {
-                  final user = _nearbyUsers[index];
-                  final userId = (user['user']?['id'] ?? user['userId'])?.toString();
-                  final isSelected = userId == _selectedUserId;
-                  return _buildHorizontalUserCard(user, isSelected: isSelected);
-                },
-              ),
-            ),
-          ),
-
-        // View Grid button - small orange rounded button below horizontal slider
-        if (_nearbyUsers.isNotEmpty)
-          Positioned(
-            bottom: 12,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: GestureDetector(
-                onTap: _showGridOverlay,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF5722).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.grid_view, color: Colors.white, size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        'View Grid',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // View Grid button (top of the feature)
+                Center(
+                  child: GestureDetector(
+                    onTap: _showGridOverlay,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
                         ),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF5722).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.grid_view,
+                              color: Colors.white, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'View Grid',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                // Horizontal scrollable user cards
+                Container(
+                  height: 165,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.1),
+                      ],
+                    ),
+                  ),
+                  child: ListView.builder(
+                    controller: _horizontalScrollController,
+                    scrollDirection: Axis.horizontal,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: _nearbyUsers.length,
+                    itemBuilder: (context, index) {
+                      final user = _nearbyUsers[index];
+                      final userId =
+                          (user['user']?['id'] ?? user['userId'])?.toString();
+                      final isSelected = userId == _selectedUserId;
+                      return _buildHorizontalUserCard(user,
+                          isSelected: isSelected);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
       ],
@@ -2517,6 +2524,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     final List<LocationSearchResult> results = [];
     Timer? debounce;
     var loading = false;
+    var locating = false;
     var query = '';
 
     showModalBottomSheet(
@@ -2528,6 +2536,26 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
         child: StatefulBuilder(
           builder: (context, setModalState) {
+            // Geo-locate the device, then recenter on it.
+            Future<void> useDevice() async {
+              setModalState(() => locating = true);
+              try {
+                final loc = await _locationSearchService.getCurrentLocation();
+                if (!sheetContext.mounted) return;
+                setModalState(() => locating = false);
+                if (loc != null) {
+                  _selectSearchResult(loc, sheetContext);
+                } else {
+                  showPremiumSnack(context, 'Could not determine your location');
+                }
+              } catch (_) {
+                if (!sheetContext.mounted) return;
+                setModalState(() => locating = false);
+                showPremiumSnack(context,
+                    'Location unavailable. Enable location access and try again.');
+              }
+            }
+
             void runSearch(String value) {
               query = value.trim();
               debounce?.cancel();
@@ -2593,17 +2621,17 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                       ],
                     ),
                   ),
-                  // Search field
+                  // Search field — light field with black text + geo-locate
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppTheme.darkSurface,
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: query.isNotEmpty
-                              ? AppTheme.accent.withOpacity(0.6)
-                              : Colors.white.withOpacity(0.08),
+                              ? AppTheme.accent
+                              : Colors.black.withOpacity(0.08),
                           width: 1.4,
                         ),
                       ),
@@ -2613,26 +2641,51 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         textInputAction: TextInputAction.search,
                         cursorColor: AppTheme.accent,
                         style: GoogleFonts.poppins(
-                            color: Colors.white,
+                            color: Colors.black87,
                             fontSize: 15,
                             fontWeight: FontWeight.w500),
                         onChanged: runSearch,
                         decoration: InputDecoration(
                           hintText: 'Type a city, state or country',
                           hintStyle: GoogleFonts.poppins(
-                              color: Colors.white38, fontSize: 14),
+                              color: Colors.grey.shade500, fontSize: 14),
                           prefixIcon: const Icon(Icons.search_rounded,
                               color: AppTheme.accent, size: 22),
-                          suffixIcon: query.isEmpty
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.close_rounded,
-                                      color: Colors.white38, size: 20),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (query.isNotEmpty)
+                                IconButton(
+                                  icon: Icon(Icons.close_rounded,
+                                      color: Colors.grey.shade500, size: 20),
                                   onPressed: () {
                                     searchController.clear();
                                     runSearch('');
                                   },
                                 ),
+                              // Use my location
+                              Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: locating
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: Padding(
+                                          padding: EdgeInsets.all(2),
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2.2,
+                                              color: AppTheme.accent),
+                                        ),
+                                      )
+                                    : IconButton(
+                                        tooltip: 'Use my location',
+                                        icon: const Icon(Icons.my_location_rounded,
+                                            color: AppTheme.accent, size: 22),
+                                        onPressed: useDevice,
+                                      ),
+                              ),
+                            ],
+                          ),
                           border: InputBorder.none,
                           contentPadding:
                               const EdgeInsets.symmetric(vertical: 16),
@@ -3010,6 +3063,32 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
                     children: [
+                      // Descriptive intro
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(2, 0, 2, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Find your kind of person',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Dial in the details and we\'ll surface the matches that fit.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.white.withOpacity(0.55),
+                                height: 1.35,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       dropdownField(
                         'Gender',
                         Icons.wc_rounded,
@@ -3194,13 +3273,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           borderRadius: BorderRadius.circular(15),
                           onTap: () {
                             Navigator.pop(context);
-                            if (onApplied != null) {
-                              onApplied();
-                            } else {
-                              setState(() {});
-                              _fetchNearbyUsers();
-                              _fetchSuggestions();
-                            }
+                            _applyFiltersWithAnimation(onApplied);
                           },
                           child: Center(
                             child: Text('Apply Filters',
@@ -3244,6 +3317,31 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
+  /// Runs the post-filter refresh behind an animated "filtering" overlay so it
+  /// feels like results are actively being matched.
+  Future<void> _applyFiltersWithAnimation(VoidCallback? onApplied) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+      builder: (_) => const _FilteringOverlay(),
+    );
+    final started = DateTime.now();
+    if (onApplied != null) {
+      onApplied();
+    } else {
+      setState(() {});
+      await Future.wait([_fetchNearbyUsers(), _fetchSuggestions()]);
+    }
+    // Keep the animation on screen long enough to register.
+    const minDuration = Duration(milliseconds: 1100);
+    final elapsed = DateTime.now().difference(started);
+    if (elapsed < minDuration) {
+      await Future.delayed(minDuration - elapsed);
+    }
+    if (mounted) Navigator.of(context, rootNavigator: true).pop();
+  }
+
   /// Wraps a slider in a compact theme so it doesn't dominate the sheet.
   Widget _slimSlider(Widget slider) {
     return SliderTheme(
@@ -3254,6 +3352,122 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 8),
       ),
       child: slider,
+    );
+  }
+}
+
+/// Animated overlay shown while filters are being applied — pulsing rings around
+/// a heart give the feeling that matches are actively being found.
+class _FilteringOverlay extends StatefulWidget {
+  const _FilteringOverlay();
+
+  @override
+  State<_FilteringOverlay> createState() => _FilteringOverlayState();
+}
+
+class _FilteringOverlayState extends State<_FilteringOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 26),
+        decoration: BoxDecoration(
+          color: AppTheme.darkSurface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.4),
+              blurRadius: 30,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 76,
+              height: 76,
+              child: AnimatedBuilder(
+                animation: _c,
+                builder: (context, child) {
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Expanding rings
+                      for (int i = 0; i < 3; i++)
+                        _ring((i / 3.0)),
+                      // Center heart
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: AppTheme.accentGradient,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.accent.withOpacity(0.5),
+                              blurRadius: 16,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.favorite_rounded,
+                            color: Colors.white, size: 22),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Finding your matches…',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _ring(double phase) {
+    final t = (_c.value + phase) % 1.0;
+    final size = 30 + t * 46;
+    final opacity = (1.0 - t).clamp(0.0, 1.0) * 0.5;
+    return Opacity(
+      opacity: opacity,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: AppTheme.accent, width: 2),
+        ),
+      ),
     );
   }
 }
