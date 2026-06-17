@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/premium_loader.dart';
+import '../../widgets/premium_message.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,11 +15,39 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscurePassword = true;
+
+  late final AnimationController _entrance;
+  late final Animation<double> _fadeIn;
+  late final Animation<Offset> _slideUp;
+
+  @override
+  void initState() {
+    super.initState();
+    _entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 750),
+    );
+    _fadeIn = CurvedAnimation(parent: _entrance, curve: Curves.easeOutCubic);
+    _slideUp = Tween<Offset>(
+      begin: const Offset(0, 0.14),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entrance, curve: Curves.easeOutCubic));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _entrance.forward());
+  }
+
+  @override
+  void dispose() {
+    _entrance.dispose();
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     // Validate form first
@@ -34,12 +63,8 @@ class _LoginPageState extends State<LoginPage> {
 
     if (!success) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(auth.error ?? 'Login failed'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showPremiumSnack(context, auth.error ?? 'Login failed',
+            kind: MessageKind.error);
       }
       return;
     }
@@ -195,7 +220,11 @@ class _LoginPageState extends State<LoginPage> {
                           const Spacer(),
 
                           // Glassmorphic Form Card
-                          Container(
+                          FadeTransition(
+                            opacity: _fadeIn,
+                            child: SlideTransition(
+                            position: _slideUp,
+                            child: Container(
                             margin: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 20,
@@ -501,6 +530,8 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                 ),
                               ),
+                            ),
+                          ),
                             ),
                           ),
 

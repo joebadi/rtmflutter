@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/password_strength_indicator.dart';
 import '../../widgets/premium_loader.dart';
+import '../../widgets/premium_message.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -14,7 +15,11 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends State<RegisterPage>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _entrance;
+  late final Animation<double> _fadeIn;
+  late final Animation<Offset> _slideUp;
   final _formKey = GlobalKey<FormState>();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
@@ -59,6 +64,16 @@ class _RegisterPageState extends State<RegisterPage> {
     super.initState();
     _emailFocus.addListener(_onEmailFocusChange);
     _phoneFocus.addListener(_onPhoneFocusChange);
+    _entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 750),
+    );
+    _fadeIn = CurvedAnimation(parent: _entrance, curve: Curves.easeOutCubic);
+    _slideUp = Tween<Offset>(
+      begin: const Offset(0, 0.14),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entrance, curve: Curves.easeOutCubic));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _entrance.forward());
   }
 
   @override
@@ -74,7 +89,8 @@ class _RegisterPageState extends State<RegisterPage> {
     _phoneFocus.removeListener(_onPhoneFocusChange);
     _emailFocus.dispose();
     _phoneFocus.dispose();
-    
+    _entrance.dispose();
+
     super.dispose();
   }
 
@@ -141,22 +157,15 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_passCtrl.text != _confirmPassCtrl.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Passwords do not match'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showPremiumSnack(context, 'Passwords do not match',
+          kind: MessageKind.warning);
       return;
     }
 
     if (!_agreedToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please agree to Terms of Service and Privacy Policy'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showPremiumSnack(
+          context, 'Please agree to the Terms of Service and Privacy Policy',
+          kind: MessageKind.warning);
       return;
     }
 
@@ -199,12 +208,8 @@ class _RegisterPageState extends State<RegisterPage> {
       );
     } else {
       // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(auth.error ?? 'Registration failed'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showPremiumSnack(context, auth.error ?? 'Registration failed',
+          kind: MessageKind.error);
     }
   }
 
@@ -270,7 +275,11 @@ class _RegisterPageState extends State<RegisterPage> {
                 // Glassmorphic Form Card
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Container(
+                    child: FadeTransition(
+                      opacity: _fadeIn,
+                      child: SlideTransition(
+                      position: _slideUp,
+                      child: Container(
                       margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(20),
@@ -599,6 +608,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
+                      ),
+                      ),
                   ),
                 ),
               ],

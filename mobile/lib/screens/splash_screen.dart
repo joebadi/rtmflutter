@@ -158,99 +158,146 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+  // Romantic Pexels hero (verified). Swappable; a gradient fallback renders if
+  // it fails to load so the splash always looks premium.
+  static const String _heroImage =
+      'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=1200';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1A1A2E),
-              Color(0xFF16213E),
-              Color(0xFF0F3460),
-            ],
+      backgroundColor: const Color(0xFF120A07),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background imagery
+          Image.network(
+            _heroImage,
+            fit: BoxFit.cover,
+            loadingBuilder: (context, child, progress) =>
+                progress == null ? child : _gradientBackdrop(),
+            errorBuilder: (_, __, ___) => _gradientBackdrop(),
           ),
-        ),
-        child: Center(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: ScaleTransition(
-              scale: _scaleAnimation,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Pulsing Logo with glow
-                  AnimatedBuilder(
-                    animation: _pulseAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _pulseAnimation.value,
-                        child: Container(
-                          width: 130,
-                          height: 130,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFFFF6B35),
-                                Color(0xFFFF5722),
-                                Color(0xFFE64A19),
-                              ],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFF6B35).withOpacity(0.4),
-                                blurRadius: 30,
-                                spreadRadius: 5,
-                              ),
-                              BoxShadow(
-                                color: const Color(0xFFFF5722).withOpacity(0.2),
-                                blurRadius: 60,
-                                spreadRadius: 10,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.favorite_rounded,
-                            size: 60,
-                            color: Colors.white,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 36),
-                  // App Name
-                  Text(
-                    'Ready to Marry',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Find Your Perfect Match',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white.withOpacity(0.6),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 60),
-                  // Premium loading dots
-                  const _PremiumLoadingDots(),
+          // Readability scrim
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.45),
+                  Colors.black.withOpacity(0.35),
+                  const Color(0xFF120A07).withOpacity(0.92),
                 ],
+                stops: const [0.0, 0.45, 1.0],
               ),
             ),
           ),
+          SafeArea(
+            child: Column(
+              children: [
+                const Spacer(flex: 5),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Column(
+                      children: [
+                        // Pulsing logo with glow
+                        AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            return Transform.scale(
+                              scale: _pulseAnimation.value,
+                              child: child,
+                            );
+                          },
+                          child: Container(
+                            width: 116,
+                            height: 116,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withOpacity(0.12),
+                              border: Border.all(
+                                  color: Colors.white.withOpacity(0.25), width: 1.5),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFFF6B35).withOpacity(0.5),
+                                  blurRadius: 40,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Image.asset(
+                              'assets/icon/app_icon.png',
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.favorite_rounded,
+                                size: 52,
+                                color: Color(0xFFFF6B35),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        // App name
+                        ShaderMask(
+                          shaderCallback: (bounds) => const LinearGradient(
+                            colors: [Colors.white, Color(0xFFFFE0D2)],
+                          ).createShader(bounds),
+                          child: Text(
+                            'Compatible',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 42,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.15)),
+                          ),
+                          child: Text(
+                            'Find someone truly compatible',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Spacer(flex: 5),
+                const _PremiumLoadingDots(),
+                const SizedBox(height: 48),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _gradientBackdrop() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2A1206), Color(0xFF16100E), Color(0xFF0F0A14)],
         ),
       ),
     );
