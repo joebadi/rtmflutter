@@ -37,6 +37,8 @@ class _UserProfilePageState extends State<UserProfilePage>
   int? _theyMatchYou;
   int? _youMatchThem;
   Set<String> _youMatchThemMatches = {};
+  // Their deal-breakers that this viewer's profile fails to meet.
+  Set<String> _youMatchThemDealBreakers = {};
 
   List<String> _images = [];
   late Map<String, dynamic> _user;
@@ -86,6 +88,10 @@ class _UserProfilePageState extends State<UserProfilePage>
         if (you['matches'] is List) {
           _youMatchThemMatches =
               (you['matches'] as List).map((e) => e.toString()).toSet();
+        }
+        if (you['dealBreakers'] is List) {
+          _youMatchThemDealBreakers =
+              (you['dealBreakers'] as List).map((e) => e.toString()).toSet();
         }
       }
     });
@@ -376,17 +382,142 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
+  // Human-readable labels for compatibility field keys.
+  static const Map<String, String> _fieldLabels = {
+    'age': 'Age',
+    'relationshipStatus': 'Relationship status',
+    'location': 'Location',
+    'tribe': 'Tribe / State of origin',
+    'religion': 'Religion',
+    'zodiac': 'Zodiac',
+    'genotype': 'Genotype',
+    'bloodGroup': 'Blood group',
+    'bodyType': 'Body type',
+    'tattoos': 'Tattoos',
+    'piercings': 'Piercings',
+    'height': 'Height',
+  };
+
   void _startChat() {
+    // If the viewer fails any of this person's deal-breakers, warn first.
+    if (_youMatchThemDealBreakers.isNotEmpty) {
+      _showDealBreakerWarning();
+    } else {
+      _openChat();
+    }
+  }
+
+  void _openChat() {
     final userId = _userObj['id'] ?? _user['userId'];
     final firstName = _user['firstName'] ?? 'User';
     final photoUrl = _images.isNotEmpty ? _images[0] : null;
-    
+
     // Use userId as conversationId for now - backend will handle conversation creation
     context.push('/chat/$userId', extra: {
       'receiverId': userId,
       'receiverName': firstName,
       'receiverPhoto': photoUrl,
     });
+  }
+
+  void _showDealBreakerWarning() {
+    final name = _user['firstName'] ?? 'This person';
+    final labels = _youMatchThemDealBreakers
+        .map((k) => _fieldLabels[k] ?? k)
+        .toList();
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5252).withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.gpp_bad_rounded,
+                    color: Color(0xFFFF5252), size: 32),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Deal breakers not met',
+                style: GoogleFonts.poppins(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$name marked these as deal breakers, and your profile doesn\'t align with them:',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                    fontSize: 12.5,
+                    color: Colors.white.withOpacity(0.7),
+                    height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: labels
+                    .map((l) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF5252).withOpacity(0.14),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: const Color(0xFFFF5252).withOpacity(0.5)),
+                          ),
+                          child: Text(l,
+                              style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFFF8A80))),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5722),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _openChat();
+                  },
+                  child: Text('Proceed anyway',
+                      style: GoogleFonts.poppins(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white)),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Maybe not',
+                    style: GoogleFonts.poppins(
+                        color: Colors.white54, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -1506,10 +1637,13 @@ class _UserProfilePageState extends State<UserProfilePage>
     String label,
     String value, {
     bool? matched,
+    bool isDealBreaker = false,
   }) {
     if (value == 'Any' || value.isEmpty) {
       return const SizedBox.shrink();
     }
+    // A deal-breaker the viewer fails to meet is highlighted red.
+    final bool failedDealBreaker = isDealBreaker && matched == false;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -1521,12 +1655,22 @@ class _UserProfilePageState extends State<UserProfilePage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        label,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.white.withOpacity(0.6),
+                        ),
+                      ),
+                    ),
+                    if (isDealBreaker) ...[
+                      const SizedBox(width: 6),
+                      _dealBreakerChip(failedDealBreaker),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -1546,7 +1690,9 @@ class _UserProfilePageState extends State<UserProfilePage>
               matched ? Icons.check_circle_rounded : Icons.cancel_rounded,
               color: matched
                   ? const Color(0xFF4CAF50)
-                  : Colors.white.withOpacity(0.28),
+                  : (failedDealBreaker
+                      ? const Color(0xFFFF5252)
+                      : Colors.white.withOpacity(0.28)),
               size: 18,
             ),
           ],
@@ -1554,6 +1700,38 @@ class _UserProfilePageState extends State<UserProfilePage>
       ),
     );
   }
+
+  Widget _dealBreakerChip(bool failed) {
+    final color = failed ? const Color(0xFFFF5252) : const Color(0xFFFFB300);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.16),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(failed ? Icons.gpp_bad_rounded : Icons.gpp_maybe_rounded,
+              color: color, size: 11),
+          const SizedBox(width: 3),
+          Text(
+            'Deal breaker',
+            style: GoogleFonts.poppins(
+              fontSize: 8.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Whether the viewed user flagged [prefKey] as a deal-breaker.
+  bool _isDealBreaker(Map prefs, String prefKey) => prefs[prefKey] == true;
 
   /// Whether the viewer's own profile satisfies the target's preference on
   /// [fieldKey]. Returns null when we have no reciprocal data yet (no marker
@@ -1727,6 +1905,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 'Preferred Age',
                 '${prefs['ageMin']} - ${prefs['ageMax']} years',
                 matched: _reciprocalMatch('age'),
+                isDealBreaker: _isDealBreaker(prefs, 'ageIsDealBreaker'),
               ),
 
             // Relationship Status
@@ -1734,6 +1913,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               Icons.favorite,
               'Relationship Status',
               _formatList(prefs['relationshipStatus']),
+              isDealBreaker: _isDealBreaker(prefs, 'relationshipIsDealBreaker'),
             ),
 
             // Location — country grouped with preferred states
@@ -1742,6 +1922,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               'Preferred Location',
               _formatPreferredLocation(prefs),
               matched: _reciprocalMatch('location'),
+              isDealBreaker: _isDealBreaker(prefs, 'locationIsDealBreaker'),
             ),
 
             // Tribe(s) — grouped by state of origin
@@ -1750,6 +1931,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               'Preferred Tribe(s)',
               _formatPreferredTribes(prefs),
               matched: _reciprocalMatch('tribe'),
+              isDealBreaker: _isDealBreaker(prefs, 'locationIsDealBreaker'),
             ),
 
             // Religion
@@ -1758,6 +1940,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               'Preferred Religion',
               _formatList(prefs['religion']),
               matched: _reciprocalMatch('religion'),
+              isDealBreaker: _isDealBreaker(prefs, 'religionIsDealBreaker'),
             ),
 
             // Zodiac
@@ -1766,6 +1949,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               'Preferred Zodiac',
               _formatList(prefs['zodiac']),
               matched: _reciprocalMatch('zodiac'),
+              isDealBreaker: _isDealBreaker(prefs, 'zodiacIsDealBreaker'),
             ),
 
             // Genotype
@@ -1774,6 +1958,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               'Preferred Genotype',
               _formatList(prefs['genotype']),
               matched: _reciprocalMatch('genotype'),
+              isDealBreaker: _isDealBreaker(prefs, 'genotypeIsDealBreaker'),
             ),
 
             // Blood Group
@@ -1782,6 +1967,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               'Preferred Blood Group',
               _formatList(prefs['bloodGroup']),
               matched: _reciprocalMatch('bloodGroup'),
+              isDealBreaker: _isDealBreaker(prefs, 'bloodGroupIsDealBreaker'),
             ),
 
             // Height
@@ -1790,6 +1976,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 Icons.height,
                 'Preferred Height',
                 '${prefs['heightMin']} to ${prefs['heightMax']}',
+                isDealBreaker: _isDealBreaker(prefs, 'heightIsDealBreaker'),
               ),
 
             // Body Type
@@ -1798,6 +1985,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               'Preferred Body Type',
               _formatList(prefs['bodyType']),
               matched: _reciprocalMatch('bodyType'),
+              isDealBreaker: _isDealBreaker(prefs, 'bodyTypeIsDealBreaker'),
             ),
 
             // Tattoos
@@ -1807,6 +1995,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 'Tattoos',
                 prefs['tattoosAcceptable'] == true ? 'Yes' : 'No',
                 matched: _reciprocalMatch('tattoos'),
+                isDealBreaker: _isDealBreaker(prefs, 'tattoosIsDealBreaker'),
               ),
 
             // Piercings
@@ -1816,6 +2005,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 'Piercings',
                 prefs['piercingsAcceptable'] == true ? 'Yes' : 'No',
                 matched: _reciprocalMatch('piercings'),
+                isDealBreaker: _isDealBreaker(prefs, 'piercingsIsDealBreaker'),
               ),
           ],
 
