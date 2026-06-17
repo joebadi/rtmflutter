@@ -24,7 +24,7 @@ import 'screens/live_dates_screen.dart';
 import 'screens/live/live_call_screen.dart';
 import 'screens/live/live_event_room_screen.dart';
 import 'screens/live/live_event_results_screen.dart';
-import 'screens/likes_screen.dart';
+import 'screens/matches_screen.dart';
 import 'screens/messages_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/user_profile_page.dart';
@@ -214,8 +214,8 @@ final _router = GoRouter(
           builder: (context, state) => const LiveDatesScreen(),
         ),
         GoRoute(
-          path: '/likes',
-          builder: (context, state) => const LikesScreen(),
+          path: '/matches',
+          builder: (context, state) => const MatchesScreen(),
         ),
         GoRoute(
           path: '/messages',

@@ -29,7 +29,7 @@ class _MainShellState extends State<MainShell> {
     final String location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/home')) return 0;
     if (location.startsWith('/live-dates')) return 1;
-    if (location.startsWith('/likes')) return 2;
+    if (location.startsWith('/matches')) return 2;
     if (location.startsWith('/messages')) return 3;
     if (location.startsWith('/profile')) return 4;
     return 0;
@@ -44,7 +44,7 @@ class _MainShellState extends State<MainShell> {
         context.go('/live-dates');
         break;
       case 2:
-        context.go('/likes');
+        context.go('/matches');
         break;
       case 3:
         context.go('/messages');
@@ -120,9 +120,9 @@ class _MainShellState extends State<MainShell> {
               label: 'Live Dates',
             ),
             const BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_outline),
-              activeIcon: Icon(Icons.favorite),
-              label: 'Likes',
+              icon: Icon(Icons.local_fire_department_outlined),
+              activeIcon: Icon(Icons.local_fire_department),
+              label: 'Matches',
             ),
             BottomNavigationBarItem(
               icon: Stack(
