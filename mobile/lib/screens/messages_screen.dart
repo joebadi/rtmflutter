@@ -154,7 +154,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBg,
+      backgroundColor: AppTheme.bg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -188,19 +188,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     style: GoogleFonts.poppins(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white)),
+                        color: AppTheme.textPrimary(context))),
                 const SizedBox(height: 2),
                 Text(
                   _conversations.isEmpty
                       ? 'Your conversations'
                       : '${_conversations.length} conversation${_conversations.length > 1 ? 's' : ''}',
                   style: GoogleFonts.poppins(
-                      fontSize: 13, color: Colors.white54),
+                      fontSize: 13, color: AppTheme.textSecondary(context)),
                 ),
               ],
             ),
           ),
-          const NotificationIcon(isDark: true),
+          NotificationIcon(isDark: !AppTheme.isLight(context)),
         ],
       ),
     );
@@ -212,10 +212,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.cloud_off_rounded,
-              size: 44, color: Colors.white.withOpacity(0.4)),
+              size: 44, color: AppTheme.fg(context, 0.4)),
           const SizedBox(height: 14),
           Text('Failed to load messages',
-              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14)),
+              style: GoogleFonts.poppins(color: AppTheme.textSecondary(context), fontSize: 14)),
           const SizedBox(height: 16),
           GestureDetector(
             onTap: _loadConversations,
@@ -259,13 +259,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white)),
+                    color: AppTheme.textPrimary(context))),
             const SizedBox(height: 8),
             Text('Match with someone to start a conversation.',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
                     fontSize: 12.5,
-                    color: Colors.white.withOpacity(0.5),
+                    color: AppTheme.fg(context, 0.5),
                     height: 1.45)),
             const SizedBox(height: 22),
             GestureDetector(
@@ -299,26 +299,27 @@ class _MessagesScreenState extends State<MessagesScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
           child: Container(
             decoration: BoxDecoration(
-              color: AppTheme.darkSurface,
+              color: AppTheme.surface(context),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.07)),
+              border: Border.all(color: AppTheme.hairline(context)),
             ),
             child: TextField(
               controller: _searchController,
               onChanged: (v) => setState(() => _query = v),
               cursorColor: AppTheme.accent,
-              style: GoogleFonts.poppins(fontSize: 14, color: Colors.white),
+              style: GoogleFonts.poppins(
+                  fontSize: 14, color: AppTheme.textPrimary(context)),
               decoration: InputDecoration(
                 hintText: 'Search conversations…',
                 hintStyle:
-                    GoogleFonts.poppins(color: Colors.white38, fontSize: 14),
+                    GoogleFonts.poppins(color: AppTheme.textFaint(context), fontSize: 14),
                 prefixIcon:
                     const Icon(Icons.search_rounded, color: AppTheme.accent),
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
-                        icon: const Icon(Icons.close_rounded,
-                            color: Colors.white38, size: 20),
+                        icon: Icon(Icons.close_rounded,
+                            color: AppTheme.textFaint(context), size: 20),
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _query = '');
@@ -335,7 +336,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           child: RefreshIndicator(
             onRefresh: _loadConversations,
             color: AppTheme.accent,
-            backgroundColor: AppTheme.darkSurface,
+            backgroundColor: AppTheme.surface(context),
             child: list.isEmpty
                 ? ListView(
                     children: [
@@ -343,7 +344,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       Center(
                         child: Text('No matches for "$_query"',
                             style: GoogleFonts.poppins(
-                                color: Colors.white38, fontSize: 13)),
+                                color: AppTheme.textFaint(context), fontSize: 13)),
                       ),
                     ],
                   )
@@ -378,7 +379,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
     String otherUserName,
   ) {
     final sentByMe = _isSentByMe(lastMessage);
-    final contentColor = hasUnread ? Colors.white : Colors.white.withOpacity(0.5);
+    final contentColor =
+        hasUnread ? AppTheme.textPrimary(context) : AppTheme.fg(context, 0.5);
 
     if (sentByMe == null) {
       return Text(
@@ -398,7 +400,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         Icon(
           sentByMe ? Icons.subdirectory_arrow_right_rounded : Icons.south_west_rounded,
           size: 13,
-          color: sentByMe ? Colors.white38 : AppTheme.accent,
+          color: sentByMe ? AppTheme.textFaint(context) : AppTheme.accent,
         ),
         const SizedBox(width: 5),
         Expanded(
@@ -411,7 +413,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   text: sentByMe ? 'You: ' : '',
                   style: GoogleFonts.poppins(
                     fontSize: 13,
-                    color: Colors.white38,
+                    color: AppTheme.textFaint(context),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -492,12 +494,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
             decoration: BoxDecoration(
               color: hasUnread
                   ? AppTheme.accent.withOpacity(0.10)
-                  : AppTheme.darkSurface,
+                  : AppTheme.surface(context),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
                 color: hasUnread
                     ? AppTheme.accent.withOpacity(0.4)
-                    : Colors.white.withOpacity(0.06),
+                    : AppTheme.hairline(context),
               ),
             ),
             child: Row(
@@ -513,7 +515,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         border: Border.all(
                           color: hasUnread
                               ? AppTheme.accent
-                              : Colors.white.withOpacity(0.12),
+                              : AppTheme.hairline(context),
                           width: 2,
                         ),
                       ),
@@ -526,7 +528,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                     progress == null
                                         ? child
                                         : Container(
-                                            color: AppTheme.darkSurface2,
+                                            color: AppTheme.surface2(context),
                                             child: const Center(
                                               child: PremiumLoader(
                                                   strokeWidth: 2,
@@ -534,15 +536,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                             ),
                                           ),
                                 errorBuilder: (_, __, ___) => Container(
-                                  color: AppTheme.darkSurface2,
-                                  child: const Icon(Icons.person,
-                                      size: 26, color: Colors.white38),
+                                  color: AppTheme.surface2(context),
+                                  child: Icon(Icons.person,
+                                      size: 26, color: AppTheme.textFaint(context)),
                                 ),
                               )
                             : Container(
-                                color: AppTheme.darkSurface2,
-                                child: const Icon(Icons.person,
-                                    size: 26, color: Colors.white38),
+                                color: AppTheme.surface2(context),
+                                child: Icon(Icons.person,
+                                    size: 26, color: AppTheme.textFaint(context)),
                               ),
                       ),
                     ),
@@ -557,7 +559,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             color: const Color(0xFF4CAF50),
                             shape: BoxShape.circle,
                             border:
-                                Border.all(color: AppTheme.darkBg, width: 2.5),
+                                Border.all(color: AppTheme.bg(context), width: 2.5),
                           ),
                         ),
                       ),
@@ -581,7 +583,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                 fontWeight: hasUnread
                                     ? FontWeight.w700
                                     : FontWeight.w600,
-                                color: Colors.white,
+                                color: AppTheme.textPrimary(context),
                               ),
                             ),
                           ),
@@ -595,7 +597,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                     : FontWeight.w400,
                                 color: hasUnread
                                     ? AppTheme.accentBright
-                                    : Colors.white38,
+                                    : AppTheme.textFaint(context),
                               ),
                             ),
                         ],

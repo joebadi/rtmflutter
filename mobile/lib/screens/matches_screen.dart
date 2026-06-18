@@ -207,7 +207,7 @@ class _MatchesScreenState extends State<MatchesScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBg,
+      backgroundColor: AppTheme.bg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -242,15 +242,15 @@ class _MatchesScreenState extends State<MatchesScreen>
                     style: GoogleFonts.poppins(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white)),
+                        color: AppTheme.textPrimary(context))),
                 const SizedBox(height: 2),
                 Text('Your connections & perfect-fit profiles',
                     style: GoogleFonts.poppins(
-                        fontSize: 13, color: Colors.white54)),
+                        fontSize: 13, color: AppTheme.textSecondary(context))),
               ],
             ),
           ),
-          const NotificationIcon(isDark: true),
+          NotificationIcon(isDark: !AppTheme.isLight(context)),
         ],
       ),
     );
@@ -261,9 +261,9 @@ class _MatchesScreenState extends State<MatchesScreen>
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppTheme.darkSurface,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: AppTheme.hairline(context)),
       ),
       child: TabBar(
         controller: _tab,
@@ -274,7 +274,7 @@ class _MatchesScreenState extends State<MatchesScreen>
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
         labelColor: Colors.white,
-        unselectedLabelColor: Colors.white60,
+        unselectedLabelColor: AppTheme.textSecondary(context),
         labelStyle:
             GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
         tabs: const [
@@ -301,7 +301,7 @@ class _MatchesScreenState extends State<MatchesScreen>
     }
     return RefreshIndicator(
       color: AppTheme.accent,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: AppTheme.surface(context),
       onRefresh: _loadMutual,
       child: GridView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -340,7 +340,7 @@ class _MatchesScreenState extends State<MatchesScreen>
                       'Try a different filter.')
                   : RefreshIndicator(
                       color: AppTheme.accent,
-                      backgroundColor: AppTheme.darkSurface,
+                      backgroundColor: AppTheme.surface(context),
                       onRefresh: _loadPreferred,
                       child: GridView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
@@ -384,16 +384,16 @@ class _MatchesScreenState extends State<MatchesScreen>
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
             gradient: on ? AppTheme.accentGradient : null,
-            color: on ? null : AppTheme.darkSurface,
+            color: on ? null : AppTheme.surface(context),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-                color: on ? Colors.transparent : Colors.white.withOpacity(0.1)),
+                color: on ? Colors.transparent : AppTheme.hairline(context)),
           ),
           child: Text(label,
               style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: on ? FontWeight.w600 : FontWeight.w500,
-                  color: on ? Colors.white : Colors.white70)),
+                  color: on ? Colors.white : AppTheme.textSecondary(context))),
         ),
       );
     }
@@ -418,9 +418,9 @@ class _MatchesScreenState extends State<MatchesScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
             decoration: BoxDecoration(
-              color: AppTheme.darkSurface,
+              color: AppTheme.surface(context),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: AppTheme.hairline(context)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -431,9 +431,9 @@ class _MatchesScreenState extends State<MatchesScreen>
                   child: DropdownButton<_PrefSort>(
                     value: _sort,
                     isDense: true,
-                    dropdownColor: AppTheme.darkSurface,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                        color: Colors.white54, size: 18),
+                    dropdownColor: AppTheme.surface(context),
+                    icon: Icon(Icons.keyboard_arrow_down_rounded,
+                        color: AppTheme.textSecondary(context), size: 18),
                     style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -618,12 +618,12 @@ class _MatchesScreenState extends State<MatchesScreen>
           end: Alignment.bottomRight,
           colors: [
             AppTheme.accent.withOpacity(0.25),
-            AppTheme.darkSurface2,
+            AppTheme.surface2(context),
           ],
         ),
       ),
       child: Icon(Icons.person_rounded,
-          size: 56, color: Colors.white.withOpacity(0.5)),
+          size: 56, color: AppTheme.fg(context, 0.5)),
     );
   }
 
@@ -656,13 +656,13 @@ class _MatchesScreenState extends State<MatchesScreen>
                       style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white)),
+                          color: AppTheme.textPrimary(context))),
                   const SizedBox(height: 8),
                   Text(subtitle,
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
                           fontSize: 12.5,
-                          color: Colors.white.withOpacity(0.5),
+                          color: AppTheme.fg(context, 0.5),
                           height: 1.45)),
                   const SizedBox(height: 22),
                   GestureDetector(
@@ -696,11 +696,11 @@ class _MatchesScreenState extends State<MatchesScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.cloud_off_rounded,
-              size: 44, color: Colors.white.withOpacity(0.4)),
+              size: 44, color: AppTheme.fg(context, 0.4)),
           const SizedBox(height: 14),
           Text(message,
               style: GoogleFonts.poppins(
-                  color: Colors.white70, fontSize: 14)),
+                  color: AppTheme.textSecondary(context), fontSize: 14)),
           const SizedBox(height: 16),
           GestureDetector(
             onTap: retry,

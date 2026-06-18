@@ -126,4 +126,67 @@ class AppTheme {
       ),
     );
   }
+
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primary,
+        primary: primary,
+        secondary: primaryLight,
+        brightness: Brightness.dark,
+        surface: darkSurface,
+      ),
+      scaffoldBackgroundColor: darkBg,
+      fontFamily: GoogleFonts.poppins().fontFamily,
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: darkSurface,
+        selectedItemColor: primary,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        elevation: 10,
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Context-aware semantic tokens. These return the correct value for the
+  // current ThemeMode so screens can support both light and dark. Use these
+  // instead of hardcoding darkBg / Colors.white in dual-mode screens.
+  // ---------------------------------------------------------------------------
+  static const Color _lightBg = Color(0xFFF4F5F8);
+  static const Color _lightSurface = Colors.white;
+  static const Color _lightSurface2 = Color(0xFFEDEFF3);
+
+  static bool isLight(BuildContext c) =>
+      Theme.of(c).brightness == Brightness.light;
+
+  static Color bg(BuildContext c) => isLight(c) ? _lightBg : darkBg;
+  static Color surface(BuildContext c) => isLight(c) ? _lightSurface : darkSurface;
+  static Color surface2(BuildContext c) =>
+      isLight(c) ? _lightSurface2 : darkSurface2;
+
+  /// Primary text/icon color.
+  static Color textPrimary(BuildContext c) =>
+      isLight(c) ? const Color(0xFF1A1D1E) : Colors.white;
+
+  /// Secondary text (subtitles).
+  static Color textSecondary(BuildContext c) =>
+      isLight(c) ? const Color(0xFF6B7280) : Colors.white70;
+
+  /// Muted/placeholder text.
+  static Color textFaint(BuildContext c) =>
+      isLight(c) ? const Color(0xFF9AA0A6) : Colors.white38;
+
+  /// Subtle border / hairline.
+  static Color hairline(BuildContext c) => isLight(c)
+      ? Colors.black.withValues(alpha: 0.07)
+      : Colors.white.withValues(alpha: 0.07);
+
+  /// A foreground color at an arbitrary opacity that flips per mode (white in
+  /// dark, near-black in light).
+  static Color fg(BuildContext c, double opacity) => isLight(c)
+      ? Colors.black.withValues(alpha: opacity)
+      : Colors.white.withValues(alpha: opacity);
 }

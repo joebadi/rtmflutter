@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/theme_provider.dart';
 
 class OptionsPage extends StatefulWidget {
   const OptionsPage({super.key});
@@ -160,32 +161,32 @@ class _OptionsPageState extends State<OptionsPage> {
             _buildOptionItem(
               icon: Icons.verified,
               title: 'Apply for Verification',
-              onTap: () {},
+              onTap: _comingSoon,
             ),
             _buildOptionItem(
               icon: Icons.language,
               title: 'App Languages',
-              onTap: () {},
+              onTap: () => context.push('/languages'),
             ),
             _buildOptionItem(
               icon: Icons.bookmark,
               title: 'Saved Profiles',
-              onTap: () {},
+              onTap: _comingSoon,
             ),
             _buildOptionItem(
               icon: Icons.block,
               title: 'Blocked Profiles',
-              onTap: () {},
+              onTap: _comingSoon,
             ),
             _buildOptionItem(
               icon: Icons.favorite,
-              title: 'Like Profiles',
-              onTap: () {},
+              title: 'Liked Profiles',
+              onTap: () => context.push('/liked-profiles'),
             ),
             _buildOptionItem(
               icon: Icons.visibility_off,
-              title: 'Hidden Profile',
-              onTap: () {},
+              title: 'Hidden Profiles',
+              onTap: _comingSoon,
             ),
             _buildOptionItem(
               icon: Icons.tune,
@@ -210,6 +211,17 @@ class _OptionsPageState extends State<OptionsPage> {
             ),
 
             const SizedBox(height: 10),
+
+            // Appearance — Dark mode toggle
+            Consumer<ThemeProvider>(
+              builder: (context, theme, _) => _buildToggleItem(
+                title: 'Dark Mode',
+                subtitle: 'Switch between dark and light appearance',
+                value: theme.mode == ThemeMode.dark,
+                onChanged: (v) =>
+                    theme.setMode(v ? ThemeMode.dark : ThemeMode.light),
+              ),
+            ),
 
             // Privacy Toggles
             _buildToggleItem(
@@ -400,6 +412,16 @@ class _OptionsPageState extends State<OptionsPage> {
             const SizedBox(height: 80),
           ],
         ),
+      ),
+    );
+  }
+
+  void _comingSoon() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Coming soon', style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFFF5722),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

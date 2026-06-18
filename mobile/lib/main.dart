@@ -17,6 +17,8 @@ import 'screens/profile/complete_profile_page.dart';
 import 'screens/profile/personal_information_page.dart';
 import 'screens/profile/match_preferences_page.dart';
 import 'screens/profile/options_page.dart';
+import 'screens/profile/liked_profiles_screen.dart';
+import 'screens/profile/languages_screen.dart';
 import 'screens/premium/premium_page.dart';
 import 'screens/wallet/wallet_page.dart';
 import 'screens/explore_screen.dart';
@@ -33,6 +35,7 @@ import 'screens/main_shell.dart';
 import 'providers/profile_provider.dart';
 import 'providers/message_provider.dart';
 import 'providers/wallet_provider.dart';
+import 'providers/theme_provider.dart';
 import 'config/theme.dart';
 
 import 'services/notification_service.dart';
@@ -127,6 +130,8 @@ final _router = GoRouter(
       builder: (context, state) => const MatchPreferencesPage(),
     ),
     GoRoute(path: '/options', builder: (context, state) => const OptionsPage()),
+    GoRoute(path: '/liked-profiles', builder: (context, state) => const LikedProfilesScreen()),
+    GoRoute(path: '/languages', builder: (context, state) => const LanguagesScreen()),
     GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
     GoRoute(path: '/premium', builder: (context, state) => const PremiumPage()),
     GoRoute(path: '/wallet', builder: (context, state) => const WalletPage()),
@@ -244,12 +249,17 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotificationService()..init()),
         ChangeNotifierProvider(create: (_) => MessageProvider()..init()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..load()),
       ],
-      child: MaterialApp.router(
-        title: 'Ready to Marry',
-        theme: AppTheme.lightTheme,
-        debugShowCheckedModeBanner: false,
-        routerConfig: _router,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) => MaterialApp.router(
+          title: 'Compatible',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeProvider.mode,
+          debugShowCheckedModeBanner: false,
+          routerConfig: _router,
+        ),
       ),
     );
   }
