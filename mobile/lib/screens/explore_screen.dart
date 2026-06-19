@@ -17,6 +17,7 @@ import '../services/profile_service.dart';
 import '../data/nigeria_locations.dart';
 import '../widgets/notification_icon.dart';
 import '../widgets/premium_message.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/premium_loader.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -527,14 +528,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Explore',
-            style: GoogleFonts.poppins(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
+          const AppLogo(height: 26),
           Row(
             children: [
               const NotificationIcon(),

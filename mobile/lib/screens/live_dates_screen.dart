@@ -8,6 +8,7 @@ import '../config/api_config.dart';
 import '../services/live_service.dart';
 import '../providers/wallet_provider.dart';
 import '../widgets/notification_icon.dart';
+import '../widgets/app_logo.dart';
 import '../widgets/premium_loader.dart';
 import '../widgets/live_dates_collage.dart';
 
@@ -233,6 +234,8 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const AppLogo(height: 20, color: Colors.white),
+                const SizedBox(height: 8),
                 Text('Live Dates',
                     style: GoogleFonts.poppins(
                         fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),

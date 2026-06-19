@@ -8,6 +8,7 @@ import '../config/api_config.dart';
 import '../config/theme.dart';
 import '../widgets/notification_icon.dart';
 import '../widgets/premium_loader.dart';
+import '../widgets/app_logo.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -184,6 +185,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const AppLogo(height: 20),
+                const SizedBox(height: 8),
                 Text('Messages',
                     style: GoogleFonts.poppins(
                         fontSize: 26,

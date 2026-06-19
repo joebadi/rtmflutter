@@ -7,6 +7,7 @@ import '../services/like_service.dart';
 import '../services/match_service.dart';
 import '../widgets/notification_icon.dart';
 import '../widgets/premium_loader.dart';
+import '../widgets/app_logo.dart';
 
 /// Matches — replaces the old Likes page. Two tabs:
 ///  • Mutual: people you and they have both liked.
@@ -238,6 +239,8 @@ class _MatchesScreenState extends State<MatchesScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const AppLogo(height: 20),
+                const SizedBox(height: 8),
                 Text('Matches',
                     style: GoogleFonts.poppins(
                         fontSize: 26,
