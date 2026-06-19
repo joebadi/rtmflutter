@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,43 +16,77 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _emailFocus = FocusNode();
+  final _passFocus = FocusNode();
   bool _obscurePassword = true;
+  bool _emailFocused = false;
+  bool _passFocused = false;
 
   late final AnimationController _entrance;
+  late final AnimationController _shake;
   late final Animation<double> _fadeIn;
   late final Animation<Offset> _slideUp;
+  late final Animation<Offset> _shakeAnim;
 
   @override
   void initState() {
     super.initState();
+
     _entrance = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 750),
+      duration: const Duration(milliseconds: 900),
     );
-    _fadeIn = CurvedAnimation(parent: _entrance, curve: Curves.easeOutCubic);
+    _shake = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+
+    _fadeIn = CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(0.0, 0.75, curve: Curves.easeOutCubic),
+    );
     _slideUp = Tween<Offset>(
-      begin: const Offset(0, 0.14),
+      begin: const Offset(0, 0.22),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _entrance, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(
+      parent: _entrance,
+      curve: const Interval(0.0, 0.85, curve: Curves.easeOutBack),
+    ));
+    _shakeAnim = TweenSequence<Offset>([
+      TweenSequenceItem(tween: Tween(begin: Offset.zero, end: const Offset(0.025, 0)), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: const Offset(0.025, 0), end: const Offset(-0.025, 0)), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: const Offset(-0.025, 0), end: const Offset(0.016, 0)), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: const Offset(0.016, 0), end: const Offset(-0.01, 0)), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: const Offset(-0.01, 0), end: Offset.zero), weight: 1),
+    ]).animate(CurvedAnimation(parent: _shake, curve: Curves.easeInOut));
+
+    _emailFocus.addListener(() => setState(() => _emailFocused = _emailFocus.hasFocus));
+    _passFocus.addListener(() => setState(() => _passFocused = _passFocus.hasFocus));
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _entrance.forward());
   }
 
   @override
   void dispose() {
     _entrance.dispose();
+    _shake.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
+    _emailFocus.dispose();
+    _passFocus.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    // Validate form first
+    FocusScope.of(context).unfocus();
+
     if (!_formKey.currentState!.validate()) {
+      HapticFeedback.lightImpact();
+      _shake.forward(from: 0);
       return;
     }
 
@@ -63,89 +98,63 @@ class _LoginPageState extends State<LoginPage>
 
     if (!success) {
       if (mounted) {
-        showPremiumSnack(context, auth.error ?? 'Login failed',
-            kind: MessageKind.error);
+        HapticFeedback.mediumImpact();
+        _shake.forward(from: 0);
+        showPremiumSnack(context, auth.error ?? 'Login failed', kind: MessageKind.error);
       }
       return;
     }
 
     if (!mounted) return;
+    HapticFeedback.selectionClick();
 
-    // Check user's onboarding status to route appropriately
     try {
       final profileService = ProfileService();
       final profileData = await profileService.getMyProfile();
 
       if (profileData == null || profileData['data'] == null) {
-        // No profile data - might need OTP verification or profile setup
-        // For now, go to profile details
         if (mounted) context.go('/profile-details');
         return;
       }
 
       final user = profileData['data'];
 
-      // Check if email/phone is verified
-      // Check if email is verified (Phone verification is optional/future feature)
       if (user['emailVerified'] == false) {
-        // Need to verify OTP
         if (mounted) {
-          context.push(
-            '/otp-verification',
-            extra: {
-              'phoneNumber': user['phoneNumber'] ?? '',
-              'email': user['email'] ?? '',
-              'firstName': user['firstName'],
-              'lastName': user['lastName'],
-            },
-          );
+          context.push('/otp-verification', extra: {
+            'phoneNumber': user['phoneNumber'] ?? '',
+            'email': user['email'] ?? '',
+            'firstName': user['firstName'],
+            'lastName': user['lastName'],
+          });
         }
         return;
       }
 
-      // Step 2: Basic Profile (DOB/Gender)
-      // Check if firstName/lastName needed? usually in registration
       final profile = user['profile'];
-      if (profile == null ||
-          profile['dateOfBirth'] == null ||
-          profile['gender'] == null) {
+      if (profile == null || profile['dateOfBirth'] == null || profile['gender'] == null) {
         if (mounted) {
-          context.go(
-            '/profile-details',
-            extra: {
-              'firstName': user['firstName'],
-              'lastName': user['lastName'],
-            },
-          );
+          context.go('/profile-details', extra: {
+            'firstName': user['firstName'],
+            'lastName': user['lastName'],
+          });
         }
         return;
       }
 
-      // Step 3: Photos
       final photos = profile['photos'] as List?;
       if (photos == null || photos.isEmpty) {
         if (mounted) context.go('/image-upload');
         return;
       }
 
-      // Step 4: Verification (Video) - Optional for now or handled elsewhere?
-      // Step 5: Match Preferences
-      // Check if matchPreferences exists on user object
-      // (Backend needs to include it in getMyProfile response, which it does based on verify_db_data output)
-      // However, user['matchPreferences'] might not be in the response of getMyProfile unless included.
-      // let's assume if aboutMe is missing, we go to complete profile first.
-      
-      // Step 6: Complete Profile (Bio/AboutMe)
       if (profile['aboutMe'] == null) {
         if (mounted) context.go('/complete-profile');
         return;
       }
 
-      // Everything complete - go to home
       if (mounted) context.go('/home');
-    } catch (e) {
-      print('Error checking onboarding status: $e');
-      // On error, default to home
+    } catch (_) {
       if (mounted) context.go('/home');
     }
   }
@@ -155,14 +164,12 @@ class _LoginPageState extends State<LoginPage>
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
-          // Background Image
           Positioned.fill(
             child: Image.asset('assets/images/login_bg.png', fit: BoxFit.cover),
           ),
-
-          // Dark Gradient Overlay
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -170,378 +177,48 @@ class _LoginPageState extends State<LoginPage>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.2),
-                    Colors.black.withOpacity(0.5),
-                    Colors.black.withOpacity(0.8),
+                    Colors.black.withOpacity(0.15),
+                    Colors.black.withOpacity(0.45),
+                    Colors.black.withOpacity(0.9),
                   ],
-                  stops: const [0.0, 0.5, 0.9],
+                  stops: const [0.0, 0.42, 0.88],
                 ),
               ),
             ),
           ),
 
-          // Content
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).viewInsets.bottom,
-                  ),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
+          GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            behavior: HitTestBehavior.translucent,
+            child: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: _GlassBackButton(onTap: () => context.pop()),
                     ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        children: [
-                          // Back Button
-                          Align(
-                            alignment: Alignment.topLeft,
-                            child: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.3),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.arrow_back,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                  onPressed: () => context.pop(),
-                                ),
-                              ),
-                            ),
-                          ),
+                  ),
 
-                          const Spacer(),
+                  const Expanded(child: SizedBox()),
 
-                          // Glassmorphic Form Card
-                          FadeTransition(
-                            opacity: _fadeIn,
-                            child: SlideTransition(
-                            position: _slideUp,
-                            child: Container(
-                            margin: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 20,
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                child: Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.2),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: Form(
-                                    key: _formKey,
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        // Title
-                                        Text(
-                                          'Log in',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 28,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          'Welcome back! Sign in to continue',
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 13,
-                                            color: Colors.white.withOpacity(0.8),
-                                          ),
-                                        ),
-
-                                        const SizedBox(height: 24),
-
-                                        // Email Field
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Email',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white.withOpacity(0.9),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            TextFormField(
-                                              controller: _emailCtrl,
-                                              keyboardType: TextInputType.emailAddress,
-                                              style: GoogleFonts.poppins(
-                                                color: Colors.black87,
-                                                fontSize: 13,
-                                              ),
-                                              validator: (value) {
-                                                if (value == null || value.isEmpty) {
-                                                  return 'Email is required';
-                                                }
-                                                if (!value.contains('@')) {
-                                                  return 'Please enter a valid email';
-                                                }
-                                                return null;
-                                              },
-                                              decoration: InputDecoration(
-                                                hintText: 'Enter your email',
-                                                hintStyle: GoogleFonts.poppins(
-                                                  color: Colors.grey.shade400,
-                                                  fontSize: 13,
-                                                ),
-                                                filled: true,
-                                                fillColor: Colors.white.withOpacity(0.95),
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 14,
-                                                    ),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: BorderSide(
-                                                    color: Colors.white.withOpacity(0.3),
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(
-                                                    color: Color(0xFFFF6B35),
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                                errorBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: BorderSide(
-                                                    color: Colors.red.shade300,
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                focusedErrorBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(
-                                                    color: Colors.red,
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-
-                                        const SizedBox(height: 12),
-
-                                        // Password Field
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'Password',
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white.withOpacity(0.9),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            TextFormField(
-                                              controller: _passCtrl,
-                                              obscureText: _obscurePassword,
-                                              style: GoogleFonts.poppins(
-                                                color: Colors.black87,
-                                                fontSize: 13,
-                                              ),
-                                              validator: (value) {
-                                                if (value == null || value.isEmpty) {
-                                                  return 'Password is required';
-                                                }
-                                                if (value.length < 6) {
-                                                  return 'Password must be at least 6 characters';
-                                                }
-                                                return null;
-                                              },
-                                              decoration: InputDecoration(
-                                                hintText: 'Enter your password',
-                                                hintStyle: GoogleFonts.poppins(
-                                                  color: Colors.grey.shade400,
-                                                  fontSize: 13,
-                                                ),
-                                                filled: true,
-                                                fillColor: Colors.white.withOpacity(0.95),
-                                                contentPadding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 14,
-                                                    ),
-                                                suffixIcon: IconButton(
-                                                  icon: Icon(
-                                                    _obscurePassword
-                                                        ? Icons.visibility_off
-                                                        : Icons.visibility,
-                                                    color: Colors.grey,
-                                                    size: 20,
-                                                  ),
-                                                  onPressed: () => setState(
-                                                    () => _obscurePassword =
-                                                        !_obscurePassword,
-                                                  ),
-                                                ),
-                                                enabledBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: BorderSide(
-                                                    color: Colors.white.withOpacity(0.3),
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                focusedBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(
-                                                    color: Color(0xFFFF6B35),
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                                errorBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: BorderSide(
-                                                    color: Colors.red.shade300,
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                focusedErrorBorder: OutlineInputBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                  borderSide: const BorderSide(
-                                                    color: Colors.red,
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-
-                                        const SizedBox(height: 20),
-
-                                        // Continue Button
-                                        SizedBox(
-                                          width: double.infinity,
-                                          height: 50,
-                                          child: ElevatedButton(
-                                            onPressed: auth.isLoading ? null : _submit,
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFFFF6B35),
-                                              disabledBackgroundColor: const Color(
-                                                0xFFFF6B35,
-                                              ).withOpacity(0.6),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(12),
-                                              ),
-                                              elevation: 0,
-                                              padding: const EdgeInsets.symmetric(
-                                                vertical: 14,
-                                              ),
-                                            ),
-                                            child: auth.isLoading
-                                                ? const SizedBox(
-                                                    width: 22,
-                                                    height: 22,
-                                                    child: PremiumLoader(
-                                                      color: Colors.white,
-                                                      strokeWidth: 2.5,
-                                                    ),
-                                                  )
-                                                : Text(
-                                                    'Continue',
-                                                    style: GoogleFonts.poppins(
-                                                      fontSize: 15,
-                                                      fontWeight: FontWeight.w600,
-                                                      color: Colors.white,
-                                                      letterSpacing: 0.5,
-                                                    ),
-                                                  ),
-                                          ),
-                                        ),
-
-                                        const SizedBox(height: 12),
-
-                                        // Forgot Password
-                                        Center(
-                                          child: TextButton(
-                                            onPressed: () => _showForgotPasswordSheet(context),
-                                            child: Text(
-                                              'Forgot your password?',
-                                              style: GoogleFonts.poppins(
-                                                color: const Color(0xFFFF6B35),
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-
-                                        const SizedBox(height: 12),
-
-                                        // Sign Up Link
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Text(
-                                              "Don't have an account? ",
-                                              style: GoogleFonts.poppins(
-                                                color: Colors.white.withOpacity(0.8),
-                                                fontSize: 13,
-                                              ),
-                                            ),
-                                            TextButton(
-                                              onPressed: () => context.push('/register'),
-                                              style: TextButton.styleFrom(
-                                                padding: EdgeInsets.zero,
-                                                minimumSize: const Size(0, 0),
-                                                tapTargetSize:
-                                                    MaterialTapTargetSize.shrinkWrap,
-                                              ),
-                                              child: Text(
-                                                'Sign up',
-                                                style: GoogleFonts.poppins(
-                                                  color: const Color(0xFFFF6B35),
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 20),
-                        ],
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: FadeTransition(
+                      opacity: _fadeIn,
+                      child: SlideTransition(
+                        position: _slideUp,
+                        child: SlideTransition(
+                          position: _shakeAnim,
+                          child: _buildCard(auth),
+                        ),
                       ),
                     ),
                   ),
-                );
-              },
+                ],
+              ),
             ),
           ),
         ],
@@ -549,70 +226,435 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 
-  void _showForgotPasswordSheet(BuildContext context) {
-    final emailController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
+  Widget _buildCard(AuthProvider auth) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(22, 26, 22, 18),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.09),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white.withOpacity(0.14), width: 1),
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Welcome back',
+                  style: GoogleFonts.poppins(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.4,
+                    height: 1.1,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  'Sign in to continue your journey',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.5),
+                  ),
+                ),
 
+                const SizedBox(height: 22),
+
+                _GlassField(
+                  controller: _emailCtrl,
+                  focusNode: _emailFocus,
+                  isFocused: _emailFocused,
+                  label: 'Email',
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_passFocus),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Email is required';
+                    if (!v.contains('@')) return 'Enter a valid email';
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 10),
+
+                _GlassField(
+                  controller: _passCtrl,
+                  focusNode: _passFocus,
+                  isFocused: _passFocused,
+                  label: 'Password',
+                  obscureText: _obscurePassword,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                  suffixIcon: GestureDetector(
+                    onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                    child: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: _passFocused
+                          ? Colors.white.withOpacity(0.8)
+                          : Colors.white.withOpacity(0.4),
+                      size: 20,
+                    ),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Password is required';
+                    if (v.length < 6) return 'Min 6 characters';
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                _GradientButton(
+                  isLoading: auth.isLoading,
+                  label: 'Sign in',
+                  onPressed: _submit,
+                ),
+
+                const SizedBox(height: 8),
+
+                Center(
+                  child: TextButton(
+                    onPressed: () => _showForgotPasswordSheet(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Forgot password?',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 2),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account? ",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white.withOpacity(0.55),
+                        fontSize: 13,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        context.push('/register');
+                      },
+                      child: Text(
+                        'Sign up',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFFFF5722),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showForgotPasswordSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _ForgotPasswordSheet(
-        emailController: emailController,
-        formKey: formKey,
+      builder: (_) => const _ForgotPasswordSheet(),
+    );
+  }
+}
+
+// ─── Glass back button ────────────────────────────────────────────────────────
+
+class _GlassBackButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _GlassBackButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.18)),
+            ),
+            child: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Colors.white,
+              size: 16,
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-class _ForgotPasswordSheet extends StatefulWidget {
-  final TextEditingController emailController;
-  final GlobalKey<FormState> formKey;
+// ─── Animated glass input field ──────────────────────────────────────────────
 
-  const _ForgotPasswordSheet({
-    required this.emailController,
-    required this.formKey,
+class _GlassField extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool isFocused;
+  final String label;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
+  final String? Function(String?)? validator;
+  final bool obscureText;
+  final Widget? suffixIcon;
+
+  const _GlassField({
+    required this.controller,
+    required this.focusNode,
+    required this.isFocused,
+    required this.label,
+    this.keyboardType,
+    this.textInputAction,
+    this.onFieldSubmitted,
+    this.validator,
+    this.obscureText = false,
+    this.suffixIcon,
   });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: isFocused
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFFF5722).withOpacity(0.22),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [],
+      ),
+      child: TextFormField(
+        controller: controller,
+        focusNode: focusNode,
+        keyboardType: keyboardType,
+        textInputAction: textInputAction,
+        onFieldSubmitted: onFieldSubmitted,
+        validator: validator,
+        obscureText: obscureText,
+        autocorrect: false,
+        style: GoogleFonts.poppins(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        cursorColor: const Color(0xFFFF5722),
+        cursorWidth: 1.5,
+        cursorRadius: const Radius.circular(2),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: GoogleFonts.poppins(
+            color: isFocused
+                ? const Color(0xFFFF5722)
+                : Colors.white.withOpacity(0.45),
+            fontSize: 14,
+          ),
+          floatingLabelStyle: GoogleFonts.poppins(
+            color: const Color(0xFFFF5722),
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.4,
+          ),
+          floatingLabelBehavior: FloatingLabelBehavior.auto,
+          suffixIcon: suffixIcon != null
+              ? Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: suffixIcon,
+                )
+              : null,
+          filled: true,
+          fillColor: isFocused
+              ? Colors.white.withOpacity(0.12)
+              : Colors.white.withOpacity(0.07),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(
+              color: Colors.white.withOpacity(0.18),
+              width: 1,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Color(0xFFFF5722), width: 1.5),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: Colors.red.withOpacity(0.65), width: 1),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1.5),
+          ),
+          errorStyle: GoogleFonts.poppins(
+            color: const Color(0xFFFF6B6B),
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Gradient submit button ───────────────────────────────────────────────────
+
+class _GradientButton extends StatefulWidget {
+  final bool isLoading;
+  final String label;
+  final VoidCallback onPressed;
+
+  const _GradientButton({
+    required this.isLoading,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  State<_GradientButton> createState() => _GradientButtonState();
+}
+
+class _GradientButtonState extends State<_GradientButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        if (!widget.isLoading) widget.onPressed();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: double.infinity,
+          height: 52,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFF5722).withOpacity(_pressed ? 0.18 : 0.42),
+                blurRadius: _pressed ? 6 : 20,
+                offset: Offset(0, _pressed ? 2 : 6),
+              ),
+            ],
+          ),
+          child: Center(
+            child: widget.isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: PremiumLoader(color: Colors.white, strokeWidth: 2.5),
+                  )
+                : Text(
+                    widget.label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Forgot password bottom sheet ────────────────────────────────────────────
+
+class _ForgotPasswordSheet extends StatefulWidget {
+  const _ForgotPasswordSheet();
 
   @override
   State<_ForgotPasswordSheet> createState() => _ForgotPasswordSheetState();
 }
 
 class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
-  // 0 = email entry, 1 = token+password entry, 2 = success
-  int _step = 0;
-  bool _isLoading = false;
-  String? _errorMessage;
+  final _emailCtrl = TextEditingController();
   final _tokenCtrl = TextEditingController();
   final _newPassCtrl = TextEditingController();
   final _confirmPassCtrl = TextEditingController();
-  bool _obscureNewPass = true;
-  bool _obscureConfirmPass = true;
+  final _formKey = GlobalKey<FormState>();
+  final _emailFocus = FocusNode();
+
+  int _step = 0;
+  bool _isLoading = false;
+  bool _obscureNew = true;
+  bool _obscureConfirm = true;
+  String? _errorMessage;
 
   @override
   void dispose() {
+    _emailCtrl.dispose();
     _tokenCtrl.dispose();
     _newPassCtrl.dispose();
     _confirmPassCtrl.dispose();
+    _emailFocus.dispose();
     super.dispose();
   }
 
   Future<void> _sendResetLink() async {
-    if (!widget.formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (!_formKey.currentState!.validate()) return;
+    setState(() { _isLoading = true; _errorMessage = null; });
 
     final auth = context.read<AuthProvider>();
-    final success = await auth.forgotPassword(widget.emailController.text.trim());
+    final ok = await auth.forgotPassword(_emailCtrl.text.trim());
 
     if (!mounted) return;
-
     setState(() => _isLoading = false);
-
-    if (success) {
+    if (ok) {
       setState(() => _step = 1);
     } else {
       setState(() => _errorMessage = auth.error ?? 'Failed to send reset link');
@@ -621,7 +663,7 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
 
   Future<void> _resetPassword() async {
     if (_tokenCtrl.text.isEmpty) {
-      setState(() => _errorMessage = 'Please enter the reset token');
+      setState(() => _errorMessage = 'Enter the reset token');
       return;
     }
     if (_newPassCtrl.text.length < 8) {
@@ -633,61 +675,47 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
+    setState(() { _isLoading = true; _errorMessage = null; });
     final auth = context.read<AuthProvider>();
-    final success = await auth.resetPassword(
-      _tokenCtrl.text.trim(),
-      _newPassCtrl.text,
-    );
+    final ok = await auth.resetPassword(_tokenCtrl.text.trim(), _newPassCtrl.text);
 
     if (!mounted) return;
-
     setState(() => _isLoading = false);
-
-    if (success) {
-      setState(() => _step = 2);
-    } else {
-      setState(() => _errorMessage = auth.error ?? 'Failed to reset password');
-    }
+    if (ok) setState(() => _step = 2);
+    else setState(() => _errorMessage = auth.error ?? 'Failed to reset password');
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A2E),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(
+            top: BorderSide(color: Colors.white.withOpacity(0.1), width: 1),
+          ),
         ),
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+            padding: const EdgeInsets.fromLTRB(22, 14, 22, 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Drag handle
                 Container(
-                  width: 40,
+                  width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 20),
-
+                const SizedBox(height: 22),
                 if (_step == 0) _buildEmailStep(),
                 if (_step == 1) _buildResetStep(),
                 if (_step == 2) _buildSuccessStep(),
-
-                SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+                SizedBox(height: MediaQuery.of(context).padding.bottom),
               ],
             ),
           ),
@@ -698,123 +726,30 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
 
   Widget _buildEmailStep() {
     return Form(
-      key: widget.formKey,
+      key: _formKey,
       child: Column(
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF6B35).withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.lock_reset_rounded,
-              size: 32,
-              color: Color(0xFFFF6B35),
-            ),
-          ),
+          _sheetIcon(Icons.lock_reset_rounded),
           const SizedBox(height: 16),
-          Text(
-            'Reset Password',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
+          _sheetTitle('Reset Password'),
           const SizedBox(height: 8),
-          Text(
-            'Enter your email address and we\'ll send\nyou a reset token.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: Colors.grey[600],
-              height: 1.5,
-            ),
-          ),
+          _sheetSubtitle("Enter your email and we'll send a reset token"),
           const SizedBox(height: 24),
-          TextFormField(
-            controller: widget.emailController,
+          _sheetField(
+            controller: _emailCtrl,
+            focusNode: _emailFocus,
+            hint: 'Email address',
+            icon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,
-            style: GoogleFonts.poppins(fontSize: 14),
-            validator: (value) {
-              if (value == null || value.isEmpty) return 'Email is required';
-              if (!value.contains('@')) return 'Enter a valid email';
+            validator: (v) {
+              if (v == null || v.isEmpty) return 'Email is required';
+              if (!v.contains('@')) return 'Enter a valid email';
               return null;
             },
-            decoration: InputDecoration(
-              hintText: 'Enter your email',
-              hintStyle: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 14),
-              prefixIcon: Icon(Icons.email_outlined, color: Colors.grey[400], size: 20),
-              filled: true,
-              fillColor: Colors.grey[50],
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.grey[300]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFFF6B35), width: 1.5),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(color: Colors.red.shade300),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Colors.red, width: 1.5),
-              ),
-            ),
           ),
-          if (_errorMessage != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, color: Colors.red[400], size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _errorMessage!,
-                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.red[700]),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          if (_errorMessage != null) _errorBox(_errorMessage!),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _sendResetLink,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF6B35),
-                disabledBackgroundColor: const Color(0xFFFF6B35).withOpacity(0.6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 22, height: 22,
-                      child: PremiumLoader(color: Colors.white, strokeWidth: 2.5),
-                    )
-                  : Text(
-                      'Send Reset Token',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white,
-                      ),
-                    ),
-            ),
-          ),
+          _sheetButton('Send Reset Token', _isLoading, _sendResetLink),
         ],
       ),
     );
@@ -823,103 +758,32 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
   Widget _buildResetStep() {
     return Column(
       children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF6B35).withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.mark_email_read_rounded,
-            size: 32,
-            color: Color(0xFFFF6B35),
-          ),
-        ),
+        _sheetIcon(Icons.mark_email_read_rounded),
         const SizedBox(height: 16),
-        Text(
-          'Check Your Email',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
+        _sheetTitle('Check Your Email'),
         const SizedBox(height: 8),
-        Text(
-          'We sent a reset token to\n${widget.emailController.text}',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600], height: 1.5),
-        ),
+        _sheetSubtitle('Token sent to ${_emailCtrl.text}'),
         const SizedBox(height: 24),
-        _buildSheetField(
-          controller: _tokenCtrl,
-          hint: 'Paste reset token',
-          icon: Icons.key_rounded,
-        ),
-        const SizedBox(height: 12),
-        _buildSheetField(
+        _sheetField(controller: _tokenCtrl, hint: 'Paste reset token', icon: Icons.key_rounded),
+        const SizedBox(height: 10),
+        _sheetField(
           controller: _newPassCtrl,
           hint: 'New password (min 8 chars)',
           icon: Icons.lock_outline_rounded,
-          obscure: _obscureNewPass,
-          toggleObscure: () => setState(() => _obscureNewPass = !_obscureNewPass),
+          obscure: _obscureNew,
+          toggleObscure: () => setState(() => _obscureNew = !_obscureNew),
         ),
-        const SizedBox(height: 12),
-        _buildSheetField(
+        const SizedBox(height: 10),
+        _sheetField(
           controller: _confirmPassCtrl,
           hint: 'Confirm new password',
           icon: Icons.lock_outline_rounded,
-          obscure: _obscureConfirmPass,
-          toggleObscure: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
+          obscure: _obscureConfirm,
+          toggleObscure: () => setState(() => _obscureConfirm = !_obscureConfirm),
         ),
-        if (_errorMessage != null) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.error_outline, color: Colors.red[400], size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _errorMessage!,
-                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.red[700]),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        if (_errorMessage != null) _errorBox(_errorMessage!),
         const SizedBox(height: 20),
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: _isLoading ? null : _resetPassword,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6B35),
-              disabledBackgroundColor: const Color(0xFFFF6B35).withOpacity(0.6),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 0,
-            ),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 22, height: 22,
-                    child: PremiumLoader(color: Colors.white, strokeWidth: 2.5),
-                  )
-                : Text(
-                    'Reset Password',
-                    style: GoogleFonts.poppins(
-                      fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white,
-                    ),
-                  ),
-          ),
-        ),
+        _sheetButton('Reset Password', _isLoading, _resetPassword),
       ],
     );
   }
@@ -928,93 +792,190 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
     return Column(
       children: [
         Container(
-          width: 80,
-          height: 80,
+          width: 72,
+          height: 72,
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.1),
+            color: Colors.green.withOpacity(0.15),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.check_circle_rounded,
-            size: 48,
-            color: Colors.green,
-          ),
+          child: const Icon(Icons.check_circle_rounded, size: 40, color: Colors.green),
         ),
-        const SizedBox(height: 20),
-        Text(
-          'Password Reset!',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
+        const SizedBox(height: 18),
+        _sheetTitle('Password Reset!'),
         const SizedBox(height: 8),
-        Text(
-          'Your password has been reset successfully.\nYou can now log in with your new password.',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[600], height: 1.5),
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6B35),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 0,
-            ),
-            child: Text(
-              'Back to Login',
-              style: GoogleFonts.poppins(
-                fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white,
-              ),
-            ),
-          ),
-        ),
+        _sheetSubtitle('You can now sign in with your new password.'),
+        const SizedBox(height: 28),
+        _sheetButton('Back to Login', false, () => Navigator.pop(context)),
       ],
     );
   }
 
-  Widget _buildSheetField({
+  Widget _sheetIcon(IconData icon) => Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFF5722).withOpacity(0.12),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 30, color: const Color(0xFFFF5722)),
+      );
+
+  Widget _sheetTitle(String t) => Text(
+        t,
+        style: GoogleFonts.poppins(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      );
+
+  Widget _sheetSubtitle(String t) => Text(
+        t,
+        textAlign: TextAlign.center,
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          color: Colors.white.withOpacity(0.55),
+          height: 1.5,
+        ),
+      );
+
+  Widget _errorBox(String msg) => Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Container(
+          padding: const EdgeInsets.all(11),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.red.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline_rounded, color: Colors.red[400], size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  msg,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.red[300],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _sheetField({
     required TextEditingController controller,
     required String hint,
     required IconData icon,
+    FocusNode? focusNode,
+    TextInputType? keyboardType,
     bool obscure = false,
     VoidCallback? toggleObscure,
+    String? Function(String?)? validator,
   }) {
-    return TextField(
+    final field = TextField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: obscure,
-      style: GoogleFonts.poppins(fontSize: 14),
+      keyboardType: keyboardType,
+      style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+      cursorColor: const Color(0xFFFF5722),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 14),
-        prefixIcon: Icon(icon, color: Colors.grey[400], size: 20),
+        hintStyle: GoogleFonts.poppins(color: Colors.white.withOpacity(0.3), fontSize: 14),
+        prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.35), size: 20),
         suffixIcon: toggleObscure != null
             ? IconButton(
                 icon: Icon(
-                  obscure ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey[400],
+                  obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  color: Colors.white.withOpacity(0.4),
                   size: 20,
                 ),
                 onPressed: toggleObscure,
               )
             : null,
         filled: true,
-        fillColor: Colors.grey[50],
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: Colors.white.withOpacity(0.06),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey[300]!),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFFF6B35), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFFFF5722), width: 1.5),
         ),
       ),
     );
+
+    if (validator != null) {
+      return TextFormField(
+        controller: controller,
+        focusNode: focusNode,
+        keyboardType: keyboardType,
+        validator: validator,
+        style: GoogleFonts.poppins(color: Colors.white, fontSize: 14),
+        cursorColor: const Color(0xFFFF5722),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: GoogleFonts.poppins(color: Colors.white.withOpacity(0.3), fontSize: 14),
+          prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.35), size: 20),
+          filled: true,
+          fillColor: Colors.white.withOpacity(0.06),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFFF5722), width: 1.5),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: Colors.red.withOpacity(0.6)),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFFF6B6B), width: 1.5),
+          ),
+          errorStyle: GoogleFonts.poppins(color: const Color(0xFFFF6B6B), fontSize: 11),
+        ),
+      );
+    }
+
+    return field;
   }
+
+  Widget _sheetButton(String label, bool loading, VoidCallback onTap) => SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: ElevatedButton(
+          onPressed: loading ? null : onTap,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFFF5722),
+            disabledBackgroundColor: const Color(0xFFFF5722).withOpacity(0.4),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            elevation: 0,
+          ),
+          child: loading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: PremiumLoader(color: Colors.white, strokeWidth: 2.5),
+                )
+              : Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+        ),
+      );
 }
