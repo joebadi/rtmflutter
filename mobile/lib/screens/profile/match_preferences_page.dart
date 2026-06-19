@@ -464,11 +464,8 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
       'Relationship Status',
       Icons.favorite_outline_rounded,
       [
-        _chipWrap(
-          _relationshipStatuses,
-          _selectedRelationshipStatuses,
-          (v) => _toggleInList(_selectedRelationshipStatuses, v),
-        ),
+        _multiField(_selectedRelationshipStatuses, _relationshipStatuses,
+            'Relationship status'),
       ],
       trailing: _dealBreakerSwitch('relationshipStatus'),
     );
@@ -481,18 +478,13 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
       [
         Text('Country', style: _labelStyle()),
         const SizedBox(height: 8),
-        _chipWrap(_countries, [_selectedCountry], (v) {
-          setState(() => _selectedCountry = v);
-        }),
+        _singleField(_selectedCountry, _countries,
+            (v) => setState(() => _selectedCountry = v)),
         if (_selectedCountry == 'Nigeria') ...[
           const SizedBox(height: 14),
           Text('States they can reside in', style: _labelStyle()),
           const SizedBox(height: 8),
-          _chipWrap(
-            kNigerianStates,
-            _selectedStates,
-            (v) => _toggleInList(_selectedStates, v),
-          ),
+          _multiField(_selectedStates, kNigerianStates, 'Preferred states'),
           if (_selectedStates.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(
@@ -711,8 +703,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         ],
       ),
       const SizedBox(height: 8),
-      _chipWrap(_religions, _selectedReligions,
-          (v) => _toggleInList(_selectedReligions, v)),
+      _multiField(_selectedReligions, _religions, 'Religion'),
       const SizedBox(height: 14),
       Row(
         children: [
@@ -722,8 +713,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         ],
       ),
       const SizedBox(height: 8),
-      _chipWrap(
-          _zodiacs, _selectedZodiacs, (v) => _toggleInList(_selectedZodiacs, v)),
+      _multiField(_selectedZodiacs, _zodiacs, 'Zodiac'),
     ]);
   }
 
@@ -737,8 +727,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         ],
       ),
       const SizedBox(height: 8),
-      _chipWrap(_genotypes, _selectedGenotypes,
-          (v) => _toggleInList(_selectedGenotypes, v)),
+      _multiField(_selectedGenotypes, _genotypes, 'Genotype'),
       const SizedBox(height: 14),
       Row(
         children: [
@@ -748,8 +737,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         ],
       ),
       const SizedBox(height: 8),
-      _chipWrap(_bloodGroups, _selectedBloodGroups,
-          (v) => _toggleInList(_selectedBloodGroups, v)),
+      _multiField(_selectedBloodGroups, _bloodGroups, 'Blood group'),
     ]);
   }
 
@@ -765,8 +753,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         ],
       ),
       const SizedBox(height: 8),
-      _chipWrap(_bodyTypes, _selectedBodyTypes,
-          (v) => _toggleInList(_selectedBodyTypes, v)),
+      _multiField(_selectedBodyTypes, _bodyTypes, 'Body type'),
       const SizedBox(height: 14),
       _tristate('Tattoos', _preferredTattoos,
           (v) => setState(() => _preferredTattoos = v), 'tattoos'),
@@ -826,51 +813,229 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
       fontWeight: FontWeight.w600,
       color: AppTheme.fg(context, 0.85));
 
-  void _toggleInList(List<String> list, String value) {
-    setState(() {
-      if (list.contains(value)) {
-        list.remove(value);
-      } else {
-        list.add(value);
-      }
-    });
-  }
 
-  Widget _chipWrap(
-    List<String> items,
-    List<String> selected,
-    ValueChanged<String> onTap,
-  ) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: items.map((item) {
-        final on = selected.contains(item);
-        return _selectChip(item, on, () => onTap(item));
-      }).toList(),
+  /// Filter-style multi-select field: a tappable surface field that shows the
+  /// selection summary + count and opens a checkbox sheet.
+  Widget _multiField(
+      List<String> selected, List<String> options, String sheetTitle) {
+    final summary = selected.isEmpty ? 'Any' : selected.join(', ');
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () async {
+          await _openMultiSelect(sheetTitle, options, selected);
+          setState(() {});
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            color: AppTheme.surface2(context),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.hairline(context)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  summary,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.5,
+                    fontWeight:
+                        selected.isEmpty ? FontWeight.w500 : FontWeight.w600,
+                    color: selected.isEmpty
+                        ? AppTheme.textFaint(context)
+                        : AppTheme.textPrimary(context),
+                  ),
+                ),
+              ),
+              if (selected.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text('${selected.length}',
+                      style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white)),
+                ),
+              Icon(Icons.keyboard_arrow_down_rounded,
+                  color: AppTheme.textFaint(context)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _selectChip(String label, bool selected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: selected ? AppTheme.accentGradient : null,
-          color: selected ? null : AppTheme.surface2(context),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? Colors.transparent : AppTheme.hairline(context),
-          ),
-        ),
-        child: Text(
-          label,
+  /// Single-select field (e.g. country) using a styled dropdown.
+  Widget _singleField(
+      String value, List<String> options, ValueChanged<String> onPick) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppTheme.surface2(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.hairline(context)),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: options.contains(value) ? value : null,
+          dropdownColor: AppTheme.surface(context),
+          borderRadius: BorderRadius.circular(14),
+          icon: Icon(Icons.keyboard_arrow_down_rounded,
+              color: AppTheme.textFaint(context)),
           style: GoogleFonts.poppins(
-            fontSize: 12.5,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? Colors.white : AppTheme.fg(context, 0.75),
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary(context)),
+          items: options
+              .map((o) => DropdownMenuItem(value: o, child: Text(o)))
+              .toList(),
+          onChanged: (v) {
+            if (v != null) onPick(v);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Theme-aware checkbox bottom sheet; mutates [selected] in place.
+  Future<void> _openMultiSelect(
+      String title, List<String> options, List<String> selected) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (sheetCtx, setSheet) => Container(
+          height: MediaQuery.of(sheetCtx).size.height * 0.65,
+          decoration: BoxDecoration(
+            color: AppTheme.bg(context),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: AppTheme.textFaint(context),
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 12, 12, 6),
+                child: Row(
+                  children: [
+                    Text(title,
+                        style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary(context))),
+                    const Spacer(),
+                    if (selected.isNotEmpty)
+                      TextButton(
+                        onPressed: () => setSheet(() => selected.clear()),
+                        child: Text('Clear',
+                            style: GoogleFonts.poppins(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.accent)),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                  children: options.map((o) {
+                    final on = selected.contains(o);
+                    return GestureDetector(
+                      onTap: () => setSheet(
+                          () => on ? selected.remove(o) : selected.add(o)),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 13),
+                        decoration: BoxDecoration(
+                          color: on
+                              ? AppTheme.accent.withOpacity(0.16)
+                              : AppTheme.surface(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: on
+                                  ? AppTheme.accent
+                                  : AppTheme.hairline(context)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              on
+                                  ? Icons.check_box_rounded
+                                  : Icons.check_box_outline_blank_rounded,
+                              color: on
+                                  ? AppTheme.accent
+                                  : AppTheme.textFaint(context),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(o,
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 13.5,
+                                      fontWeight: on
+                                          ? FontWeight.w600
+                                          : FontWeight.w500,
+                                      color: AppTheme.textPrimary(context))),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.accentGradient,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => Navigator.pop(sheetCtx),
+                        child: Center(
+                          child: Text(
+                            selected.isEmpty
+                                ? 'Done'
+                                : 'Done · ${selected.length} selected',
+                            style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
