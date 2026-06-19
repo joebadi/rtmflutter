@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../config/theme.dart';
+import '../../data/location_preferences.dart';
 import '../../data/nigeria_locations.dart';
 import '../../services/match_service.dart';
+import '../../widgets/location_preference_editor.dart';
 import '../../widgets/premium_loader.dart';
 
 /// Match Preferences — dark premium redesign matching the Live Dates / Wallet
@@ -23,10 +25,8 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
 
   RangeValues _ageRange = const RangeValues(18, 50);
   final List<String> _selectedRelationshipStatuses = [];
-  String _selectedCountry = 'Nigeria';
-  final List<String> _selectedStates = [];
-  // Preferred state-of-origin -> tribes (e.g. {"Edo":["Esan"],"Delta":["All"]}).
-  final Map<String, List<String>> _tribePrefs = {};
+  // Coupled location/origin blocks (OR'd) — see LocationPreferenceEditor.
+  final List<LocationBlock> _locationBlocks = [];
   final List<String> _selectedReligions = [];
   final List<String> _selectedZodiacs = [];
   final List<String> _selectedGenotypes = [];
@@ -54,14 +54,6 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     'Divorced',
     'Widowed',
     'Separated',
-  ];
-  final List<String> _countries = [
-    'Nigeria',
-    'Ghana',
-    'Kenya',
-    'South Africa',
-    'USA',
-    'UK',
   ];
   final List<String> _religions = ['Christianity', 'Islam', 'Traditional', 'Other'];
   final List<String> _zodiacs = [
@@ -131,10 +123,6 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             (data['ageMax'] as num).toDouble(),
           );
         }
-        if (data['locationCountry'] != null) {
-          _selectedCountry = data['locationCountry'];
-        }
-
         void loadList(String key, List<String> target) {
           if (data[key] != null && data[key] is List) {
             target
@@ -144,18 +132,29 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         }
 
         loadList('relationshipStatus', _selectedRelationshipStatuses);
-        loadList('locationStates', _selectedStates);
         loadList('religion', _selectedReligions);
         loadList('zodiac', _selectedZodiacs);
         loadList('genotype', _selectedGenotypes);
         loadList('bloodGroup', _selectedBloodGroups);
         loadList('bodyType', _selectedBodyTypes);
 
-        // Tribe preferences (state -> tribes map). Fall back to the legacy flat
-        // list if the new field is absent.
-        _tribePrefs
+        // Location/origin blocks. Prefer the new model; otherwise reconstruct a
+        // single block from the legacy locationCountry/locationStates/tribePreferences.
+        _locationBlocks
           ..clear()
-          ..addAll(parseTribePreferences(data['tribePreferences']));
+          ..addAll(parseLocationBlocks(data['locationPreferences']));
+        if (_locationBlocks.isEmpty && data['locationCountry'] != null) {
+          final legacyTribes = parseTribePreferences(data['tribePreferences']);
+          _locationBlocks.add(LocationBlock(
+            residenceCountry: data['locationCountry'].toString(),
+            residenceStates: data['locationStates'] is List
+                ? (data['locationStates'] as List).map((e) => e.toString()).toList()
+                : [],
+            origins: legacyTribes.isEmpty
+                ? []
+                : [OriginRule(country: 'Nigeria', stateTribes: legacyTribes)],
+          ));
+        }
 
         final minIdx = _cmToHeightIndex(
             data['heightMin'] is num ? (data['heightMin'] as num).toInt() : null);
@@ -190,18 +189,6 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     }
   }
 
-  /// Flatten the state -> tribes map into a legacy flat list of tribe names
-  /// (excluding the "All" sentinel) for backward compatibility.
-  List<String> _flatTribes() {
-    final set = <String>{};
-    _tribePrefs.forEach((_, tribes) {
-      for (final t in tribes) {
-        if (t != 'All') set.add(t);
-      }
-    });
-    return set.toList();
-  }
-
   Future<void> _savePreferences() async {
     setState(() => _isSaving = true);
     try {
@@ -209,10 +196,12 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         'ageMin': _ageRange.start.round(),
         'ageMax': _ageRange.end.round(),
         'ageIsDealBreaker': false,
-        'locationCountry': _selectedCountry,
-        'locationStates': _selectedStates,
-        'locationTribes': _flatTribes(),
-        'tribePreferences': _tribePrefs,
+        // New coupled-block model + derived legacy fields for back-compat.
+        'locationPreferences': locationBlocksToJson(_locationBlocks),
+        'locationCountry': deriveLegacyCountry(_locationBlocks),
+        'locationStates': deriveLegacyStates(_locationBlocks),
+        'locationTribes': deriveLegacyFlatTribes(_locationBlocks),
+        'tribePreferences': deriveLegacyTribePrefs(_locationBlocks),
         'locationIsDealBreaker': _dealBreakers['location'] ?? false,
         'relationshipStatus': _selectedRelationshipStatuses,
         'relationshipIsDealBreaker': _dealBreakers['relationshipStatus'] ?? false,
@@ -279,8 +268,6 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                         _relationshipSection(),
                         const SizedBox(height: 14),
                         _locationSection(),
-                        const SizedBox(height: 14),
-                        _tribeSection(),
                         const SizedBox(height: 14),
                         _beliefsSection(),
                         const SizedBox(height: 14),
@@ -473,49 +460,18 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
 
   Widget _locationSection() {
     return _card(
-      'Preferred Location',
+      'Preferred Location & Origin',
       Icons.place_outlined,
       [
-        Text('Country', style: _labelStyle()),
-        const SizedBox(height: 8),
-        _singleField(_selectedCountry, _countries,
-            (v) => setState(() => _selectedCountry = v)),
-        if (_selectedCountry == 'Nigeria') ...[
-          const SizedBox(height: 14),
-          Text('States they can reside in', style: _labelStyle()),
-          const SizedBox(height: 8),
-          _multiField(_selectedStates, kNigerianStates, 'Preferred states'),
-          if (_selectedStates.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              '$_selectedCountry (${_selectedStates.join(', ')})',
-              style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: AppTheme.fg(context, 0.6),
-                  fontStyle: FontStyle.italic),
-            ),
-          ],
-        ],
-      ],
-      trailing: _dealBreakerSwitch('location'),
-    );
-  }
-
-  Widget _tribeSection() {
-    return _card(
-      'Preferred Tribe',
-      Icons.diversity_3_outlined,
-      [
-        Text(
-          'Pick a state of origin, then the tribe(s) you prefer — or "All".',
-          style: GoogleFonts.poppins(
-              fontSize: 11.5, color: AppTheme.fg(context, 0.6), height: 1.35),
+        LocationPreferenceEditor(
+          blocks: _locationBlocks,
+          onChanged: (b) => setState(() {
+            _locationBlocks
+              ..clear()
+              ..addAll(b);
+          }),
         ),
-        const SizedBox(height: 12),
-        ..._tribePrefs.keys.map(_tribeStateCard),
-        const SizedBox(height: 4),
-        _addStateButton(),
-        if (_tribePrefs.isNotEmpty) ...[
+        if (_locationBlocks.isNotEmpty) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(10),
@@ -525,16 +481,17 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.people_alt_rounded,
+                const Icon(Icons.travel_explore_rounded,
                     color: AppTheme.accent, size: 15),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Tribe(s): ${formatTribePreferences(_tribePrefs)}',
+                    formatLocationBlocks(_locationBlocks),
                     style: GoogleFonts.poppins(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         color: AppTheme.fg(context, 0.85),
-                        fontWeight: FontWeight.w500),
+                        fontWeight: FontWeight.w500,
+                        height: 1.35),
                   ),
                 ),
               ],
@@ -542,154 +499,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
           ),
         ],
       ],
-    );
-  }
-
-  Widget _tribeStateCard(String state) {
-    final selected = _tribePrefs[state] ?? [];
-    final isAll = selected.contains('All');
-    final tribes = tribesForState(state);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.surface2(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.accent.withOpacity(0.18)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                state,
-                style: GoogleFonts.poppins(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary(context)),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => setState(() => _tribePrefs.remove(state)),
-                child: Icon(Icons.close_rounded,
-                    size: 18, color: AppTheme.fg(context, 0.5)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            children: [
-              _smallChip('All', isAll, () {
-                setState(() => _tribePrefs[state] = isAll ? [] : ['All']);
-              }),
-              ...tribes.map((t) {
-                final on = selected.contains(t);
-                return _smallChip(t, on, () {
-                  setState(() {
-                    final list = List<String>.from(_tribePrefs[state] ?? []);
-                    list.remove('All');
-                    if (on) {
-                      list.remove(t);
-                    } else {
-                      list.add(t);
-                    }
-                    _tribePrefs[state] = list;
-                  });
-                });
-              }),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _addStateButton() {
-    return GestureDetector(
-      onTap: _showAddStateSheet,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 11),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: AppTheme.accent.withOpacity(0.4),
-              width: 1.3,
-              style: BorderStyle.solid),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.add_rounded, color: AppTheme.accent, size: 18),
-            const SizedBox(width: 6),
-            Text('Add state of origin',
-                style: GoogleFonts.poppins(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.accent)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showAddStateSheet() {
-    final remaining =
-        kNigerianStates.where((s) => !_tribePrefs.containsKey(s)).toList();
-    if (remaining.isEmpty) return;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surface(context),
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 10),
-            Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                  color: AppTheme.textFaint(context), borderRadius: BorderRadius.circular(2)),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Select state of origin',
-                    style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textPrimary(context))),
-              ),
-            ),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: remaining.length,
-                itemBuilder: (_, i) {
-                  final s = remaining[i];
-                  return ListTile(
-                    title: Text(s,
-                        style: GoogleFonts.poppins(
-                            color: AppTheme.textPrimary(context), fontSize: 13.5)),
-                    trailing: const Icon(Icons.add_rounded,
-                        color: AppTheme.accent, size: 18),
-                    onTap: () {
-                      setState(() => _tribePrefs[s] = ['All']);
-                      Navigator.pop(ctx);
-                    },
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+      trailing: _dealBreakerSwitch('location'),
     );
   }
 
@@ -875,39 +685,6 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     );
   }
 
-  /// Single-select field (e.g. country) using a styled dropdown.
-  Widget _singleField(
-      String value, List<String> options, ValueChanged<String> onPick) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppTheme.surface2(context),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.hairline(context)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          value: options.contains(value) ? value : null,
-          dropdownColor: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(14),
-          icon: Icon(Icons.keyboard_arrow_down_rounded,
-              color: AppTheme.textFaint(context)),
-          style: GoogleFonts.poppins(
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary(context)),
-          items: options
-              .map((o) => DropdownMenuItem(value: o, child: Text(o)))
-              .toList(),
-          onChanged: (v) {
-            if (v != null) onPick(v);
-          },
-        ),
-      ),
-    );
-  }
-
   /// Theme-aware checkbox bottom sheet; mutates [selected] in place.
   Future<void> _openMultiSelect(
       String title, List<String> options, List<String> selected) async {
@@ -1036,30 +813,6 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _smallChip(String label, bool selected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? AppTheme.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? AppTheme.accent : AppTheme.hairline(context),
-          ),
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 11.5,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? Colors.white : AppTheme.fg(context, 0.7),
           ),
         ),
       ),

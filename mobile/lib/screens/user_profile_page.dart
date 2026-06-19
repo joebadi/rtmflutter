@@ -7,6 +7,7 @@ import '../services/like_service.dart';
 import '../services/match_service.dart';
 import '../services/relationship_service.dart';
 import '../data/nigeria_locations.dart';
+import '../data/location_preferences.dart';
 import '../widgets/premium_loader.dart';
 
 class UserProfilePage extends StatefulWidget {
@@ -1821,8 +1822,18 @@ class _UserProfilePageState extends State<UserProfilePage>
     return _youMatchThemMatches.contains(fieldKey);
   }
 
-  /// "Nigeria (Edo, Delta, Lagos)" — country grouped with preferred states.
+  /// True when the new coupled location/origin blocks are present.
+  bool _hasLocationBlocks(Map prefs) =>
+      prefs['locationPreferences'] is List &&
+      (prefs['locationPreferences'] as List).isNotEmpty;
+
+  /// Preferred location + origin. Prefers the new coupled-block model (e.g.
+  /// "Nigeria (Delta, Lagos) · from Edo (Esan)  OR  United Kingdom (anywhere)");
+  /// falls back to the legacy "Nigeria (Edo, Delta, Lagos)".
   String _formatPreferredLocation(Map prefs) {
+    if (_hasLocationBlocks(prefs)) {
+      return formatLocationBlocks(parseLocationBlocks(prefs['locationPreferences']));
+    }
     final country = prefs['locationCountry']?.toString() ?? '';
     final states = (prefs['locationStates'] is List)
         ? (prefs['locationStates'] as List).map((e) => e.toString()).toList()
@@ -1996,23 +2007,28 @@ class _UserProfilePageState extends State<UserProfilePage>
               isDealBreaker: _isDealBreaker(prefs, 'relationshipIsDealBreaker'),
             ),
 
-            // Location — country grouped with preferred states
+            // Location (+ origin). The coupled-block model folds origin/tribe into
+            // one line; the legacy model still shows a separate tribe row below.
             _buildPreferenceItem(
               Icons.location_on,
-              'Preferred Location',
+              _hasLocationBlocks(prefs)
+                  ? 'Preferred Location & Origin'
+                  : 'Preferred Location',
               _formatPreferredLocation(prefs),
               matched: _reciprocalMatch('location'),
               isDealBreaker: _isDealBreaker(prefs, 'locationIsDealBreaker'),
             ),
 
-            // Tribe(s) — grouped by state of origin
-            _buildPreferenceItem(
-              Icons.people,
-              'Preferred Tribe(s)',
-              _formatPreferredTribes(prefs),
-              matched: _reciprocalMatch('tribe'),
-              isDealBreaker: _isDealBreaker(prefs, 'locationIsDealBreaker'),
-            ),
+            // Tribe(s) — legacy only (origin is folded into the location line above
+            // under the new coupled-block model).
+            if (!_hasLocationBlocks(prefs))
+              _buildPreferenceItem(
+                Icons.people,
+                'Preferred Tribe(s)',
+                _formatPreferredTribes(prefs),
+                matched: _reciprocalMatch('tribe'),
+                isDealBreaker: _isDealBreaker(prefs, 'locationIsDealBreaker'),
+              ),
 
             // Religion
             _buildPreferenceItem(
