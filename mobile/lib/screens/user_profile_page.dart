@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../config/api_config.dart';
 import '../services/like_service.dart';
 import '../services/match_service.dart';
+import '../services/relationship_service.dart';
 import '../data/nigeria_locations.dart';
 import '../widgets/premium_loader.dart';
 
@@ -29,6 +30,7 @@ class _UserProfilePageState extends State<UserProfilePage>
 
   final LikeService _likeService = LikeService();
   final MatchService _matchService = MatchService();
+  final RelationshipService _relationshipService = RelationshipService();
   bool _isLiked = false;
   bool _isLiking = false;
 
@@ -169,6 +171,89 @@ class _UserProfilePageState extends State<UserProfilePage>
         _menuAnimationController.reverse();
       }
     });
+  }
+
+  String? get _targetUserId =>
+      (_userObj['id'] ?? _user['userId'])?.toString();
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.poppins()),
+        backgroundColor: const Color(0xFFFF5722),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _hideUser() async {
+    _toggleReportMenu();
+    final id = _targetUserId;
+    if (id == null) return;
+    try {
+      await _relationshipService.hide(id);
+      if (!mounted) return;
+      _toast('Hidden from your feed');
+      context.pop();
+    } catch (_) {
+      if (mounted) _toast('Could not hide profile');
+    }
+  }
+
+  Future<void> _saveUser() async {
+    _toggleReportMenu();
+    final id = _targetUserId;
+    if (id == null) return;
+    try {
+      await _relationshipService.save(id);
+      if (mounted) _toast('Saved to your profiles');
+    } catch (_) {
+      if (mounted) _toast('Could not save profile');
+    }
+  }
+
+  Future<void> _blockUser() async {
+    _toggleReportMenu();
+    final id = _targetUserId;
+    if (id == null) return;
+    try {
+      await _relationshipService.block(id);
+      if (!mounted) return;
+      _toast('User blocked');
+      context.pop();
+    } catch (_) {
+      if (mounted) _toast('Could not block user');
+    }
+  }
+
+  Widget _menuDivider() =>
+      Divider(height: 1, color: Colors.white.withOpacity(0.12));
+
+  Widget _menuRow(
+      IconData icon, String label, Color color, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(
+            children: [
+              Icon(icon, color: color, size: 19),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _reportUser() {
@@ -693,32 +778,27 @@ class _UserProfilePageState extends State<UserProfilePage>
                                       ),
                                       child: Material(
                                         color: Colors.transparent,
-                                        child: InkWell(
-                                          onTap: _reportUser,
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
-                                              vertical: 14,
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                const Icon(
-                                                  Icons.flag,
-                                                  color: Colors.red,
-                                                  size: 20,
-                                                ),
-                                                const SizedBox(width: 12),
-                                                Text(
-                                                  'Report User',
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            _menuRow(Icons.bookmark_border_rounded,
+                                                'Save profile', Colors.white,
+                                                _saveUser),
+                                            _menuDivider(),
+                                            _menuRow(
+                                                Icons.visibility_off_rounded,
+                                                'Hide from feed',
+                                                Colors.white,
+                                                _hideUser),
+                                            _menuDivider(),
+                                            _menuRow(Icons.block_rounded,
+                                                'Block', Colors.orangeAccent,
+                                                _blockUser),
+                                            _menuDivider(),
+                                            _menuRow(Icons.flag_rounded,
+                                                'Report', Colors.red,
+                                                _reportUser),
+                                          ],
                                         ),
                                       ),
                                     ),

@@ -171,12 +171,12 @@ class _OptionsPageState extends State<OptionsPage> {
             _buildOptionItem(
               icon: Icons.bookmark,
               title: 'Saved Profiles',
-              onTap: _comingSoon,
+              onTap: () => context.push('/saved-profiles'),
             ),
             _buildOptionItem(
               icon: Icons.block,
               title: 'Blocked Profiles',
-              onTap: _comingSoon,
+              onTap: () => context.push('/blocked-profiles'),
             ),
             _buildOptionItem(
               icon: Icons.favorite,
@@ -186,7 +186,7 @@ class _OptionsPageState extends State<OptionsPage> {
             _buildOptionItem(
               icon: Icons.visibility_off,
               title: 'Hidden Profiles',
-              onTap: _comingSoon,
+              onTap: () => context.push('/hidden-profiles'),
             ),
             _buildOptionItem(
               icon: Icons.tune,
