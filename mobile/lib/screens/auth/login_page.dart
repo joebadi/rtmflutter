@@ -163,8 +163,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
     return Scaffold(
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           Positioned.fill(
@@ -204,8 +206,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
                   const Expanded(child: SizedBox()),
 
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  AnimatedPadding(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOutCubic,
+                    padding: EdgeInsets.fromLTRB(
+                      16, 0, 16,
+                      keyboardHeight > 0 ? keyboardHeight + 10 : 24,
+                    ),
                     child: FadeTransition(
                       opacity: _fadeIn,
                       child: SlideTransition(
