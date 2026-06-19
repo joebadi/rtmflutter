@@ -105,18 +105,18 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.darkSurface,
+        backgroundColor: AppTheme.surface(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Cancel booking?',
-            style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: GoogleFonts.poppins(color: AppTheme.textPrimary(context), fontWeight: FontWeight.bold)),
         content: Text(
           'Your diamonds will be refunded if the event hasn\'t started.',
-          style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14),
+          style: GoogleFonts.poppins(color: AppTheme.textSecondary(context), fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Keep it', style: GoogleFonts.poppins(color: Colors.white54)),
+            child: Text('Keep it', style: GoogleFonts.poppins(color: AppTheme.textSecondary(context))),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -132,7 +132,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
       await _liveService.cancelBooking(id);
       if (!mounted) return;
       context.read<WalletProvider>().refresh();
-      _toast('Booking cancelled.', AppTheme.darkSurface2);
+      _toast('Booking cancelled.', AppTheme.surface2(context));
       await _load();
     } catch (e) {
       if (mounted) _toast(e.toString().replaceAll('Exception: ', ''), Colors.red);
@@ -160,7 +160,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
         child: Container(
           padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
           decoration: BoxDecoration(
-            color: AppTheme.darkSurface,
+            color: AppTheme.surface(context),
             borderRadius: BorderRadius.circular(28),
           ),
           child: Column(
@@ -170,12 +170,12 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
               const SizedBox(height: 16),
               Text('Not enough diamonds',
                   style: GoogleFonts.poppins(
-                      color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)),
+                      color: AppTheme.textPrimary(context), fontSize: 19, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Text(
                 '"${event['title']}" costs ${event['diamondCost']} diamonds to join. Top up to book your spot.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(color: Colors.white70, fontSize: 14, height: 1.5),
+                style: GoogleFonts.poppins(color: AppTheme.textSecondary(context), fontSize: 14, height: 1.5),
               ),
               const SizedBox(height: 24),
               SizedBox(
@@ -197,7 +197,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('Maybe later', style: GoogleFonts.poppins(color: Colors.white38)),
+                child: Text('Maybe later', style: GoogleFonts.poppins(color: AppTheme.textFaint(context))),
               ),
             ],
           ),
@@ -211,7 +211,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBg,
+      backgroundColor: AppTheme.bg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -234,18 +234,18 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AppLogo(height: 20, color: Colors.white),
+                AppLogo(height: 20, color: AppTheme.textPrimary(context)),
                 const SizedBox(height: 8),
                 Text('Live Dates',
                     style: GoogleFonts.poppins(
-                        fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white)),
+                        fontSize: 26, fontWeight: FontWeight.bold, color: AppTheme.textPrimary(context))),
                 const SizedBox(height: 2),
                 Text(
                   liveCount > 0
                       ? '$liveCount event${liveCount > 1 ? 's' : ''} live right now'
                       : 'Meet someone face-to-face',
                   style: GoogleFonts.poppins(
-                      fontSize: 13, color: liveCount > 0 ? AppTheme.accentBright : Colors.white54),
+                      fontSize: 13, color: liveCount > 0 ? AppTheme.accentBright : AppTheme.textSecondary(context)),
                 ),
               ],
             ),
@@ -313,10 +313,10 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppTheme.darkSurface, AppTheme.darkSurface2],
+          colors: [AppTheme.surface(context), AppTheme.surface2(context)],
         ),
         border: Border.all(
-          color: isLive ? accent.withOpacity(0.6) : Colors.white.withOpacity(0.07),
+          color: isLive ? accent.withOpacity(0.6) : AppTheme.hairline(context),
           width: isLive ? 2 : 1,
         ),
         boxShadow: [
@@ -353,7 +353,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, AppTheme.darkSurface.withOpacity(0.95)],
+                        colors: [Colors.transparent, AppTheme.surface(context).withOpacity(0.95)],
                       ),
                     ),
                   ),
@@ -384,13 +384,13 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                 children: [
                   Text(event['title']?.toString() ?? 'Live Date',
                       style: GoogleFonts.poppins(
-                          color: Colors.white, fontSize: 19, fontWeight: FontWeight.bold)),
+                          color: AppTheme.textPrimary(context), fontSize: 19, fontWeight: FontWeight.bold)),
                   if ((event['description']?.toString() ?? '').isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(event['description'].toString(),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(color: Colors.white60, fontSize: 13, height: 1.4)),
+                        style: GoogleFonts.poppins(color: AppTheme.textSecondary(context), fontSize: 13, height: 1.4)),
                   ],
                   const SizedBox(height: 14),
 
@@ -406,7 +406,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                             Text(
                               isFull ? 'Full · waitlist open' : '$spotsLeft spot${spotsLeft == 1 ? '' : 's'} left',
                               style: GoogleFonts.poppins(
-                                  color: isFull ? AppTheme.accentBright : Colors.white,
+                                  color: isFull ? AppTheme.accentBright : AppTheme.textPrimary(context),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600),
                             ),
@@ -451,7 +451,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
       child: Center(
         child: Icon(
           isBlind ? Icons.favorite_rounded : Icons.video_camera_front_rounded,
-          color: Colors.white.withOpacity(0.85),
+          color: AppTheme.fg(context, 0.85),
           size: 46,
         ),
       ),
@@ -573,12 +573,12 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                 height: 34,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppTheme.darkSurface2,
+                  color: AppTheme.surface2(context),
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.darkBg, width: 2),
+                  border: Border.all(color: AppTheme.bg(context), width: 2),
                 ),
                 child: Text('+$extra',
-                    style: GoogleFonts.poppins(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w700)),
+                    style: GoogleFonts.poppins(color: AppTheme.textSecondary(context), fontSize: 10, fontWeight: FontWeight.w700)),
               ),
             ),
         ],
@@ -592,14 +592,14 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
       height: 34,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppTheme.darkBg, width: 2),
-        color: AppTheme.darkSurface2,
+        border: Border.all(color: AppTheme.bg(context), width: 2),
+        color: AppTheme.surface2(context),
       ),
       child: ClipOval(
         child: url.isEmpty
-            ? const Icon(Icons.person, color: Colors.white30, size: 18)
+            ? Icon(Icons.person, color: AppTheme.textFaint(context), size: 18)
             : Image.network(url, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white30, size: 18)),
+                errorBuilder: (_, __, ___) => Icon(Icons.person, color: AppTheme.textFaint(context), size: 18)),
       ),
     );
   }
@@ -611,7 +611,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
       child: LinearProgressIndicator(
         value: pct,
         minHeight: 6,
-        backgroundColor: Colors.white.withOpacity(0.08),
+        backgroundColor: AppTheme.hairline(context),
         valueColor: AlwaysStoppedAnimation<Color>(accent),
       ),
     );
@@ -657,12 +657,12 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
     } else if (waitlisted) {
       label = 'On waitlist · Leave';
       icon = Icons.hourglass_top_rounded;
-      bg = AppTheme.darkSurface2;
+      bg = AppTheme.surface2(context);
       onTap = () => _cancel(event);
     } else if (isFull) {
       label = 'Join Waitlist';
       icon = Icons.playlist_add_rounded;
-      bg = AppTheme.darkSurface2;
+      bg = AppTheme.surface2(context);
       onTap = () => _book(event);
     } else {
       label = 'Book a Slot';
@@ -700,7 +700,7 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
 
     return RefreshIndicator(
       color: AppTheme.accent,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: AppTheme.surface(context),
       onRefresh: _load,
       child: _error != null ? _buildError() : _buildEventList(),
     );
@@ -713,10 +713,10 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
         Center(
           child: Column(
             children: [
-              const Icon(Icons.cloud_off_rounded, size: 56, color: Colors.white38),
+              Icon(Icons.cloud_off_rounded, size: 56, color: AppTheme.textFaint(context)),
               const SizedBox(height: 16),
               Text('Couldn\'t load events',
-                  style: GoogleFonts.poppins(color: Colors.white70, fontSize: 16)),
+                  style: GoogleFonts.poppins(color: AppTheme.textSecondary(context), fontSize: 16)),
               const SizedBox(height: 8),
               TextButton(
                 onPressed: _load,

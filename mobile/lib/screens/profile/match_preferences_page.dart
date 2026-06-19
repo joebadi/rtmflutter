@@ -261,7 +261,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.darkBg,
+      backgroundColor: AppTheme.bg(context),
       body: SafeArea(
         child: _isLoading
             ? const Center(child: PremiumLoader())
@@ -306,7 +306,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+            icon: Icon(Icons.arrow_back_rounded, color: AppTheme.textPrimary(context)),
             onPressed: () => context.pop(),
           ),
           Text(
@@ -314,7 +314,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: AppTheme.textPrimary(context),
             ),
           ),
         ],
@@ -338,7 +338,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
             child: Text(
               'Toggle "Deal breaker" for must-haves. We only score the preferences you set.',
               style: GoogleFonts.poppins(
-                  fontSize: 11.5, color: Colors.white.withOpacity(0.75), height: 1.35),
+                  fontSize: 11.5, color: AppTheme.fg(context, 0.75), height: 1.35),
             ),
           ),
         ],
@@ -350,8 +350,8 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
       decoration: BoxDecoration(
-        color: AppTheme.darkBg,
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.06))),
+        color: AppTheme.bg(context),
+        border: Border(top: BorderSide(color: AppTheme.hairline(context))),
       ),
       child: SizedBox(
         width: double.infinity,
@@ -401,9 +401,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.darkSurface,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: AppTheme.hairline(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,7 +425,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   style: GoogleFonts.poppins(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white),
+                      color: AppTheme.textPrimary(context)),
                 ),
               ),
               if (trailing != null) trailing,
@@ -451,7 +451,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         max: 70,
         divisions: 52,
         activeColor: AppTheme.accent,
-        inactiveColor: Colors.white24,
+        inactiveColor: AppTheme.textFaint(context),
         labels: RangeLabels(
             _ageRange.start.round().toString(), _ageRange.end.round().toString()),
         onChanged: (v) => setState(() => _ageRange = v),
@@ -499,7 +499,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
               '$_selectedCountry (${_selectedStates.join(', ')})',
               style: GoogleFonts.poppins(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.6),
+                  color: AppTheme.fg(context, 0.6),
                   fontStyle: FontStyle.italic),
             ),
           ],
@@ -517,7 +517,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         Text(
           'Pick a state of origin, then the tribe(s) you prefer — or "All".',
           style: GoogleFonts.poppins(
-              fontSize: 11.5, color: Colors.white.withOpacity(0.6), height: 1.35),
+              fontSize: 11.5, color: AppTheme.fg(context, 0.6), height: 1.35),
         ),
         const SizedBox(height: 12),
         ..._tribePrefs.keys.map(_tribeStateCard),
@@ -541,7 +541,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     'Tribe(s): ${formatTribePreferences(_tribePrefs)}',
                     style: GoogleFonts.poppins(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.85),
+                        color: AppTheme.fg(context, 0.85),
                         fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -561,7 +561,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.darkSurface2,
+        color: AppTheme.surface2(context),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.accent.withOpacity(0.18)),
       ),
@@ -575,13 +575,13 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                 style: GoogleFonts.poppins(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white),
+                    color: AppTheme.textPrimary(context)),
               ),
               const Spacer(),
               GestureDetector(
                 onTap: () => setState(() => _tribePrefs.remove(state)),
                 child: Icon(Icons.close_rounded,
-                    size: 18, color: Colors.white.withOpacity(0.5)),
+                    size: 18, color: AppTheme.fg(context, 0.5)),
               ),
             ],
           ),
@@ -649,7 +649,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     if (remaining.isEmpty) return;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.darkSurface,
+      backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => SafeArea(
@@ -661,7 +661,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
               width: 42,
               height: 4,
               decoration: BoxDecoration(
-                  color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  color: AppTheme.textFaint(context), borderRadius: BorderRadius.circular(2)),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
@@ -671,7 +671,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white)),
+                        color: AppTheme.textPrimary(context))),
               ),
             ),
             Flexible(
@@ -683,7 +683,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   return ListTile(
                     title: Text(s,
                         style: GoogleFonts.poppins(
-                            color: Colors.white, fontSize: 13.5)),
+                            color: AppTheme.textPrimary(context), fontSize: 13.5)),
                     trailing: const Icon(Icons.add_rounded,
                         color: AppTheme.accent, size: 18),
                     onTap: () {
@@ -798,7 +798,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     color: AppTheme.accent)),
             Text('to',
                 style: GoogleFonts.poppins(
-                    fontSize: 12, color: Colors.white38)),
+                    fontSize: 12, color: AppTheme.textFaint(context))),
             Text(_heightLabel(_heightRange.end.round()),
                 style: GoogleFonts.poppins(
                     fontSize: 13,
@@ -812,7 +812,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
           max: (_heights.length - 1).toDouble(),
           divisions: _heights.length - 1,
           activeColor: AppTheme.accent,
-          inactiveColor: Colors.white24,
+          inactiveColor: AppTheme.textFaint(context),
           onChanged: (v) => setState(() => _heightRange = v),
         ),
       ],
@@ -824,7 +824,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
   TextStyle _labelStyle() => GoogleFonts.poppins(
       fontSize: 12.5,
       fontWeight: FontWeight.w600,
-      color: Colors.white.withOpacity(0.85));
+      color: AppTheme.fg(context, 0.85));
 
   void _toggleInList(List<String> list, String value) {
     setState(() {
@@ -859,10 +859,10 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           gradient: selected ? AppTheme.accentGradient : null,
-          color: selected ? null : AppTheme.darkSurface2,
+          color: selected ? null : AppTheme.surface2(context),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? Colors.transparent : Colors.white.withOpacity(0.1),
+            color: selected ? Colors.transparent : AppTheme.hairline(context),
           ),
         ),
         child: Text(
@@ -870,7 +870,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
           style: GoogleFonts.poppins(
             fontSize: 12.5,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? Colors.white : Colors.white.withOpacity(0.75),
+            color: selected ? Colors.white : AppTheme.fg(context, 0.75),
           ),
         ),
       ),
@@ -886,7 +886,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
           color: selected ? AppTheme.accent : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? AppTheme.accent : Colors.white.withOpacity(0.18),
+            color: selected ? AppTheme.accent : AppTheme.hairline(context),
           ),
         ),
         child: Text(
@@ -894,7 +894,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
           style: GoogleFonts.poppins(
             fontSize: 11.5,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? Colors.white : Colors.white.withOpacity(0.7),
+            color: selected ? Colors.white : AppTheme.fg(context, 0.7),
           ),
         ),
       ),
@@ -912,7 +912,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
               style: GoogleFonts.poppins(
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
-                  color: on ? AppTheme.accent : Colors.white38)),
+                  color: on ? AppTheme.accent : AppTheme.textFaint(context))),
           const SizedBox(width: 4),
           Transform.scale(
             scale: 0.7,
@@ -948,7 +948,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                     style: GoogleFonts.poppins(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: active ? Colors.white : Colors.white60)),
+                        color: active ? Colors.white : AppTheme.textSecondary(context))),
               ),
             ),
           ),
@@ -968,9 +968,9 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: AppTheme.darkSurface2,
+            color: AppTheme.surface2(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.08)),
+            border: Border.all(color: AppTheme.hairline(context)),
           ),
           child: Row(
             children: [
