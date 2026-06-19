@@ -20,6 +20,7 @@ import 'screens/profile/options_page.dart';
 import 'screens/profile/liked_profiles_screen.dart';
 import 'screens/profile/languages_screen.dart';
 import 'screens/profile/relationship_list_screen.dart';
+import 'screens/profile/verification_screen.dart';
 import 'screens/premium/premium_page.dart';
 import 'screens/wallet/wallet_page.dart';
 import 'screens/explore_screen.dart';
@@ -136,6 +137,7 @@ final _router = GoRouter(
     GoRoute(path: '/saved-profiles', builder: (context, state) => const SavedProfilesScreen()),
     GoRoute(path: '/blocked-profiles', builder: (context, state) => const BlockedProfilesScreen()),
     GoRoute(path: '/hidden-profiles', builder: (context, state) => const HiddenProfilesScreen()),
+    GoRoute(path: '/verification', builder: (context, state) => const VerificationScreen()),
     GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
     GoRoute(path: '/premium', builder: (context, state) => const PremiumPage()),
     GoRoute(path: '/wallet', builder: (context, state) => const WalletPage()),

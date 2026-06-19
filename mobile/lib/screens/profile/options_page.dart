@@ -161,7 +161,7 @@ class _OptionsPageState extends State<OptionsPage> {
             _buildOptionItem(
               icon: Icons.verified,
               title: 'Apply for Verification',
-              onTap: _comingSoon,
+              onTap: () => context.push('/verification'),
             ),
             _buildOptionItem(
               icon: Icons.language,
@@ -412,16 +412,6 @@ class _OptionsPageState extends State<OptionsPage> {
             const SizedBox(height: 80),
           ],
         ),
-      ),
-    );
-  }
-
-  void _comingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Coming soon', style: GoogleFonts.poppins()),
-        backgroundColor: const Color(0xFFFF5722),
-        behavior: SnackBarBehavior.floating,
       ),
     );
   }
