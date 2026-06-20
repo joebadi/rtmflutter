@@ -552,9 +552,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           _buildSwitchButton('Map', Icons.map, 0),
           const SizedBox(width: 10),
           _buildSwitchButton('Swipe', Icons.style, 1),
-          const Spacer(),
-          // Location field — sits on the same line, far right.
-          Flexible(child: _buildLocationButton()),
+          const Spacer(flex: 1),
+          // Location field — sits on the same line, far right. Give it the
+          // bulk of the remaining width so the location text isn't squeezed.
+          Expanded(flex: 4, child: _buildLocationButton()),
         ],
       ),
     );
@@ -579,7 +580,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           ],
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
             Container(
               padding: const EdgeInsets.all(5),
@@ -592,7 +593,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   color: Colors.white, size: 13),
             ),
             const SizedBox(width: 6),
-            Flexible(
+            Expanded(
               child: Text(
                 _locationName,
                 style: GoogleFonts.poppins(
@@ -2272,9 +2273,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           builder: (context, setGridState) {
             return Container(
               height: MediaQuery.of(context).size.height * 0.95,
-              decoration: const BoxDecoration(
-                color: AppTheme.darkBg,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: AppTheme.bg(context),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Column(
                 children: [
@@ -2283,7 +2284,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white24,
+                      color: AppTheme.fg(context, 0.2),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -2300,14 +2301,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               style: GoogleFonts.poppins(
                                 fontSize: 19,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                                color: AppTheme.textPrimary(context),
                               ),
                             ),
                             Text(
                               '${_nearbyUsers.length} ${_nearbyUsers.length == 1 ? 'person' : 'people'} found',
                               style: GoogleFonts.poppins(
                                 fontSize: 11.5,
-                                color: Colors.white.withOpacity(0.5),
+                                color: AppTheme.textSecondary(context),
                               ),
                             ),
                           ],
@@ -2353,11 +2354,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.08),
+                              color: AppTheme.fg(context, 0.08),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.close_rounded,
-                                size: 17, color: Colors.white70),
+                            child: Icon(Icons.close_rounded,
+                                size: 17, color: AppTheme.fg(context, 0.7)),
                           ),
                         ),
                       ],
@@ -2410,7 +2411,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             style: GoogleFonts.poppins(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Colors.white.withOpacity(0.8),
+              color: AppTheme.textPrimary(context),
             ),
           ),
           const SizedBox(height: 6),
@@ -2418,7 +2419,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             'Try widening your filters',
             style: GoogleFonts.poppins(
               fontSize: 12.5,
-              color: Colors.white.withOpacity(0.5),
+              color: AppTheme.textSecondary(context),
             ),
           ),
         ],
@@ -2792,9 +2793,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFEDEFF2),
+                color: AppTheme.surface(context),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.black.withOpacity(0.05)),
+                border: Border.all(color: AppTheme.hairline(context)),
               ),
               child: Material(
                 color: Colors.transparent,
@@ -2824,7 +2825,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                   style: GoogleFonts.poppins(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF7A7F87))),
+                                      color: AppTheme.textSecondary(context))),
                               const SizedBox(height: 1),
                               Text(
                                 summary,
@@ -2836,8 +2837,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                         ? FontWeight.w500
                                         : FontWeight.w600,
                                     color: selected.isEmpty
-                                        ? const Color(0xFF9AA0A6)
-                                        : const Color(0xFF1A1D1E)),
+                                        ? AppTheme.textFaint(context)
+                                        : AppTheme.textPrimary(context)),
                               ),
                             ],
                           ),
@@ -2857,8 +2858,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white)),
                           ),
-                        const Icon(Icons.keyboard_arrow_down_rounded,
-                            color: Color(0xFF7A7F87)),
+                        Icon(Icons.keyboard_arrow_down_rounded,
+                            color: AppTheme.textFaint(context)),
                       ],
                     ),
                   ),
@@ -2873,9 +2874,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFEDEFF2),
+                color: AppTheme.surface(context),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.black.withOpacity(0.05)),
+                border: Border.all(color: AppTheme.hairline(context)),
               ),
               child: Row(
                 children: [
@@ -2889,7 +2890,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             style: GoogleFonts.poppins(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w500,
-                                color: const Color(0xFF7A7F87))),
+                                color: AppTheme.textSecondary(context))),
                         SizedBox(
                           height: 30,
                           child: DropdownButtonHideUnderline(
@@ -2897,15 +2898,15 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               isExpanded: true,
                               isDense: true,
                               value: _genderFilter ?? _defaultGender,
-                              dropdownColor: Colors.white,
+                              dropdownColor: AppTheme.surface(context),
                               borderRadius: BorderRadius.circular(14),
-                              icon: const Icon(
+                              icon: Icon(
                                   Icons.keyboard_arrow_down_rounded,
-                                  color: Color(0xFF7A7F87)),
+                                  color: AppTheme.textFaint(context)),
                               style: GoogleFonts.poppins(
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF1A1D1E)),
+                                  color: AppTheme.textPrimary(context)),
                               items: const [
                                 DropdownMenuItem(
                                     value: 'MALE', child: Text('Male')),
@@ -2944,9 +2945,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFEDEFF2),
+                color: AppTheme.surface(context),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.black.withOpacity(0.05)),
+                border: Border.all(color: AppTheme.hairline(context)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2959,7 +2960,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFF5A5F66))),
+                              color: AppTheme.textSecondary(context))),
                       const Spacer(),
                       Text(valueText,
                           style: GoogleFonts.poppins(
@@ -2976,9 +2977,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
           return Container(
             height: MediaQuery.of(context).size.height * 0.9,
-            decoration: const BoxDecoration(
-              color: AppTheme.darkBg,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: AppTheme.bg(context),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(
               children: [
@@ -2987,7 +2988,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
+                    color: AppTheme.fg(context, 0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -2999,7 +3000,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           style: GoogleFonts.poppins(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white)),
+                              color: AppTheme.textPrimary(context))),
                       const Spacer(),
                       TextButton(
                         onPressed: () => setModalState(() {
@@ -3036,11 +3037,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         child: Container(
                           padding: const EdgeInsets.all(5),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.08),
+                            color: AppTheme.fg(context, 0.08),
                             borderRadius: BorderRadius.circular(9),
                           ),
-                          child: const Icon(Icons.close_rounded,
-                              size: 16, color: Colors.white70),
+                          child: Icon(Icons.close_rounded,
+                              size: 16, color: AppTheme.fg(context, 0.7)),
                         ),
                       ),
                     ],
@@ -3059,13 +3060,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                 style: GoogleFonts.poppins(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w700,
-                                    color: Colors.white)),
+                                    color: AppTheme.textPrimary(context))),
                             const SizedBox(height: 3),
                             Text(
                                 'Dial in the details and we\'ll surface the matches that fit.',
                                 style: GoogleFonts.poppins(
                                     fontSize: 12,
-                                    color: Colors.white.withOpacity(0.55),
+                                    color: AppTheme.textSecondary(context),
                                     height: 1.35)),
                           ],
                         ),
@@ -3081,7 +3082,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           max: 100,
                           divisions: 82,
                           activeColor: AppTheme.accent,
-                          inactiveColor: Colors.black12,
+                          inactiveColor: AppTheme.fg(context, 0.12),
                           labels: RangeLabels('${_ageRange.start.round()}',
                               '${_ageRange.end.round()}'),
                           onChanged: (v) => setModalState(() => _ageRange = v),
@@ -3097,7 +3098,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           max: 500,
                           divisions: 499,
                           activeColor: AppTheme.accent,
-                          inactiveColor: Colors.black12,
+                          inactiveColor: AppTheme.fg(context, 0.12),
                           label: '${_distance.round()} km',
                           onChanged: (v) => setModalState(() => _distance = v),
                         ),
@@ -3138,7 +3139,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           max: 220,
                           divisions: 80,
                           activeColor: AppTheme.accent,
-                          inactiveColor: Colors.black12,
+                          inactiveColor: AppTheme.fg(context, 0.12),
                           labels: RangeLabels('${_heightRange.start.round()}',
                               '${_heightRange.end.round()}'),
                           onChanged: (v) =>
@@ -3182,9 +3183,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEDEFF2),
+                          color: AppTheme.surface(context),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.black.withOpacity(0.05)),
+                          border: Border.all(color: AppTheme.hairline(context)),
                         ),
                         child: Column(
                           children: [
@@ -3203,9 +3204,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 Container(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
                   decoration: BoxDecoration(
-                    color: AppTheme.darkBg,
+                    color: AppTheme.bg(context),
                     border: Border(
-                        top: BorderSide(color: Colors.white.withOpacity(0.06))),
+                        top: BorderSide(color: AppTheme.hairline(context))),
                   ),
                   child: SizedBox(
                     width: double.infinity,
@@ -3265,9 +3266,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         builder: (sheetCtx, setSheet) {
           return Container(
             height: MediaQuery.of(sheetCtx).size.height * 0.7,
-            decoration: const BoxDecoration(
-              color: AppTheme.darkBg,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: AppTheme.bg(sheetCtx),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Column(
               children: [
@@ -3276,7 +3277,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                      color: AppTheme.fg(sheetCtx, 0.2),
+                      borderRadius: BorderRadius.circular(2)),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 12, 12, 6),
@@ -3286,7 +3288,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           style: GoogleFonts.poppins(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white)),
+                              color: AppTheme.textPrimary(sheetCtx))),
                       const Spacer(),
                       if (selected.isNotEmpty)
                         TextButton(
@@ -3327,12 +3329,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               decoration: BoxDecoration(
                                 color: on
                                     ? AppTheme.accent.withOpacity(0.16)
-                                    : AppTheme.darkSurface,
+                                    : AppTheme.surface(sheetCtx),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                     color: on
                                         ? AppTheme.accent
-                                        : Colors.white.withOpacity(0.07)),
+                                        : AppTheme.hairline(sheetCtx)),
                               ),
                               child: Row(
                                 children: [
@@ -3340,7 +3342,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                     on
                                         ? Icons.check_box_rounded
                                         : Icons.check_box_outline_blank_rounded,
-                                    color: on ? AppTheme.accent : Colors.white38,
+                                    color: on
+                                        ? AppTheme.accent
+                                        : AppTheme.textFaint(sheetCtx),
                                     size: 20,
                                   ),
                                   const SizedBox(width: 12),
@@ -3351,7 +3355,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                             fontWeight: on
                                                 ? FontWeight.w600
                                                 : FontWeight.w500,
-                                            color: Colors.white)),
+                                            color: AppTheme.textPrimary(sheetCtx))),
                                   ),
                                 ],
                               ),
@@ -3409,7 +3413,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             style: GoogleFonts.poppins(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF3A3F46))),
+                color: AppTheme.textPrimary(context))),
         Transform.scale(
           scale: 0.78,
           child: Switch(

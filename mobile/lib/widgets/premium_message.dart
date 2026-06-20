@@ -134,20 +134,20 @@ Future<void> showPremiumAlert(
           child: Transform.scale(
             scale: 0.85 + 0.15 * curved,
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 36),
-              padding: const EdgeInsets.fromLTRB(24, 28, 24, 22),
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.fromLTRB(26, 28, 26, 22),
               decoration: BoxDecoration(
-                color: const Color(0xFF1C1C1E),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: style.color.withOpacity(0.35)),
+                color: AppTheme.surface(context),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppTheme.fg(context, 0.08)),
                 boxShadow: [
                   BoxShadow(
-                    color: style.color.withOpacity(0.18),
-                    blurRadius: 40,
-                    spreadRadius: 2,
+                    color: style.color.withOpacity(0.20),
+                    blurRadius: 36,
+                    spreadRadius: 1,
                   ),
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withOpacity(0.35),
                     blurRadius: 30,
                     offset: const Offset(0, 14),
                   ),
@@ -157,25 +157,27 @@ Future<void> showPremiumAlert(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 66,
+                    height: 66,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          style.color.withOpacity(0.30),
-                          style.color.withOpacity(0.10),
-                        ],
-                      ),
+                      color: style.color,
+                      boxShadow: [
+                        BoxShadow(
+                          color: style.color.withOpacity(0.45),
+                          blurRadius: 18,
+                          spreadRadius: 1,
+                        ),
+                      ],
                     ),
-                    child: Icon(style.icon, color: style.color, size: 34),
+                    child: Icon(style.icon, color: Colors.white, size: 32),
                   ),
                   const SizedBox(height: 18),
                   Text(
                     title,
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
-                      color: Colors.white,
+                      color: AppTheme.textPrimary(context),
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                       height: 1.25,
@@ -187,7 +189,7 @@ Future<void> showPremiumAlert(
                       message,
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
-                        color: Colors.white.withOpacity(0.66),
+                        color: AppTheme.textSecondary(context),
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
                         height: 1.4,
