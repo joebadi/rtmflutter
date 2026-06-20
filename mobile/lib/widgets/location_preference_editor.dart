@@ -29,6 +29,12 @@ class LocationPreferenceEditor extends StatefulWidget {
 class _LocationPreferenceEditorState extends State<LocationPreferenceEditor> {
   List<LocationBlock> get _blocks => widget.blocks;
 
+  /// Which block is currently expanded for editing. Blocks are collapsed by
+  /// default (showing a one-line summary) so the page stays short as more
+  /// location rules are added. Tracked by object identity so it survives the
+  /// list being rebuilt in [_emit].
+  LocationBlock? _expandedBlock;
+
   void _emit() {
     // Pass a *copy* of the list. The parent holds the same list instance as
     // `widget.blocks`, and its onChanged typically does `..clear()..addAll(b)`.
@@ -66,103 +72,154 @@ class _LocationPreferenceEditorState extends State<LocationPreferenceEditor> {
 
   Widget _blockCard(int index) {
     final block = _blocks[index];
+    final expanded = identical(_expandedBlock, block);
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: AppTheme.surface2(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.accent.withOpacity(0.18)),
+        border: Border.all(
+            color: AppTheme.accent.withOpacity(expanded ? 0.30 : 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppTheme.accent.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Location ${index + 1}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.accent,
+          // Tappable header — collapses/expands this block.
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () =>
+                setState(() => _expandedBlock = expanded ? null : block),
+            child: Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent.withOpacity(0.14),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Location ${index + 1}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.accent,
+                    ),
                   ),
                 ),
-              ),
-              const Spacer(),
-              GestureDetector(
-                onTap: () {
-                  _blocks.removeAt(index);
-                  _emit();
-                },
-                child: Icon(Icons.delete_outline_rounded,
-                    size: 19, color: AppTheme.fg(context, 0.5)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Residence ----------------------------------------------------------
-          Row(
-            children: [
-              Icon(Icons.home_outlined,
-                  size: 15, color: AppTheme.fg(context, 0.7)),
-              const SizedBox(width: 6),
-              Text('Where they live', style: _label()),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _countryDropdown(
-            block.residenceCountry,
-            (v) {
-              block.residenceCountry = v;
-              if (!countryHasStates(v)) block.residenceStates.clear();
-              _emit();
-            },
-          ),
-          if (countryHasStates(block.residenceCountry)) ...[
-            const SizedBox(height: 8),
-            _multiField(
-              block.residenceStates,
-              statesForCountry(block.residenceCountry),
-              'States of residence',
-              emptyLabel: 'Anywhere in ${block.residenceCountry}',
+                const SizedBox(width: 10),
+                Expanded(
+                  child: expanded
+                      ? const SizedBox()
+                      : Text(
+                          formatLocationBlock(block),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.fg(context, 0.7),
+                          ),
+                        ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    if (identical(_expandedBlock, block)) _expandedBlock = null;
+                    _blocks.removeAt(index);
+                    _emit();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(Icons.delete_outline_rounded,
+                        size: 19, color: AppTheme.fg(context, 0.5)),
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: expanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 220),
+                  child: Icon(Icons.keyboard_arrow_down_rounded,
+                      color: AppTheme.textFaint(context)),
+                ),
+              ],
             ),
-          ],
-
-          const SizedBox(height: 12),
-          Divider(color: AppTheme.hairline(context), height: 1),
-          const SizedBox(height: 12),
-
-          // Origin / nationality ----------------------------------------------
-          Row(
-            children: [
-              Icon(Icons.public_rounded,
-                  size: 15, color: AppTheme.fg(context, 0.7)),
-              const SizedBox(width: 6),
-              Expanded(child: Text('Where they’re from', style: _label())),
-              Text('optional',
-                  style: GoogleFonts.poppins(
-                      fontSize: 10.5, color: AppTheme.textFaint(context))),
-            ],
           ),
-          const SizedBox(height: 8),
-          _nationalityField(block),
-          for (final origin in block.origins)
-            if (countryHasTribes(origin.country)) _originTribePicker(origin),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: expanded
+                ? _blockBody(block)
+                : const SizedBox(width: double.infinity),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _blockBody(LocationBlock block) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+
+        // Residence ------------------------------------------------------------
+        Row(
+          children: [
+            Icon(Icons.home_outlined,
+                size: 15, color: AppTheme.fg(context, 0.7)),
+            const SizedBox(width: 6),
+            Text('Where they live', style: _label()),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _countryDropdown(
+          block.residenceCountry,
+          (v) {
+            block.residenceCountry = v;
+            if (!countryHasStates(v)) block.residenceStates.clear();
+            _emit();
+          },
+        ),
+        if (countryHasStates(block.residenceCountry)) ...[
+          const SizedBox(height: 8),
+          _multiField(
+            block.residenceStates,
+            statesForCountry(block.residenceCountry),
+            'States of residence',
+            emptyLabel: 'Anywhere in ${block.residenceCountry}',
+          ),
+        ],
+
+        const SizedBox(height: 12),
+        Divider(color: AppTheme.hairline(context), height: 1),
+        const SizedBox(height: 12),
+
+        // Origin / nationality -------------------------------------------------
+        Row(
+          children: [
+            Icon(Icons.public_rounded,
+                size: 15, color: AppTheme.fg(context, 0.7)),
+            const SizedBox(width: 6),
+            Expanded(child: Text('Where they’re from', style: _label())),
+            Text('optional',
+                style: GoogleFonts.poppins(
+                    fontSize: 10.5, color: AppTheme.textFaint(context))),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _nationalityField(block),
+        for (final origin in block.origins)
+          if (countryHasTribes(origin.country)) _originTribePicker(origin),
+      ],
     );
   }
 
   Widget _addBlockButton() {
     return GestureDetector(
       onTap: () {
-        _blocks.add(LocationBlock(residenceCountry: 'Nigeria'));
+        final block = LocationBlock(residenceCountry: 'Nigeria');
+        _blocks.add(block);
+        _expandedBlock = block; // open the new block for editing
         _emit();
       },
       child: Container(
