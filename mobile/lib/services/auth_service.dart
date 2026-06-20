@@ -97,61 +97,104 @@ class AuthService {
       throw _handleDioError(e, 'Registration failed');
     } catch (e) {
       print('Unexpected error during registration: $e');
-      throw Exception(
-        'Registration failed: ${e.toString().replaceAll('Exception: ', '')}',
-      );
+      throw AuthException(
+          'We couldn’t complete your registration. Please try again.');
     }
   }
 
+  /// Turns a Dio error into a friendly, human-readable [AuthException] — no raw
+  /// "Exception: ..." text and no developer jargon shown to users.
   Exception _handleDioError(DioException e, String defaultMessage) {
-    // Enhanced error logging
+    // Keep full detail in logs for debugging.
     print('$defaultMessage error: ${e.message}');
     print('Response data: ${e.response?.data}');
     print('Status code: ${e.response?.statusCode}');
 
-    String errorMessage = defaultMessage;
-    if (e.response?.data != null) {
-      final data = e.response!.data;
-      if (data is Map<String, dynamic>) {
-        if (data.containsKey('errors')) {
-          final errors = data['errors'];
-          if (errors is List) {
-            // Handle Zod array errors
-            // Example: [{ code: '...', message: '...', path: ['email'] }]
-            final errorMessages =
-                errors.map((err) {
-                  if (err is Map) {
-                    final path =
-                        (err['path'] as List?)?.join('.') ?? 'Field';
-                    return '$path: ${err['message']}';
-                  }
-                  return err.toString();
-                }).join('\n');
-            errorMessage = 'Validation error:\n$errorMessages';
-          } else if (errors is Map) {
-            // Handle Map errors
-            final errorList =
-                errors.entries.map((e) => '${e.key}: ${e.value}').join(', ');
-            errorMessage = 'Validation error: $errorList';
-          }
-        } else if (data.containsKey('message')) {
-          errorMessage = data['message'].toString();
-          // If there's additional error details, append them
-          if (data.containsKey('error') && data['error'] is Map) {
-            final errorDetails = data['error'] as Map<String, dynamic>;
-            if (errorDetails.containsKey('details')) {
-              errorMessage += '\nDetails: ${errorDetails['details']}';
-            }
-          }
-        } else if (data['error'] is Map) {
-          errorMessage =
-              data['error']['message']?.toString() ?? errorMessage;
-        } else if (data['error'] is String) {
-          errorMessage = data['error'];
+    // Connectivity problems (no/poor network).
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return AuthException(
+            'This is taking longer than usual. Please check your connection and try again.');
+      case DioExceptionType.connectionError:
+        return AuthException(
+            'We couldn’t reach the server. Please check your internet connection and try again.');
+      default:
+        break;
+    }
+
+    // Pull a server-provided message if there is one.
+    String? serverMessage;
+    final data = e.response?.data;
+    if (data is Map) {
+      if (data['message'] is String) {
+        serverMessage = data['message'] as String;
+      }
+      if ((serverMessage == null || serverMessage.isEmpty) &&
+          data['errors'] is List &&
+          (data['errors'] as List).isNotEmpty) {
+        final first = (data['errors'] as List).first;
+        if (first is Map && first['message'] != null) {
+          serverMessage = first['message'].toString();
         }
       }
     }
-    return Exception(errorMessage);
+
+    // Map by HTTP status to plain English.
+    switch (e.response?.statusCode) {
+      case 400:
+      case 422:
+        return AuthException(_friendly(serverMessage) ??
+            'Please check the details you entered and try again.');
+      case 401:
+        return AuthException(
+            'Your email or password is incorrect. Please try again.');
+      case 403:
+        return AuthException(
+            _friendly(serverMessage) ?? 'You don’t have permission to do that.');
+      case 404:
+        return AuthException(_friendly(serverMessage) ??
+            'We couldn’t find an account with those details.');
+      case 409:
+        return AuthException(_friendly(serverMessage) ??
+            'An account with these details already exists.');
+      case 429:
+        return AuthException(
+            'Too many attempts. Please wait a moment and try again.');
+    }
+    final status = e.response?.statusCode ?? 0;
+    if (status >= 500) {
+      return AuthException(
+          'Something went wrong on our end. Please try again in a moment.');
+    }
+    return AuthException(_friendly(serverMessage) ?? defaultMessage);
+  }
+
+  /// Cleans a server message: maps known developer phrases to friendly copy and
+  /// capitalises the first letter. Returns null for empty input.
+  String? _friendly(String? raw) {
+    if (raw == null) return null;
+    var s = raw.trim();
+    if (s.isEmpty) return null;
+    final lower = s.toLowerCase();
+    if (lower.contains('invalid credentials') ||
+        lower.contains('incorrect password') ||
+        lower.contains('wrong password')) {
+      return 'Your email or password is incorrect. Please try again.';
+    }
+    if (lower.contains('user not found') || lower.contains('no user')) {
+      return 'We couldn’t find an account with those details.';
+    }
+    if (lower.contains('already exists') ||
+        lower.contains('already registered') ||
+        lower.contains('duplicate')) {
+      return 'An account with these details already exists.';
+    }
+    if (lower.contains('expired') && lower.contains('token')) {
+      return 'Your session has expired. Please sign in again.';
+    }
+    return s[0].toUpperCase() + s.substring(1);
   }
 
   /// Send OTP for verification
@@ -314,4 +357,14 @@ class AuthService {
     final token = await getAccessToken();
     return token != null;
   }
+}
+
+/// A user-facing authentication error. Its [toString] is the friendly message
+/// itself (no "Exception:" prefix), so it can be shown directly in the UI.
+class AuthException implements Exception {
+  AuthException(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
 }

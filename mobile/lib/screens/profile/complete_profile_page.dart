@@ -8,6 +8,8 @@ import '../../services/profile_service.dart';
 import '../common/location_picker_screen.dart';
 import '../../services/location_search_service.dart';
 import '../../widgets/premium_dropdown.dart';
+import '../../config/theme.dart';
+import '../../widgets/premium_message.dart';
 
 class CompleteProfilePage extends StatefulWidget {
   final bool isEditing;
@@ -331,9 +333,8 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading profile: $e')),
-        );
+        showPremiumSnack(context, 'We couldn’t load your profile. Please try again.',
+            kind: MessageKind.error);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -357,15 +358,12 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       await _fetchProfileData(); // Refresh data to get updated photos
       
       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text('Photo uploaded successfully')),
-         );
+        showPremiumSnack(context, 'Photo added', kind: MessageKind.success);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload photo: $e')),
-        );
+        showPremiumSnack(context, 'Couldn’t upload that photo. Please try again.',
+            kind: MessageKind.error);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -378,15 +376,12 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
       await _profileService.deletePhoto(photoId);
       await _fetchProfileData(); // Refresh list
        if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text('Photo deleted')),
-         );
+        showPremiumSnack(context, 'Photo removed', kind: MessageKind.info);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete photo: $e')),
-        );
+        showPremiumSnack(context, 'Couldn’t remove that photo. Please try again.',
+            kind: MessageKind.error);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -443,41 +438,30 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
         await _profileService.updateProfile(profileData);
 
         if (mounted) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Profile saved successfully!',
-                style: GoogleFonts.poppins(),
-              ),
-              backgroundColor: const Color(0xFFFF5722),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
+          await showPremiumAlert(
+            context,
+            title: 'Profile saved',
+            message: 'Your changes are live.',
+            kind: MessageKind.success,
+            autoDismiss: const Duration(milliseconds: 1300),
           );
 
           // Navigate based on first load status
-          if (_isFirstLoad) {
+          if (_isFirstLoad && mounted) {
             setState(() {
               _isFirstLoad = false;
             });
-
-            // Navigate to home/explore page on first save
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (mounted) context.go('/home');
-            });
+            if (mounted) context.go('/home');
           }
         }
       } catch (e) {
         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to save profile: ${e.toString()}'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-            ),
+          await showPremiumAlert(
+            context,
+            title: 'Couldn’t save',
+            message: 'Something went wrong saving your profile. Please try again.',
+            kind: MessageKind.error,
+            buttonText: 'Try again',
           );
         }
       } finally {
@@ -485,27 +469,31 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
           setState(() => _isLoading = false);
         }
       }
+    } else {
+      showPremiumSnack(context, 'Please fill in the required fields.',
+          kind: MessageKind.warning);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.bg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
+        backgroundColor: AppTheme.surface(context),
+        elevation: 0,
+        scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: AppTheme.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'EDIT PROFILE',
+          'Edit Profile',
           style: GoogleFonts.poppins(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-            letterSpacing: 1.5,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary(context),
           ),
         ),
         centerTitle: true,
@@ -1176,15 +1164,9 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: AppTheme.hairline(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1194,18 +1176,18 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF5722).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppTheme.accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(9),
                 ),
-                child: Icon(icon, color: const Color(0xFFFF5722), size: 20),
+                child: Icon(icon, color: AppTheme.accent, size: 18),
               ),
               const SizedBox(width: 10),
               Text(
                 title,
                 style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary(context),
                 ),
               ),
             ],
@@ -1232,27 +1214,28 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
+            color: AppTheme.textSecondary(context),
           ),
         ),
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey[300]!),
+            color: AppTheme.surface2(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.hairline(context)),
           ),
           child: TextFormField(
             controller: controller,
             maxLines: maxLines,
-            style: GoogleFonts.poppins(color: Colors.black87, fontSize: 13),
+            style: GoogleFonts.poppins(
+                color: AppTheme.textPrimary(context), fontSize: 13),
             validator: required
                 ? (value) => value == null || value.isEmpty ? 'Required' : null
                 : null,
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.poppins(
-                color: Colors.grey[400],
+                color: AppTheme.textFaint(context),
                 fontSize: 13,
               ),
               border: InputBorder.none,
@@ -1292,23 +1275,24 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
           style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
+            color: AppTheme.textSecondary(context),
           ),
         ),
         const SizedBox(height: 6),
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey[300]!),
+            color: AppTheme.surface2(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.hairline(context)),
           ),
           child: TextFormField(
             controller: controller,
-            style: GoogleFonts.poppins(color: Colors.black87, fontSize: 13),
+            style: GoogleFonts.poppins(
+                color: AppTheme.textPrimary(context), fontSize: 13),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.poppins(
-                color: Colors.grey[400],
+                color: AppTheme.textFaint(context),
                 fontSize: 13,
               ),
               border: InputBorder.none,
@@ -1317,7 +1301,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                 vertical: 14,
               ),
               suffixIcon: IconButton(
-                icon: const Icon(Icons.my_location, color: Color(0xFFFF5722)),
+                icon: const Icon(Icons.my_location, color: AppTheme.accent),
                 onPressed: onGeolocate,
                 tooltip: 'Use current location',
               ),

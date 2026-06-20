@@ -103,8 +103,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           const NotificationIcon(),
                           IconButton(
-                            icon: const Icon(Icons.search, size: 26),
-                            onPressed: () {},
+                            icon: const Icon(Icons.tune_rounded, size: 24),
+                            tooltip: 'Match preferences',
+                            onPressed: () => context.push('/match-preferences'),
                             color: Colors.black87,
                           ),
                         ],

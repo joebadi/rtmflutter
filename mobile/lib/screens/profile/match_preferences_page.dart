@@ -272,22 +272,66 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
                   _header(),
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
                       children: [
-                        _infoBanner(),
-                        const SizedBox(height: 16),
-                        _ageSection(),
-                        const SizedBox(height: 14),
-                        _relationshipSection(),
-                        const SizedBox(height: 14),
-                        _locationSection(),
-                        const SizedBox(height: 14),
-                        _beliefsSection(),
-                        const SizedBox(height: 14),
-                        _medicalSection(),
-                        const SizedBox(height: 14),
-                        _physicalSection(),
-                        const SizedBox(height: 24),
+                        _introHeader(),
+                        _sliderField(
+                          'Age',
+                          Icons.cake_outlined,
+                          '${_ageRange.start.round()}–${_ageRange.end.round()} yrs',
+                          RangeSlider(
+                            values: _ageRange,
+                            min: 18,
+                            max: 70,
+                            divisions: 52,
+                            activeColor: AppTheme.accent,
+                            inactiveColor: AppTheme.fg(context, 0.12),
+                            labels: RangeLabels('${_ageRange.start.round()}',
+                                '${_ageRange.end.round()}'),
+                            onChanged: (v) => setState(() => _ageRange = v),
+                          ),
+                        ),
+                        _multiField('Relationship status',
+                            Icons.favorite_border_rounded,
+                            _selectedRelationshipStatuses, _relationshipStatuses,
+                            dbKey: 'relationshipStatus'),
+                        _locationField(),
+                        _multiField('Religion', Icons.church_outlined,
+                            _selectedReligions, _religions, dbKey: 'religion'),
+                        _multiField('Zodiac', Icons.star_outline_rounded,
+                            _selectedZodiacs, _zodiacs, dbKey: 'zodiac'),
+                        _multiField('Genotype', Icons.biotech_outlined,
+                            _selectedGenotypes, _genotypes, dbKey: 'genotype'),
+                        _multiField('Blood group', Icons.bloodtype_outlined,
+                            _selectedBloodGroups, _bloodGroups,
+                            dbKey: 'bloodGroup'),
+                        _sliderField(
+                          'Height',
+                          Icons.height_rounded,
+                          '${_heightLabel(_heightRange.start.round())} – ${_heightLabel(_heightRange.end.round())}',
+                          RangeSlider(
+                            values: _heightRange,
+                            min: 0,
+                            max: (_heights.length - 1).toDouble(),
+                            divisions: _heights.length - 1,
+                            activeColor: AppTheme.accent,
+                            inactiveColor: AppTheme.fg(context, 0.12),
+                            onChanged: (v) => setState(() => _heightRange = v),
+                          ),
+                          dbKey: 'height',
+                        ),
+                        _multiField('Body type',
+                            Icons.accessibility_new_rounded, _selectedBodyTypes,
+                            _bodyTypes, dbKey: 'bodyType'),
+                        _tristateField('Tattoos', Icons.brush_outlined,
+                            _preferredTattoos,
+                            (v) => setState(() => _preferredTattoos = v),
+                            'tattoos'),
+                        _tristateField('Piercings', Icons.diamond_outlined,
+                            _preferredPiercings,
+                            (v) => setState(() => _preferredPiercings = v),
+                            'piercings'),
+                        const SizedBox(height: 8),
                       ],
                     ),
                   ),
@@ -322,24 +366,25 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     );
   }
 
-  Widget _infoBanner() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.accent.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.accent.withOpacity(0.25)),
-      ),
-      child: Row(
+  Widget _introHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 0, 2, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded, color: AppTheme.accent, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Toggle "Deal breaker" for must-haves. We only score the preferences you set.',
+          Text('Find your kind of person',
               style: GoogleFonts.poppins(
-                  fontSize: 11.5, color: AppTheme.fg(context, 0.75), height: 1.35),
-            ),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary(context))),
+          const SizedBox(height: 3),
+          Text(
+            'Dial in the details — tap the flame to mark a must-have. We only '
+            'score the preferences you set.',
+            style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: AppTheme.textSecondary(context),
+                height: 1.35),
           ),
         ],
       ),
@@ -397,12 +442,133 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
 
   // --------------------------------------------------------------- sections
 
-  Widget _card(String title, IconData icon, List<Widget> children, {Widget? trailing}) {
+  // --------------------------------------------------------- filter-style fields
+
+  TextStyle _fieldLabel() => GoogleFonts.poppins(
+      fontSize: 10.5,
+      fontWeight: FontWeight.w500,
+      color: AppTheme.textSecondary(context));
+
+  Widget _slim(Widget slider) => SliderTheme(
+        data: SliderThemeData(
+          trackHeight: 3,
+          overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+          rangeThumbShape:
+              const RoundRangeSliderThumbShape(enabledThumbRadius: 8),
+        ),
+        child: slider,
+      );
+
+  /// Compact "deal breaker" toggle — a small flame chip, accent when on.
+  Widget _dbToggle(String key) {
+    final on = _dealBreakers[key] ?? false;
+    return GestureDetector(
+      onTap: () => setState(() => _dealBreakers[key] = !on),
+      child: Tooltip(
+        message: on ? 'Deal breaker — must match' : 'Tap to mark a must-have',
+        child: Container(
+          margin: const EdgeInsets.only(left: 4),
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: on ? AppTheme.accent.withOpacity(0.16) : Colors.transparent,
+            border: Border.all(
+                color: on ? AppTheme.accent : AppTheme.hairline(context)),
+          ),
+          child: Icon(Icons.local_fire_department_rounded,
+              size: 14, color: on ? AppTheme.accent : AppTheme.textFaint(context)),
+        ),
+      ),
+    );
+  }
+
+  /// Filter-style multi-select field: icon + label/value, count badge, optional
+  /// deal-breaker flame, opens a checkbox sheet.
+  Widget _multiField(String label, IconData icon, List<String> selected,
+      List<String> options,
+      {String? dbKey}) {
+    final summary = selected.isEmpty ? 'Any' : selected.join(', ');
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.hairline(context)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () async {
+            await _openMultiSelect(label, options, selected);
+            setState(() {});
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: AppTheme.accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label, style: _fieldLabel()),
+                      const SizedBox(height: 1),
+                      Text(
+                        summary,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.5,
+                          fontWeight: selected.isEmpty
+                              ? FontWeight.w500
+                              : FontWeight.w600,
+                          color: selected.isEmpty
+                              ? AppTheme.textFaint(context)
+                              : AppTheme.textPrimary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (dbKey != null) _dbToggle(dbKey),
+                if (selected.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(left: 6, right: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text('${selected.length}',
+                        style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white)),
+                  ),
+                Icon(Icons.keyboard_arrow_down_rounded,
+                    color: AppTheme.textFaint(context)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Filter-style slider field: icon + label, value text and slim slider.
+  Widget _sliderField(String label, IconData icon, String valueText,
+      Widget slider,
+      {String? dbKey}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.hairline(context)),
       ),
       child: Column(
@@ -410,290 +576,93 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.accent.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: AppTheme.accent, size: 18),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  title,
+              Icon(icon, size: 16, color: AppTheme.accent),
+              const SizedBox(width: 8),
+              Text(label,
                   style: GoogleFonts.poppins(
-                      fontSize: 14.5,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textSecondary(context))),
+              const Spacer(),
+              if (dbKey != null) _dbToggle(dbKey),
+              const SizedBox(width: 8),
+              Text(valueText,
+                  style: GoogleFonts.poppins(
+                      fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary(context)),
-                ),
-              ),
-              if (trailing != null) trailing,
+                      color: AppTheme.accent)),
             ],
           ),
-          const SizedBox(height: 14),
-          ...children,
+          _slim(slider),
         ],
       ),
     );
   }
 
-  Widget _ageSection() {
-    return _card('Age Range', Icons.cake_outlined, [
-      Text(
-        '${_ageRange.start.round()} – ${_ageRange.end.round()} years',
-        style: GoogleFonts.poppins(
-            color: AppTheme.accent, fontSize: 15, fontWeight: FontWeight.w700),
-      ),
-      RangeSlider(
-        values: _ageRange,
-        min: 18,
-        max: 70,
-        divisions: 52,
-        activeColor: AppTheme.accent,
-        inactiveColor: AppTheme.textFaint(context),
-        labels: RangeLabels(
-            _ageRange.start.round().toString(), _ageRange.end.round().toString()),
-        onChanged: (v) => setState(() => _ageRange = v),
-      ),
-    ]);
-  }
-
-  Widget _relationshipSection() {
-    return _card(
-      'Relationship Status',
-      Icons.favorite_outline_rounded,
-      [
-        _multiField(_selectedRelationshipStatuses, _relationshipStatuses,
-            'Relationship status'),
-      ],
-      trailing: _dealBreakerSwitch('relationshipStatus'),
-    );
-  }
-
-  Widget _locationSection() {
-    return _card(
-      'Preferred Location & Origin',
-      Icons.place_outlined,
-      [
-        LocationPreferenceEditor(
-          blocks: _locationBlocks,
-          onChanged: (b) => setState(() {
-            _locationBlocks
-              ..clear()
-              ..addAll(b);
-          }),
-        ),
-        if (_locationBlocks.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppTheme.accent.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.travel_explore_rounded,
-                    color: AppTheme.accent, size: 15),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    formatLocationBlocks(_locationBlocks),
-                    style: GoogleFonts.poppins(
-                        fontSize: 11.5,
-                        color: AppTheme.fg(context, 0.85),
-                        fontWeight: FontWeight.w500,
-                        height: 1.35),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
-      trailing: _dealBreakerSwitch('location'),
-    );
-  }
-
-  Widget _beliefsSection() {
-    return _card('Beliefs', Icons.auto_awesome_outlined, [
-      Row(
-        children: [
-          Text('Religion', style: _labelStyle()),
-          const Spacer(),
-          _dealBreakerSwitch('religion'),
-        ],
-      ),
-      const SizedBox(height: 8),
-      _multiField(_selectedReligions, _religions, 'Religion'),
-      const SizedBox(height: 14),
-      Row(
-        children: [
-          Text('Zodiac', style: _labelStyle()),
-          const Spacer(),
-          _dealBreakerSwitch('zodiac'),
-        ],
-      ),
-      const SizedBox(height: 8),
-      _multiField(_selectedZodiacs, _zodiacs, 'Zodiac'),
-    ]);
-  }
-
-  Widget _medicalSection() {
-    return _card('Medical', Icons.medical_services_outlined, [
-      Row(
-        children: [
-          Text('Genotype', style: _labelStyle()),
-          const Spacer(),
-          _dealBreakerSwitch('genotype'),
-        ],
-      ),
-      const SizedBox(height: 8),
-      _multiField(_selectedGenotypes, _genotypes, 'Genotype'),
-      const SizedBox(height: 14),
-      Row(
-        children: [
-          Text('Blood Group', style: _labelStyle()),
-          const Spacer(),
-          _dealBreakerSwitch('bloodGroup'),
-        ],
-      ),
-      const SizedBox(height: 8),
-      _multiField(_selectedBloodGroups, _bloodGroups, 'Blood group'),
-    ]);
-  }
-
-  Widget _physicalSection() {
-    return _card('Physical', Icons.accessibility_new_rounded, [
-      _heightRangeField(),
-      const SizedBox(height: 14),
-      Row(
-        children: [
-          Text('Body Type', style: _labelStyle()),
-          const Spacer(),
-          _dealBreakerSwitch('bodyType'),
-        ],
-      ),
-      const SizedBox(height: 8),
-      _multiField(_selectedBodyTypes, _bodyTypes, 'Body type'),
-      const SizedBox(height: 14),
-      _tristate('Tattoos', _preferredTattoos,
-          (v) => setState(() => _preferredTattoos = v), 'tattoos'),
-      const SizedBox(height: 12),
-      _tristate('Piercings', _preferredPiercings,
-          (v) => setState(() => _preferredPiercings = v), 'piercings'),
-    ]);
-  }
-
-  Widget _heightRangeField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text('Height', style: _labelStyle()),
-            const Spacer(),
-            _dealBreakerSwitch('height'),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(_heightLabel(_heightRange.start.round()),
-                style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.accent)),
-            Text('to',
-                style: GoogleFonts.poppins(
-                    fontSize: 12, color: AppTheme.textFaint(context))),
-            Text(_heightLabel(_heightRange.end.round()),
-                style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.accent)),
-          ],
-        ),
-        RangeSlider(
-          values: _heightRange,
-          min: 0,
-          max: (_heights.length - 1).toDouble(),
-          divisions: _heights.length - 1,
-          activeColor: AppTheme.accent,
-          inactiveColor: AppTheme.textFaint(context),
-          onChanged: (v) => setState(() => _heightRange = v),
-        ),
-      ],
-    );
-  }
-
-  // ----------------------------------------------------------------- atoms
-
-  TextStyle _labelStyle() => GoogleFonts.poppins(
-      fontSize: 12.5,
-      fontWeight: FontWeight.w600,
-      color: AppTheme.fg(context, 0.85));
-
-
-  /// Filter-style multi-select field: a tappable surface field that shows the
-  /// selection summary + count and opens a checkbox sheet.
-  Widget _multiField(
-      List<String> selected, List<String> options, String sheetTitle) {
-    final summary = selected.isEmpty ? 'Any' : selected.join(', ');
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
+  /// Location/origin editor wrapped as a filter-style field.
+  Widget _locationField() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 11, 14, 12),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(14),
-        onTap: () async {
-          await _openMultiSelect(sheetTitle, options, selected);
-          setState(() {});
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          decoration: BoxDecoration(
-            color: AppTheme.surface2(context),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.hairline(context)),
-          ),
-          child: Row(
+        border: Border.all(color: AppTheme.hairline(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
+              const Icon(Icons.place_outlined, size: 16, color: AppTheme.accent),
+              const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  summary,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13.5,
-                    fontWeight:
-                        selected.isEmpty ? FontWeight.w500 : FontWeight.w600,
-                    color: selected.isEmpty
-                        ? AppTheme.textFaint(context)
-                        : AppTheme.textPrimary(context),
-                  ),
-                ),
+                child: Text('Preferred location & origin',
+                    style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textSecondary(context))),
               ),
-              if (selected.isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accent,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text('${selected.length}',
-                      style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)),
-                ),
-              Icon(Icons.keyboard_arrow_down_rounded,
-                  color: AppTheme.textFaint(context)),
+              _dbToggle('location'),
             ],
           ),
-        ),
+          const SizedBox(height: 10),
+          LocationPreferenceEditor(
+            blocks: _locationBlocks,
+            onChanged: (b) => setState(() {
+              _locationBlocks
+                ..clear()
+                ..addAll(b);
+            }),
+          ),
+          if (_locationBlocks.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.accent.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.travel_explore_rounded,
+                      color: AppTheme.accent, size: 15),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      formatLocationBlocks(_locationBlocks),
+                      style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          color: AppTheme.fg(context, 0.85),
+                          fontWeight: FontWeight.w500,
+                          height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -832,35 +801,10 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
     );
   }
 
-  Widget _dealBreakerSwitch(String key) {
-    final on = _dealBreakers[key] ?? false;
-    return GestureDetector(
-      onTap: () => setState(() => _dealBreakers[key] = !on),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('Deal breaker',
-              style: GoogleFonts.poppins(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: on ? AppTheme.accent : AppTheme.textFaint(context))),
-          const SizedBox(width: 4),
-          Transform.scale(
-            scale: 0.7,
-            child: Switch(
-              value: on,
-              onChanged: (v) => setState(() => _dealBreakers[key] = v),
-              activeColor: AppTheme.accent,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _tristate(
+  /// Filter-style tri-state field (Yes / No / Any) with a deal-breaker flame.
+  Widget _tristateField(
     String label,
+    IconData icon,
     bool? value,
     ValueChanged<bool?> onChanged,
     String dealBreakerKey,
@@ -869,7 +813,7 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
           child: GestureDetector(
             onTap: onTap,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 9),
+              padding: const EdgeInsets.symmetric(vertical: 7),
               decoration: BoxDecoration(
                 color: active ? AppTheme.accent : Colors.transparent,
                 borderRadius: BorderRadius.circular(9),
@@ -877,41 +821,59 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
               child: Center(
                 child: Text(text,
                     style: GoogleFonts.poppins(
-                        fontSize: 12.5,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: active ? Colors.white : AppTheme.textSecondary(context))),
+                        color: active
+                            ? Colors.white
+                            : AppTheme.textSecondary(context))),
               ),
             ),
           ),
         );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(label, style: _labelStyle()),
-            const Spacer(),
-            _dealBreakerSwitch(dealBreakerKey),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: AppTheme.surface2(context),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.hairline(context)),
-          ),
-          child: Row(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.hairline(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              seg('Yes', value == true, () => onChanged(true)),
-              seg('No', value == false, () => onChanged(false)),
-              seg('Any', value == null, () => onChanged(null)),
+              Icon(icon, size: 16, color: AppTheme.accent),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(label,
+                    style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textSecondary(context))),
+              ),
+              _dbToggle(dealBreakerKey),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: AppTheme.surface2(context),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.hairline(context)),
+            ),
+            child: Row(
+              children: [
+                seg('Yes', value == true, () => onChanged(true)),
+                seg('No', value == false, () => onChanged(false)),
+                seg('Any', value == null, () => onChanged(null)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
