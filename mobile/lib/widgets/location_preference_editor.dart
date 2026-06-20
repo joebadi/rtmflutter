@@ -677,7 +677,10 @@ class _LocationPreferenceEditorState extends State<LocationPreferenceEditor> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+                // Lift the action button above the system nav bar / gesture
+                // inset so it is never hidden behind it.
+                padding: EdgeInsets.fromLTRB(
+                    16, 6, 16, 14 + MediaQuery.of(sheetCtx).viewPadding.bottom),
                 child: SizedBox(
                   width: double.infinity,
                   height: 48,

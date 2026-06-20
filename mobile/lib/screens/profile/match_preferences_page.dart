@@ -7,6 +7,7 @@ import '../../data/nigeria_locations.dart';
 import '../../services/match_service.dart';
 import '../../widgets/location_preference_editor.dart';
 import '../../widgets/premium_loader.dart';
+import '../../widgets/premium_message.dart';
 
 /// Match Preferences — dark premium redesign matching the Live Dates / Wallet
 /// aesthetic. Collects who the user wants to match with, including a
@@ -227,20 +228,32 @@ class _MatchPreferencesPageState extends State<MatchPreferencesPage> {
       final success = await _matchService.updatePreferences(data);
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(success
-              ? 'Match preferences updated'
-              : 'Failed to update preferences'),
-          backgroundColor: success ? AppTheme.accent : Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      if (success) context.pop();
+      if (success) {
+        await showPremiumAlert(
+          context,
+          title: 'Preferences saved',
+          message: 'We’ll use these to find your best matches.',
+          kind: MessageKind.success,
+          autoDismiss: const Duration(milliseconds: 1300),
+        );
+        if (mounted) context.pop();
+      } else {
+        await showPremiumAlert(
+          context,
+          title: 'Couldn’t save',
+          message: 'We couldn’t update your preferences. Please try again.',
+          kind: MessageKind.error,
+          buttonText: 'Try again',
+        );
+      }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      await showPremiumAlert(
+        context,
+        title: 'Something went wrong',
+        message: 'Please check your connection and try again.',
+        kind: MessageKind.error,
+        buttonText: 'Dismiss',
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
