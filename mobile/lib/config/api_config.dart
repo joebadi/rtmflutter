@@ -30,6 +30,7 @@ class ApiConfig {
   static const String myProfile = '$profileBase/me';
   static const String updateProfile = '$profileBase/update';
   static const String uploadPhoto = '$profileBase/upload-photo';
+  static const String privacySettings = '$profileBase/privacy-settings';
   
   // Preferences Endpoints
   static const String preferences = '$matchBase/preferences';

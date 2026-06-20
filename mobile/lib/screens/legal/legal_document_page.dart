@@ -99,8 +99,9 @@ class _LegalDocumentPageState extends State<LegalDocumentPage> {
 
   Widget _content(String title) {
     final body = (_doc?['content'] as String?)?.trim() ?? '';
+    final bottomPad = MediaQuery.of(context).padding.bottom;
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 36),
+      padding: EdgeInsets.fromLTRB(20, 18, 20, 36 + bottomPad),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

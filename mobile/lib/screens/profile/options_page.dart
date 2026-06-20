@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/profile_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/premium_loader.dart';
 import '../../widgets/premium_message.dart';
@@ -17,9 +18,46 @@ class OptionsPage extends StatefulWidget {
 }
 
 class _OptionsPageState extends State<OptionsPage> {
+  final ProfileService _profileService = ProfileService();
+
   bool _pushNotifications = true;
   bool _showMeOnMap = true;
   bool _goAnonymous = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPrivacyState());
+  }
+
+  void _loadPrivacyState() {
+    final profile = Provider.of<ProfileProvider>(context, listen: false).profile;
+    final data = profile?['data']?['profile'] ?? profile?['data'] ?? profile;
+    if (data is Map) {
+      setState(() {
+        _showMeOnMap = (data['showOnMap'] as bool?) ?? true;
+        _goAnonymous = (data['isAnonymous'] as bool?) ?? false;
+      });
+    }
+  }
+
+  Future<void> _updatePrivacy({bool? showOnMap, bool? isAnonymous}) async {
+    try {
+      await _profileService.updatePrivacySettings(
+        showOnMap: showOnMap,
+        isAnonymous: isAnonymous,
+      );
+    } catch (_) {
+      // Revert on failure
+      if (!mounted) return;
+      showPremiumSnack(
+        context,
+        'Couldn\'t save privacy setting. Please try again.',
+        kind: MessageKind.error,
+      );
+      _loadPrivacyState();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -237,14 +275,20 @@ class _OptionsPageState extends State<OptionsPage> {
               title: 'Show Me On Map',
               subtitle: 'Keep it on, if you want to be seen on Map',
               value: _showMeOnMap,
-              onChanged: (v) => setState(() => _showMeOnMap = v),
+              onChanged: (v) {
+                setState(() => _showMeOnMap = v);
+                _updatePrivacy(showOnMap: v);
+              },
             ),
             _buildToggleItem(
               title: 'Go Anonymous',
               subtitle:
                   'Turn On, if you don\'t want to be seen anywhere in the app',
               value: _goAnonymous,
-              onChanged: (v) => setState(() => _goAnonymous = v),
+              onChanged: (v) {
+                setState(() => _goAnonymous = v);
+                _updatePrivacy(isAnonymous: v);
+              },
             ),
 
             const SizedBox(height: 20),

@@ -139,6 +139,28 @@ class ProfileService {
     }
   }
 
+  /// Update privacy settings (showOnMap, isAnonymous)
+  Future<void> updatePrivacySettings({
+    bool? showOnMap,
+    bool? isAnonymous,
+  }) async {
+    final token = await _storage.read(key: 'access_token');
+    if (token == null) throw Exception('Not authenticated');
+
+    try {
+      await _dio.put(
+        ApiConfig.privacySettings,
+        data: {
+          if (showOnMap != null) 'showOnMap': showOnMap,
+          if (isAnonymous != null) 'isAnonymous': isAnonymous,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+    } on DioException catch (e) {
+      throw Exception(_handleDioError(e, 'Failed to update privacy settings'));
+    }
+  }
+
   /// Get match preferences
   Future<Map<String, dynamic>?> getPreferences() async {
     final token = await _storage.read(key: 'access_token');

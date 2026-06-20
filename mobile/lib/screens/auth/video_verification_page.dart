@@ -9,10 +9,7 @@ import '../../widgets/premium_loader.dart';
 import '../../widgets/premium_message.dart';
 
 /// Registration verification step — capture a live selfie and submit it for
-/// admin review. On approval the user receives the verified badge. This reuses
-/// the same `/verification` pipeline as the Options "Get Verified" screen, but
-/// asks for a selfie only to keep onboarding friction low (a government ID can
-/// be added later from Options).
+/// admin review. On approval the user receives the verified badge.
 class VideoVerificationPage extends StatefulWidget {
   const VideoVerificationPage({super.key});
 
@@ -20,12 +17,52 @@ class VideoVerificationPage extends StatefulWidget {
   State<VideoVerificationPage> createState() => _VideoVerificationPageState();
 }
 
-class _VideoVerificationPageState extends State<VideoVerificationPage> {
+class _VideoVerificationPageState extends State<VideoVerificationPage>
+    with TickerProviderStateMixin {
   final VerificationService _service = VerificationService();
   final ImagePicker _picker = ImagePicker();
 
   XFile? _selfie;
   bool _submitting = false;
+
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulseScale;
+  late Animation<double> _pulseOpacity;
+  late AnimationController _successCtrl;
+  late Animation<double> _successScale;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: false);
+
+    _pulseScale = Tween<double>(begin: 1.0, end: 1.18).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOut),
+    );
+    _pulseOpacity = Tween<double>(begin: 0.5, end: 0.0).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOut),
+    );
+
+    _successCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 480),
+    );
+    _successScale = CurvedAnimation(
+      parent: _successCtrl,
+      curve: Curves.elasticOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    _successCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _capture() async {
     try {
@@ -35,13 +72,26 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
         imageQuality: 85,
         maxWidth: 1200,
       );
-      if (file != null && mounted) setState(() => _selfie = file);
+      if (file != null && mounted) {
+        setState(() => _selfie = file);
+        _successCtrl.forward(from: 0);
+        _pulseCtrl.stop();
+      }
     } catch (_) {
       if (mounted) {
-        showPremiumSnack(context, 'Couldn’t open the camera. Please allow camera access.',
-            kind: MessageKind.error);
+        showPremiumSnack(
+          context,
+          'Couldn\'t open the camera. Please allow camera access.',
+          kind: MessageKind.error,
+        );
       }
     }
+  }
+
+  void _retake() {
+    setState(() => _selfie = null);
+    _successCtrl.reset();
+    _pulseCtrl.repeat();
   }
 
   Future<void> _submit() async {
@@ -64,7 +114,7 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
       } else {
         await showPremiumAlert(
           context,
-          title: 'Couldn’t submit',
+          title: 'Couldn\'t submit',
           message: 'Please check your connection and try again.',
           kind: MessageKind.error,
           buttonText: 'Try again',
@@ -90,33 +140,42 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surface(context),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Skip verification?',
-            style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textPrimary(context))),
-        content: Text(
-          'Verifying builds trust and unlocks the verified badge. You can always '
-          'do this later from Options → Get Verified.',
+        title: Text(
+          'Skip verification?',
           style: GoogleFonts.poppins(
-              fontSize: 13.5,
-              color: AppTheme.textSecondary(context),
-              height: 1.45),
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary(context),
+          ),
+        ),
+        content: Text(
+          'Verifying builds trust and unlocks the verified badge. You can '
+          'always do this later from Options → Get Verified.',
+          style: GoogleFonts.poppins(
+            fontSize: 13.5,
+            color: AppTheme.textSecondary(context),
+            height: 1.45,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: GoogleFonts.poppins(
-                    color: AppTheme.textSecondary(context))),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.poppins(color: AppTheme.textSecondary(context)),
+            ),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               context.go('/complete-profile');
             },
-            child: Text('Skip for now',
-                style: GoogleFonts.poppins(
-                    color: AppTheme.accent, fontWeight: FontWeight.w600)),
+            child: Text(
+              'Skip for now',
+              style: GoogleFonts.poppins(
+                color: AppTheme.accent,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -125,69 +184,44 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewPadding.bottom;
     return Scaffold(
       backgroundColor: AppTheme.bg(context),
-      body: SafeArea(
-        child: Column(
+      body: Column(
+        children: [
+          _header(),
+          Expanded(child: _body()),
+          _footer(bottom),
+        ],
+      ),
+    );
+  }
+
+  // ── Header ──────────────────────────────────────────────────────────────
+
+  Widget _header() {
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 6, 12, 0),
+        child: Row(
           children: [
-            // Header ----------------------------------------------------------
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 12, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.arrow_back_rounded,
-                        color: AppTheme.textPrimary(context)),
-                    onPressed: () => context.pop(),
-                  ),
-                  const Spacer(),
-                  Text('Step 5 of 5',
-                      style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textFaint(context))),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: _submitting ? null : _skip,
-                    child: Text('Skip',
-                        style: GoogleFonts.poppins(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textSecondary(context))),
-                  ),
-                ],
+            IconButton(
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                color: AppTheme.textPrimary(context),
               ),
+              onPressed: () => context.pop(),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    Text('Verify it’s you',
-                        style: GoogleFonts.poppins(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textPrimary(context))),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Take a quick selfie so we know you’re real. It’s reviewed '
-                      'by our team and never shown on your profile.',
-                      style: GoogleFonts.poppins(
-                          fontSize: 13.5,
-                          color: AppTheme.textSecondary(context),
-                          height: 1.45),
-                    ),
-                    const SizedBox(height: 28),
-                    _selfieCircle(),
-                    const SizedBox(height: 28),
-                    _tips(),
-                    const SizedBox(height: 16),
-                    _privacyNote(),
-                    const SizedBox(height: 28),
-                    _primaryButton(),
-                  ],
+            Expanded(child: _stepDots()),
+            TextButton(
+              onPressed: _submitting ? null : _skip,
+              child: Text(
+                'Skip',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary(context),
                 ),
               ),
             ),
@@ -197,183 +231,416 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
     );
   }
 
-  // ───────────────────────────────────────────────────────────── pieces
-
-  Widget _selfieCircle() {
-    return Center(
-      child: GestureDetector(
-        onTap: _submitting ? null : _capture,
-        child: Container(
-          width: 220,
-          height: 220,
+  Widget _stepDots() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(5, (i) {
+        final active = i == 4;
+        final done = i < 4;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: active ? 20 : 7,
+          height: 7,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppTheme.surface(context),
-            border: Border.all(
-              color: _selfie != null
-                  ? AppTheme.accent
-                  : AppTheme.accent.withValues(alpha: 0.35),
-              width: _selfie != null ? 2.4 : 1.6,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.accent.withValues(alpha: 0.18),
-                blurRadius: 30,
-                spreadRadius: 1,
-              ),
-            ],
+            borderRadius: BorderRadius.circular(4),
+            color: active
+                ? AppTheme.accent
+                : done
+                    ? AppTheme.accent.withValues(alpha: 0.35)
+                    : AppTheme.fg(context, 0.12),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: _selfie != null
-              ? Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.file(File(_selfie!.path), fit: BoxFit.cover),
-                    Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        color: Colors.black.withValues(alpha: 0.5),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.refresh_rounded,
-                                color: Colors.white, size: 15),
-                            const SizedBox(width: 6),
-                            Text('Retake',
-                                style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accent.withValues(alpha: 0.14),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.camera_alt_rounded,
-                          color: AppTheme.accent, size: 36),
-                    ),
-                    const SizedBox(height: 14),
-                    Text('Tap to take a selfie',
-                        style: GoogleFonts.poppins(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary(context))),
-                  ],
-                ),
+        );
+      }),
+    );
+  }
+
+  // ── Body ────────────────────────────────────────────────────────────────
+
+  Widget _body() {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          _heroSection(),
+          const SizedBox(height: 28),
+          _infoSection(),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  // ── Hero ────────────────────────────────────────────────────────────────
+
+  Widget _heroSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppTheme.hairline(context)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+        child: Column(
+          children: [
+            _selfiePicker(),
+            const SizedBox(height: 22),
+            _statusText(),
+          ],
         ),
       ),
     );
   }
 
-  Widget _tips() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppTheme.surface(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.hairline(context)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('For a quick approval',
-              style: GoogleFonts.poppins(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary(context))),
-          const SizedBox(height: 12),
-          _tip('Face the camera in good lighting'),
-          _tip('Keep your whole face in frame'),
-          _tip('Remove sunglasses, hats or masks'),
-        ],
+  Widget _selfiePicker() {
+    final size = MediaQuery.of(context).size.width * 0.54;
+    return Center(
+      child: SizedBox(
+        width: size + 40,
+        height: size + 40,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Pulsing ring — only when no selfie
+            if (_selfie == null)
+              AnimatedBuilder(
+                animation: _pulseCtrl,
+                builder: (_, __) => Transform.scale(
+                  scale: _pulseScale.value,
+                  child: Container(
+                    width: size + 20,
+                    height: size + 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppTheme.accent.withValues(
+                          alpha: _pulseOpacity.value * 0.8,
+                        ),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // Outer static ring
+            Container(
+              width: size + 12,
+              height: size + 12,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: SweepGradient(
+                  colors: [
+                    AppTheme.accent.withValues(alpha: 0.6),
+                    AppTheme.accent.withValues(alpha: 0.1),
+                    AppTheme.accent.withValues(alpha: 0.6),
+                  ],
+                ),
+              ),
+            ),
+
+            // Main selfie circle
+            GestureDetector(
+              onTap: _submitting ? null : (_selfie != null ? null : _capture),
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.surface2(context),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.accent.withValues(alpha: 0.22),
+                      blurRadius: 28,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: _selfie != null
+                    ? Image.file(File(_selfie!.path), fit: BoxFit.cover)
+                    : _emptyState(size),
+              ),
+            ),
+
+            // Success check badge
+            if (_selfie != null)
+              ScaleTransition(
+                scale: _successScale,
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 10, bottom: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppTheme.surface(context),
+                          width: 2.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF4CAF50).withValues(alpha: 0.4),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _tip(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.check_circle_rounded,
-              size: 17, color: AppTheme.accent),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(text,
-                style: GoogleFonts.poppins(
-                    fontSize: 12.5,
-                    color: AppTheme.textSecondary(context),
-                    height: 1.35)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _privacyNote() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _emptyState(double size) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.lock_rounded, size: 13, color: AppTheme.textFaint(context)),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            'Your selfie is used only for verification and is never shown on '
-            'your profile.',
-            style: GoogleFonts.poppins(
-                fontSize: 11,
-                color: AppTheme.textFaint(context),
-                height: 1.4),
+        // Face silhouette guide
+        ShaderMask(
+          shaderCallback: (rect) => AppTheme.accentGradient.createShader(rect),
+          child: Icon(
+            Icons.face_retouching_natural_rounded,
+            size: size * 0.38,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.accent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.camera_alt_rounded,
+                  size: 13, color: AppTheme.accent),
+              const SizedBox(width: 5),
+              Text(
+                'Tap to capture',
+                style: GoogleFonts.poppins(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.accent,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _primaryButton() {
-    final ready = _selfie != null && !_submitting;
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: ready ? AppTheme.accentGradient : null,
-          color: ready ? null : AppTheme.surface2(context),
-          borderRadius: BorderRadius.circular(16),
+  Widget _statusText() {
+    if (_selfie != null) {
+      return Column(
+        children: [
+          Text(
+            'Looking good!',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          GestureDetector(
+            onTap: _retake,
+            child: Text(
+              'Retake selfie',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.accent,
+                decoration: TextDecoration.underline,
+                decorationColor: AppTheme.accent,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        Text(
+          'Verify it\'s you',
+          style: GoogleFonts.poppins(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary(context),
+          ),
         ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
+        const SizedBox(height: 4),
+        Text(
+          'Take a live selfie — it\'s never shown on your profile',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontSize: 12.5,
+            color: AppTheme.textSecondary(context),
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Info Section ─────────────────────────────────────────────────────────
+
+  Widget _infoSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tips for a quick approval',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _tipRow(Icons.wb_sunny_rounded, 'Good lighting — face a window or bright lamp'),
+          const SizedBox(height: 8),
+          _tipRow(Icons.crop_free_rounded, 'Keep your whole face clearly in frame'),
+          const SizedBox(height: 8),
+          _tipRow(Icons.visibility_rounded, 'Remove sunglasses, hats or face coverings'),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.lock_rounded, size: 12, color: AppTheme.textFaint(context)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'Your selfie is used only for identity verification and is never shown publicly.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: AppTheme.textFaint(context),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tipRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppTheme.accent.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 13, color: AppTheme.accent),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Text(
+              text,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: AppTheme.textSecondary(context),
+                height: 1.35,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Footer CTA ───────────────────────────────────────────────────────────
+
+  Widget _footer(double bottomInset) {
+    final ready = _selfie != null && !_submitting;
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 12, 20, 16 + bottomInset),
+      decoration: BoxDecoration(
+        color: AppTheme.bg(context),
+        border: Border(top: BorderSide(color: AppTheme.hairline(context))),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 54,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: ready ? AppTheme.accentGradient : null,
+            color: ready ? null : AppTheme.surface2(context),
             borderRadius: BorderRadius.circular(16),
-            onTap: ready ? _submit : (_submitting ? null : _capture),
-            child: Center(
-              child: _submitting
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: PremiumLoader(
-                          strokeWidth: 2.4, color: Colors.white))
-                  : Text(
-                      _selfie == null ? 'Take selfie' : 'Submit for review',
-                      style: GoogleFonts.poppins(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: ready
-                              ? Colors.white
-                              : AppTheme.textPrimary(context))),
+            boxShadow: ready
+                ? [
+                    BoxShadow(
+                      color: AppTheme.accent.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: ready
+                  ? _submit
+                  : (_submitting ? null : _capture),
+              child: Center(
+                child: _submitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: PremiumLoader(strokeWidth: 2.4, color: Colors.white),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_selfie == null) ...[
+                            const Icon(
+                              Icons.camera_alt_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          Text(
+                            _selfie == null ? 'Take selfie' : 'Submit for review',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: ready
+                                  ? Colors.white
+                                  : AppTheme.textPrimary(context),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
             ),
           ),
         ),
