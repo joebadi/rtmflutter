@@ -30,7 +30,11 @@ class _LocationPreferenceEditorState extends State<LocationPreferenceEditor> {
   List<LocationBlock> get _blocks => widget.blocks;
 
   void _emit() {
-    widget.onChanged(_blocks);
+    // Pass a *copy* of the list. The parent holds the same list instance as
+    // `widget.blocks`, and its onChanged typically does `..clear()..addAll(b)`.
+    // If we passed `_blocks` directly, `clear()` would empty the very list we
+    // then read from, wiping every block (tribe selections would vanish).
+    widget.onChanged(List<LocationBlock>.from(_blocks));
     setState(() {});
   }
 
