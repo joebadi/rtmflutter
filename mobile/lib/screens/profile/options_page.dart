@@ -6,6 +6,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/app_logo.dart';
+import '../../widgets/premium_loader.dart';
+import '../../widgets/premium_message.dart';
 
 class OptionsPage extends StatefulWidget {
   const OptionsPage({super.key});
@@ -263,8 +265,12 @@ class _OptionsPageState extends State<OptionsPage> {
 
             const SizedBox(height: 10),
 
-            _buildLegalItem(title: 'Privacy Policy', onTap: () {}),
-            _buildLegalItem(title: 'Terms Of Use', onTap: () {}),
+            _buildLegalItem(
+                title: 'Privacy Policy',
+                onTap: () => context.push('/legal/privacy_policy')),
+            _buildLegalItem(
+                title: 'Terms Of Use',
+                onTap: () => context.push('/legal/terms_of_use')),
 
             const SizedBox(height: 24),
 
@@ -577,8 +583,8 @@ class _OptionsPageState extends State<OptionsPage> {
           ),
           TextButton(
             onPressed: () {
-              // TODO: Implement account deletion
               Navigator.pop(context);
+              _performAccountDeletion();
             },
             child: Text(
               'Delete',
@@ -591,5 +597,55 @@ class _OptionsPageState extends State<OptionsPage> {
         ],
       ),
     );
+  }
+
+  /// Calls the backend to permanently delete the account, then signs the user
+  /// out and returns them to the login screen.
+  Future<void> _performAccountDeletion() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+
+    // Blocking loader while the request is in flight.
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: PremiumLoader()),
+    );
+
+    try {
+      profile.clearProfile();
+      final ok = await auth.deleteAccount();
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // dismiss loader
+
+      if (ok) {
+        await showPremiumAlert(
+          context,
+          title: 'Account deleted',
+          message: 'Your account and data have been removed. Take care.',
+          kind: MessageKind.success,
+          autoDismiss: const Duration(milliseconds: 1500),
+        );
+        if (mounted) context.go('/login');
+      } else {
+        await showPremiumAlert(
+          context,
+          title: 'Couldn’t delete account',
+          message: 'Something went wrong. Please try again.',
+          kind: MessageKind.error,
+          buttonText: 'Try again',
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // dismiss loader
+      await showPremiumAlert(
+        context,
+        title: 'Something went wrong',
+        message: 'Please check your connection and try again.',
+        kind: MessageKind.error,
+        buttonText: 'Dismiss',
+      );
+    }
   }
 }

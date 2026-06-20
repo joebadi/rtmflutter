@@ -16,7 +16,11 @@ class ApiConfig {
   static const String verifyOtp = '$authBase/verify-otp';
   static const String refreshToken = '$authBase/refresh-token';
   static const String logout = '$authBase/logout';
+  static const String deleteAccount = '$authBase/account';
   static const String forgotPassword = '$authBase/forgot-password';
+
+  // Legal documents (privacy_policy | terms_of_use)
+  static String legalDocument(String slug) => '$baseUrl/legal/$slug';
   static const String resetPassword = '$authBase/reset-password';
   static const String checkPasswordStrength = '$authBase/check-password-strength';
   static const String checkExistence = '$authBase/check-existence';

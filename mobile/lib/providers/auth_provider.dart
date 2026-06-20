@@ -151,6 +151,14 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Permanently delete the account and sign out locally.
+  Future<bool> deleteAccount() async {
+    final ok = await _authService.deleteAccount();
+    _isAuthenticated = false;
+    notifyListeners();
+    return ok;
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

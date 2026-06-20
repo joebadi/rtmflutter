@@ -281,6 +281,24 @@ class AuthService {
     }
   }
 
+  /// Permanently delete the signed-in user's account, then clear local tokens.
+  /// Returns true on success.
+  Future<bool> deleteAccount() async {
+    try {
+      final token = await getAccessToken();
+      final response = await _dio.delete(
+        ApiConfig.deleteAccount,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      throw _handleDioError(e, 'Account deletion failed');
+    } finally {
+      await _storage.delete(key: 'access_token');
+      await _storage.delete(key: 'refresh_token');
+    }
+  }
+
   /// Get stored access token
   Future<String?> getAccessToken() async {
     return await _storage.read(key: 'access_token');

@@ -21,6 +21,7 @@ import 'screens/profile/liked_profiles_screen.dart';
 import 'screens/profile/languages_screen.dart';
 import 'screens/profile/relationship_list_screen.dart';
 import 'screens/profile/verification_screen.dart';
+import 'screens/legal/legal_document_page.dart';
 import 'screens/premium/premium_page.dart';
 import 'screens/wallet/wallet_page.dart';
 import 'screens/explore_screen.dart';
@@ -114,6 +115,14 @@ final _router = GoRouter(
     GoRoute(
       path: '/video-verification',
       builder: (context, state) => const VideoVerificationPage(),
+    ),
+    GoRoute(
+      path: '/legal/:slug',
+      builder: (context, state) {
+        final slug = state.pathParameters['slug'] ?? 'privacy_policy';
+        final title = slug == 'terms_of_use' ? 'Terms of Use' : 'Privacy Policy';
+        return LegalDocumentPage(slug: slug, fallbackTitle: title);
+      },
     ),
     GoRoute(
       path: '/complete-profile',
