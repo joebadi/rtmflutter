@@ -1,9 +1,18 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:math';
+import 'package:image_picker/image_picker.dart';
+import '../../config/theme.dart';
+import '../../services/verification_service.dart';
 import '../../widgets/premium_loader.dart';
+import '../../widgets/premium_message.dart';
 
+/// Registration verification step — capture a live selfie and submit it for
+/// admin review. On approval the user receives the verified badge. This reuses
+/// the same `/verification` pipeline as the Options "Get Verified" screen, but
+/// asks for a selfie only to keep onboarding friction low (a government ID can
+/// be added later from Options).
 class VideoVerificationPage extends StatefulWidget {
   const VideoVerificationPage({super.key});
 
@@ -12,89 +21,102 @@ class VideoVerificationPage extends StatefulWidget {
 }
 
 class _VideoVerificationPageState extends State<VideoVerificationPage> {
-  bool _isVerifying = false;
-  bool _isVerified = false;
-  String _currentChallenge = '';
-  final List<String> _challenges = [
-    'Please smile and wave at the camera',
-    'Turn your head slowly to the left',
-    'Turn your head slowly to the right',
-    'Blink your eyes three times',
-    'Say "I am verifying my account"',
-    'Show your thumbs up to the camera',
-    'Nod your head up and down',
-    'Touch your nose with your finger',
-  ];
+  final VerificationService _service = VerificationService();
+  final ImagePicker _picker = ImagePicker();
 
-  @override
-  void initState() {
-    super.initState();
-    _generateChallenge();
-  }
+  XFile? _selfie;
+  bool _submitting = false;
 
-  void _generateChallenge() {
-    final random = Random();
-    setState(() {
-      _currentChallenge = _challenges[random.nextInt(_challenges.length)];
-    });
-  }
-
-  void _startVerification() {
-    setState(() {
-      _isVerifying = true;
-    });
-
-    // Simulate AI verification process
-    Future.delayed(const Duration(seconds: 3), () {
+  Future<void> _capture() async {
+    try {
+      final file = await _picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 85,
+        maxWidth: 1200,
+      );
+      if (file != null && mounted) setState(() => _selfie = file);
+    } catch (_) {
       if (mounted) {
-        setState(() {
-          _isVerifying = false;
-          _isVerified = true;
-        });
-
-        // Auto navigate after success
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            context.go('/complete-profile');
-          }
-        });
+        showPremiumSnack(context, 'Couldn’t open the camera. Please allow camera access.',
+            kind: MessageKind.error);
       }
-    });
+    }
   }
 
-  void _skipVerification() {
+  Future<void> _submit() async {
+    if (_selfie == null || _submitting) return;
+    setState(() => _submitting = true);
+    try {
+      final ok = await _service.submit(selfiePath: _selfie!.path);
+      if (!mounted) return;
+      if (ok) {
+        await showPremiumAlert(
+          context,
+          title: 'Selfie submitted',
+          message:
+              'Your photo is under review — this usually takes 24–48 hours. '
+              'You can keep setting up your profile in the meantime.',
+          kind: MessageKind.success,
+          autoDismiss: const Duration(milliseconds: 1800),
+        );
+        if (mounted) context.go('/complete-profile');
+      } else {
+        await showPremiumAlert(
+          context,
+          title: 'Couldn’t submit',
+          message: 'Please check your connection and try again.',
+          kind: MessageKind.error,
+          buttonText: 'Try again',
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      await showPremiumAlert(
+        context,
+        title: 'Something went wrong',
+        message: 'Please check your connection and try again.',
+        kind: MessageKind.error,
+        buttonText: 'Dismiss',
+      );
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  void _skip() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Skip Verification?',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-        ),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface(context),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Skip verification?',
+            style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary(context))),
         content: Text(
-          'Video verification helps build trust in our community. You can verify later in settings, but some features may be limited.',
-          style: GoogleFonts.poppins(fontSize: 14),
+          'Verifying builds trust and unlocks the verified badge. You can always '
+          'do this later from Options → Get Verified.',
+          style: GoogleFonts.poppins(
+              fontSize: 13.5,
+              color: AppTheme.textSecondary(context),
+              height: 1.45),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(color: Colors.grey[600]),
-            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel',
+                style: GoogleFonts.poppins(
+                    color: AppTheme.textSecondary(context))),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(ctx);
               context.go('/complete-profile');
             },
-            child: Text(
-              'Skip',
-              style: GoogleFonts.poppins(
-                color: const Color(0xFFFF5722),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: Text('Skip for now',
+                style: GoogleFonts.poppins(
+                    color: AppTheme.accent, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -104,342 +126,67 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.bg(context),
       body: SafeArea(
         child: Column(
           children: [
-            // Header
+            // Header ----------------------------------------------------------
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(8, 8, 12, 0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back),
+                    icon: Icon(Icons.arrow_back_rounded,
+                        color: AppTheme.textPrimary(context)),
                     onPressed: () => context.pop(),
                   ),
-                  TextButton(
-                    onPressed: _skipVerification,
-                    child: Text(
-                      'Skip',
+                  const Spacer(),
+                  Text('Step 5 of 5',
                       style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textFaint(context))),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: _submitting ? null : _skip,
+                    child: Text('Skip',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textSecondary(context))),
                   ),
                 ],
               ),
             ),
-
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 20),
-
-                    // Title
+                    const SizedBox(height: 8),
+                    Text('Verify it’s you',
+                        style: GoogleFonts.poppins(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary(context))),
+                    const SizedBox(height: 8),
                     Text(
-                      'Video Verification',
+                      'Take a quick selfie so we know you’re real. It’s reviewed '
+                      'by our team and never shown on your profile.',
                       style: GoogleFonts.poppins(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
+                          fontSize: 13.5,
+                          color: AppTheme.textSecondary(context),
+                          height: 1.45),
                     ),
-
-                    const SizedBox(height: 12),
-
-                    Text(
-                      'Verify your identity to build trust',
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Video Preview Area
-                    Container(
-                      width: double.infinity,
-                      height: 400,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.grey[900]!, Colors.grey[800]!],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          // Camera placeholder
-                          Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                if (!_isVerifying && !_isVerified) ...[
-                                  Icon(
-                                    Icons.videocam,
-                                    size: 80,
-                                    color: Colors.white.withOpacity(0.3),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Camera will activate\nwhen you start',
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.white.withOpacity(0.5),
-                                      fontSize: 14,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ] else if (_isVerifying) ...[
-                                  const SizedBox(
-                                    width: 60,
-                                    height: 60,
-                                    child: PremiumLoader(
-                                      color: Color(0xFFFF5722),
-                                      strokeWidth: 4,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    'Verifying...',
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ] else if (_isVerified) ...[
-                                  Container(
-                                    padding: const EdgeInsets.all(20),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green.withOpacity(0.2),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(
-                                      Icons.check_circle,
-                                      size: 80,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    'Verified Successfully!',
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.green,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-
-                          // AI Badge
-                          Positioned(
-                            top: 16,
-                            right: 16,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFFFF5722),
-                                    Color(0xFFFF7043),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFFFF5722,
-                                    ).withOpacity(0.4),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.psychology,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'AI Powered',
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // Challenge Card
-                    if (!_isVerified)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFFFF5722).withOpacity(0.1),
-                              const Color(0xFFFF7043).withOpacity(0.05),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFFF5722).withOpacity(0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFF5722),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.lightbulb,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'Your Challenge',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFFFF5722),
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.refresh,
-                                    color: Color(0xFFFF5722),
-                                  ),
-                                  onPressed: _isVerifying
-                                      ? null
-                                      : _generateChallenge,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _currentChallenge,
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                                height: 1.4,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    const SizedBox(height: 30),
-
-                    // Benefits
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Why verify?',
-                            style: GoogleFonts.poppins(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildBenefit(
-                            Icons.verified,
-                            'Get verified badge on profile',
-                          ),
-                          _buildBenefit(
-                            Icons.security,
-                            'Build trust with matches',
-                          ),
-                          _buildBenefit(Icons.block, 'Prevent fake accounts'),
-                          _buildBenefit(Icons.star, 'Unlock premium features'),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-
-                    // Start Button
-                    if (!_isVerified)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton(
-                          onPressed: _isVerifying ? null : _startVerification,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF5722),
-                            disabledBackgroundColor: Colors.grey[300],
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: Text(
-                            _isVerifying
-                                ? 'Verifying...'
-                                : 'Start Verification',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 28),
+                    _selfieCircle(),
+                    const SizedBox(height: 28),
+                    _tips(),
+                    const SizedBox(height: 16),
+                    _privacyNote(),
+                    const SizedBox(height: 28),
+                    _primaryButton(),
                   ],
                 ),
               ),
@@ -450,20 +197,186 @@ class _VideoVerificationPageState extends State<VideoVerificationPage> {
     );
   }
 
-  Widget _buildBenefit(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: const Color(0xFFFF5722)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[700]),
+  // ───────────────────────────────────────────────────────────── pieces
+
+  Widget _selfieCircle() {
+    return Center(
+      child: GestureDetector(
+        onTap: _submitting ? null : _capture,
+        child: Container(
+          width: 220,
+          height: 220,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppTheme.surface(context),
+            border: Border.all(
+              color: _selfie != null
+                  ? AppTheme.accent
+                  : AppTheme.accent.withValues(alpha: 0.35),
+              width: _selfie != null ? 2.4 : 1.6,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.accent.withValues(alpha: 0.18),
+                blurRadius: 30,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: _selfie != null
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(File(_selfie!.path), fit: BoxFit.cover),
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        color: Colors.black.withValues(alpha: 0.5),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.refresh_rounded,
+                                color: Colors.white, size: 15),
+                            const SizedBox(width: 6),
+                            Text('Retake',
+                                style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accent.withValues(alpha: 0.14),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.camera_alt_rounded,
+                          color: AppTheme.accent, size: 36),
+                    ),
+                    const SizedBox(height: 14),
+                    Text('Tap to take a selfie',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary(context))),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tips() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.hairline(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('For a quick approval',
+              style: GoogleFonts.poppins(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary(context))),
+          const SizedBox(height: 12),
+          _tip('Face the camera in good lighting'),
+          _tip('Keep your whole face in frame'),
+          _tip('Remove sunglasses, hats or masks'),
+        ],
+      ),
+    );
+  }
+
+  Widget _tip(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle_rounded,
+              size: 17, color: AppTheme.accent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text,
+                style: GoogleFonts.poppins(
+                    fontSize: 12.5,
+                    color: AppTheme.textSecondary(context),
+                    height: 1.35)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _privacyNote() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.lock_rounded, size: 13, color: AppTheme.textFaint(context)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            'Your selfie is used only for verification and is never shown on '
+            'your profile.',
+            style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: AppTheme.textFaint(context),
+                height: 1.4),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _primaryButton() {
+    final ready = _selfie != null && !_submitting;
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: ready ? AppTheme.accentGradient : null,
+          color: ready ? null : AppTheme.surface2(context),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: ready ? _submit : (_submitting ? null : _capture),
+            child: Center(
+              child: _submitting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: PremiumLoader(
+                          strokeWidth: 2.4, color: Colors.white))
+                  : Text(
+                      _selfie == null ? 'Take selfie' : 'Submit for review',
+                      style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: ready
+                              ? Colors.white
+                              : AppTheme.textPrimary(context))),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -30,12 +30,14 @@ class VerificationService {
     return null;
   }
 
-  /// Submits a selfie + ID document for review. Returns true on success.
-  Future<bool> submit({required String selfiePath, required String idPath}) async {
+  /// Submits a selfie (and optionally an ID document) for review. The
+  /// registration step submits a selfie only; the Options screen also attaches
+  /// a government ID. Returns true on success.
+  Future<bool> submit({required String selfiePath, String? idPath}) async {
     final form = FormData.fromMap({
       'selfie': await MultipartFile.fromFile(selfiePath, filename: 'selfie.jpg'),
-      'idDocument':
-          await MultipartFile.fromFile(idPath, filename: 'id.jpg'),
+      if (idPath != null)
+        'idDocument': await MultipartFile.fromFile(idPath, filename: 'id.jpg'),
     });
     final res = await _dio.post('/verification',
         data: form, options: Options(headers: await _headers()));
