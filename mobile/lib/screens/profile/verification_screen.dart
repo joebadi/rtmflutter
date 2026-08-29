@@ -296,13 +296,13 @@ class _VerificationScreenState extends State<VerificationScreen>
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _benefitChip(Icons.workspace_premium_rounded, 'Verified badge'),
-              const SizedBox(width: 8),
               _benefitChip(Icons.favorite_rounded, 'More matches'),
-              const SizedBox(width: 8),
               _benefitChip(Icons.shield_rounded, 'Trusted'),
             ],
           ),

@@ -123,6 +123,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       await _fetchNearbyUsers();
     }
     await _fetchSuggestions();
+    if (!mounted) return;
     setState(() => _isLoading = false);
   }
 
@@ -137,6 +138,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       if (permission == LocationPermission.whileInUse || 
           permission == LocationPermission.always) {
         final position = await Geolocator.getCurrentPosition();
+        if (!mounted) return;
         setState(() {
           _currentLocation = LatLng(position.latitude, position.longitude);
         });
@@ -145,6 +147,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       }
     } catch (e) {
       debugPrint('Error getting location: $e');
+      if (!mounted) return;
       setState(() => _locationName = 'Location unavailable');
     }
   }
@@ -175,10 +178,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           locationText = 'Unknown location';
         }
         
+        if (!mounted) return;
         setState(() => _locationName = locationText);
       }
     } catch (e) {
       debugPrint('Error reverse geocoding: $e');
+      if (!mounted) return;
       setState(() => _locationName = 'Location found');
     }
   }
@@ -364,6 +369,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       }
       debugPrint('=========================');
 
+      if (!mounted) return;
       setState(() => _nearbyUsers = filteredUsers);
     } catch (e) {
       debugPrint('Error fetching nearby users: $e');
@@ -399,6 +405,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     try {
       final users = await _matchService.getMatchSuggestions(limit: 10);
       final filteredUsers = _applyFilters(users);
+      if (!mounted) return;
       setState(() => _suggestions = filteredUsers);
     } catch (e) {
       debugPrint('Error fetching suggestions: $e');

@@ -436,13 +436,17 @@ class _DriftColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Column(
-      children: [
-        for (final t in column.tiles) ...[
-          _CollageTile(spec: t),
-          const SizedBox(height: _Column._gap),
+    final content = OverflowBox(
+      maxHeight: double.infinity,
+      alignment: Alignment.topCenter,
+      child: Column(
+        children: [
+          for (final t in column.tiles) ...[
+            _CollageTile(spec: t),
+            const SizedBox(height: _Column._gap),
+          ],
         ],
-      ],
+      ),
     );
 
     return ClipRect(
