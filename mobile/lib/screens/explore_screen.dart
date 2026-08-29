@@ -18,6 +18,7 @@ import '../data/nigeria_locations.dart';
 import '../widgets/notification_icon.dart';
 import '../widgets/premium_message.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/rtm_vector_map.dart';
 import '../widgets/premium_loader.dart';
 
 class ExploreScreen extends StatefulWidget {
@@ -707,12 +708,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             ),
           ),
           children: [
-            TileLayer(
-              // CartoDB Positron (Light) - Friendly, Google Maps-like
-              urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-              subdomains: const ['a', 'b', 'c', 'd'],
-              userAgentPackageName: 'com.rtm.mobile',
-            ),
+            // Self-hosted vector basemap (no API key / third-party quota).
+            rtmVectorTileLayer(),
             // User's own location marker (always on top)
             MarkerLayer(
               markers: [
