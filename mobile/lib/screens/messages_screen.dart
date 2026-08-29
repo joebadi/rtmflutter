@@ -622,20 +622,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () =>
-                                  _openUserProfile(otherUser, profile),
-                              child: Text(
-                                firstName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 15,
-                                  fontWeight: hasUnread
-                                      ? FontWeight.w700
-                                      : FontWeight.w600,
-                                  color: AppTheme.textPrimary(context),
-                                ),
+                            child: Text(
+                              firstName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: hasUnread
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                color: AppTheme.textPrimary(context),
                               ),
                             ),
                           ),

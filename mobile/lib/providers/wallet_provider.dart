@@ -8,11 +8,15 @@ class WalletProvider extends ChangeNotifier {
 
   int _balance = 0;
   List<dynamic> _packages = [];
+  List<dynamic> _paymentGateways = [];
+  bool _paymentsEnabled = false;
   bool _isLoading = false;
   bool _loadedOnce = false;
 
   int get balance => _balance;
   List<dynamic> get packages => _packages;
+  List<dynamic> get paymentGateways => _paymentGateways;
+  bool get paymentsEnabled => _paymentsEnabled;
   bool get isLoading => _isLoading;
   bool get loadedOnce => _loadedOnce;
 
@@ -24,6 +28,8 @@ class WalletProvider extends ChangeNotifier {
       final wallet = await _service.getWallet();
       _balance = (wallet['balance'] ?? 0) as int;
       _packages = (wallet['packages'] ?? []) as List<dynamic>;
+      _paymentGateways = (wallet['paymentGateways'] ?? []) as List<dynamic>;
+      _paymentsEnabled = wallet['paymentsEnabled'] == true;
       _loadedOnce = true;
     } catch (e) {
       debugPrint('[WalletProvider] refresh failed: $e');
