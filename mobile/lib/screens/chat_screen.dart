@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../services/message_service.dart';
+import '../services/profile_service.dart';
 import '../services/like_service.dart';
 import '../config/api_config.dart';
 import '../config/theme.dart';
@@ -32,6 +33,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final MessageService _messageService = MessageService();
+  final ProfileService _profileService = ProfileService();
 
   bool _isLoading = true;
   bool _isSending = false;
@@ -44,6 +46,47 @@ class _ChatScreenState extends State<ChatScreen> {
     if (url == null || url.isEmpty) return '';
     if (url.startsWith('http')) return url;
     return '${ApiConfig.socketUrl}$url';
+  }
+
+  /// Opens the chat partner's full profile. Fetches by userId; falls back to
+  /// the name/photo we already have so the tap always opens something.
+  Future<void> _openReceiverProfile() async {
+    final userId = widget.receiverId;
+    if (userId.isEmpty) return;
+
+    final fallback = <String, dynamic>{
+      'firstName': widget.receiverName,
+      if (widget.receiverPhoto != null && widget.receiverPhoto!.isNotEmpty)
+        'photos': [
+          {'url': widget.receiverPhoto, 'isPrimary': true}
+        ],
+      'user': {'id': userId},
+      'userId': userId,
+    };
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.35),
+      barrierDismissible: false,
+      builder: (_) => const Center(child: PremiumLoader()),
+    );
+
+    Map<String, dynamic>? full;
+    try {
+      full = await _profileService.getProfileById(userId);
+    } catch (_) {
+      full = null;
+    }
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // dismiss loader
+
+    final data = full ?? fallback;
+    data['user'] ??= fallback['user'];
+    data['userId'] ??= userId;
+
+    if (!mounted) return;
+    context.push('/user-profile', extra: data);
   }
 
   @override
@@ -704,7 +747,10 @@ class _ChatScreenState extends State<ChatScreen> {
           onPressed: () => context.pop(),
         ),
         titleSpacing: 0,
-        title: Row(
+        title: GestureDetector(
+          onTap: _openReceiverProfile,
+          behavior: HitTestBehavior.opaque,
+          child: Row(
           children: [
             Container(
               width: 40,
@@ -746,6 +792,7 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
             ),
           ],
+          ),
         ),
         actions: [
           // Diamond balance chip — taps through to the wallet.

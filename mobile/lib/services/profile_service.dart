@@ -64,6 +64,27 @@ class ProfileService {
     }
   }
 
+  /// Get another user's public profile by their userId.
+  /// Returns the profile map (with nested `user` and `photos`) ready for
+  /// [UserProfilePage], or null if it can't be loaded.
+  Future<Map<String, dynamic>?> getProfileById(String userId) async {
+    final token = await _storage.read(key: 'access_token');
+    if (token == null) return null;
+
+    try {
+      final response = await _dio.get(
+        '${ApiConfig.profileBase}/$userId',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      final profile = response.data?['data']?['profile'];
+      if (profile is Map) return Map<String, dynamic>.from(profile);
+      return null;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      throw Exception(_handleDioError(e, 'Failed to fetch profile'));
+    }
+  }
+
   /// Update my profile
   Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
     final token = await _storage.read(key: 'access_token');

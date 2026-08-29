@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/message_service.dart';
+import '../services/profile_service.dart';
 import '../config/api_config.dart';
 import '../config/theme.dart';
 import '../widgets/notification_icon.dart';
@@ -20,6 +21,7 @@ class MessagesScreen extends StatefulWidget {
 class _MessagesScreenState extends State<MessagesScreen> {
   final TextEditingController _searchController = TextEditingController();
   final MessageService _messageService = MessageService();
+  final ProfileService _profileService = ProfileService();
   final _storage = const FlutterSecureStorage();
 
   bool _isLoading = true;
@@ -436,6 +438,46 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
   }
 
+  /// Opens the tapped participant's full profile. Fetches the complete profile
+  /// by userId; if that fails, falls back to the partial data already in the
+  /// conversation payload so a tap never does nothing.
+  Future<void> _openUserProfile(dynamic otherUser, dynamic profile) async {
+    final userId = otherUser?['id']?.toString();
+    if (userId == null || userId.isEmpty) return;
+
+    final fallback = <String, dynamic>{
+      if (profile is Map) ...Map<String, dynamic>.from(profile),
+      'user': otherUser is Map
+          ? Map<String, dynamic>.from(otherUser)
+          : {'id': userId},
+      'userId': userId,
+    };
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.35),
+      barrierDismissible: false,
+      builder: (_) => const Center(child: PremiumLoader()),
+    );
+
+    Map<String, dynamic>? full;
+    try {
+      full = await _profileService.getProfileById(userId);
+    } catch (_) {
+      full = null;
+    }
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // dismiss loader
+
+    final data = full ?? fallback;
+    data['user'] ??= fallback['user'];
+    data['userId'] ??= userId;
+
+    if (!mounted) return;
+    context.push('/user-profile', extra: data);
+  }
+
   Widget _buildChatItem(dynamic conversation) {
     final participants = conversation['participants'] as List? ?? [];
     final otherParticipant = participants.isNotEmpty ? participants[0] : null;
@@ -507,8 +549,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
             ),
             child: Row(
               children: [
-                // Avatar
-                Stack(
+                // Avatar — taps through to the user's profile.
+                GestureDetector(
+                  onTap: () => _openUserProfile(otherUser, profile),
+                  child: Stack(
                   children: [
                     Container(
                       width: 54,
@@ -568,6 +612,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       ),
                   ],
                 ),
+                ),
                 const SizedBox(width: 12),
                 // Info
                 Expanded(
@@ -577,16 +622,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(
-                              firstName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.poppins(
-                                fontSize: 15,
-                                fontWeight: hasUnread
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                                color: AppTheme.textPrimary(context),
+                            child: GestureDetector(
+                              onTap: () =>
+                                  _openUserProfile(otherUser, profile),
+                              child: Text(
+                                firstName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 15,
+                                  fontWeight: hasUnread
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                  color: AppTheme.textPrimary(context),
+                                ),
                               ),
                             ),
                           ),
