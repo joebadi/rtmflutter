@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/message_provider.dart';
 import '../services/notification_service.dart';
 import 'package:go_router/go_router.dart';
+import '../config/theme.dart';
 
 class MainShell extends StatefulWidget {
   final Widget child;
@@ -87,12 +88,15 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.bg(context),
       body: widget.child,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: AppTheme.isLight(context)
+                  ? Colors.black.withOpacity(0.05)
+                  : Colors.black.withOpacity(0.45),
               blurRadius: 20,
               offset: const Offset(0, -5),
             ),
@@ -101,9 +105,9 @@ class _MainShellState extends State<MainShell> {
         child: BottomNavigationBar(
           currentIndex: _calculateSelectedIndex(context),
           onTap: (index) => _onItemTapped(index, context),
-          backgroundColor: Colors.white,
+          backgroundColor: AppTheme.surface(context),
           selectedItemColor: const Color(0xFFFF5722),
-          unselectedItemColor: Colors.grey[400],
+          unselectedItemColor: AppTheme.textFaint(context),
           type: BottomNavigationBarType.fixed,
           showSelectedLabels: false,
           showUnselectedLabels: false,

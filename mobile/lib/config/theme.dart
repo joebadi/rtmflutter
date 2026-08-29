@@ -47,6 +47,12 @@ class AppTheme {
         surface: Colors.white,
       ),
       scaffoldBackgroundColor: backgroundLight,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: textDark,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
 
       // Typography
       fontFamily: GoogleFonts.poppins().fontFamily,
@@ -128,6 +134,31 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme {
+    final darkTextTheme = TextTheme(
+      displayLarge: GoogleFonts.poppins(
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
+      displayMedium: GoogleFonts.poppins(
+        fontSize: 28,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
+      ),
+      titleLarge: GoogleFonts.poppins(
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
+      ),
+      titleMedium: GoogleFonts.poppins(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Colors.white,
+      ),
+      bodyLarge: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
+      bodyMedium: GoogleFonts.poppins(fontSize: 14, color: Colors.white70),
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
@@ -140,6 +171,43 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: darkBg,
       fontFamily: GoogleFonts.poppins().fontFamily,
+      textTheme: darkTextTheme,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: darkSurface,
+        foregroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: darkSurface2,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: primary, width: 2),
+        ),
+        hintStyle: GoogleFonts.poppins(color: Colors.white38, fontSize: 14),
+      ),
+      cardTheme: const CardThemeData(
+        color: darkSurface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: darkSurface,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dividerColor: Colors.white12,
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: darkSurface,
         selectedItemColor: primary,

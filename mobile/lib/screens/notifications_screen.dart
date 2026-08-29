@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../config/api_config.dart';
 import '../services/notification_service.dart';
 import '../widgets/premium_loader.dart';
+import '../config/theme.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -199,9 +200,9 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     final hasUnread = _allNotifications.any((n) => n['isRead'] != true);
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.bg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface(context),
         elevation: 0,
         leading: GestureDetector(
           onTap: () => context.pop(),
@@ -226,7 +227,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
           style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: AppTheme.textPrimary(context),
             letterSpacing: 1.5,
           ),
         ),
@@ -261,18 +262,18 @@ class _NotificationsScreenState extends State<NotificationsScreen>
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: AppTheme.surface2(context),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: TabBar(
                 controller: _tabController,
                 indicator: BoxDecoration(
-                  color: Colors.black87,
+                  color: AppTheme.textPrimary(context),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 indicatorSize: TabBarIndicatorSize.tab,
                 labelColor: Colors.white,
-                unselectedLabelColor: Colors.grey[600],
+                unselectedLabelColor: AppTheme.textSecondary(context),
                 labelStyle: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -404,7 +405,12 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
-          color: isRead ? Colors.white : const Color(0xFFFF5722).withOpacity(0.04),
+          color: isRead
+              ? AppTheme.surface(context)
+              : Color.alphaBlend(
+                  const Color(0xFFFF5722).withOpacity(0.08),
+                  AppTheme.surface(context),
+                ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -445,7 +451,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
+                                    color: AppTheme.textPrimary(context),
                                   ),
                                 ),
                                 if (age > 0)
@@ -454,7 +460,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                     style: GoogleFonts.poppins(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w400,
-                                      color: Colors.grey[600],
+                                      color: AppTheme.textSecondary(context),
                                     ),
                                   ),
                               ] else ...[
@@ -463,7 +469,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
+                                    color: AppTheme.textPrimary(context),
                                   ),
                                 ),
                               ],
@@ -476,7 +482,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                           createdAt,
                           style: GoogleFonts.poppins(
                             fontSize: 12,
-                            color: Colors.grey[500],
+                            color: AppTheme.textFaint(context),
                           ),
                         ),
                     ],
@@ -488,7 +494,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                         : body,
                     style: GoogleFonts.poppins(
                       fontSize: 13,
-                      color: Colors.grey[600],
+                      color: AppTheme.textSecondary(context),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

@@ -328,12 +328,12 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.bg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface(context),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: AppTheme.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -341,7 +341,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
           style: GoogleFonts.poppins(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: AppTheme.textPrimary(context),
           ),
         ),
       ),
@@ -806,7 +806,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -835,7 +835,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: AppTheme.textPrimary(context),
                 ),
               ),
             ],
@@ -861,23 +861,24 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
           style: GoogleFonts.poppins(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
+            color: AppTheme.textSecondary(context),
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey[100],
+            color: AppTheme.surface2(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: AppTheme.hairline(context)),
           ),
           child: TextFormField(
             controller: controller,
-            style: GoogleFonts.poppins(color: Colors.black87, fontSize: 14),
+            style: GoogleFonts.poppins(
+                color: AppTheme.textPrimary(context), fontSize: 14),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.poppins(
-                color: Colors.grey[400],
+                color: AppTheme.textFaint(context),
                 fontSize: 14,
               ),
               border: InputBorder.none,
@@ -904,24 +905,25 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
           style: GoogleFonts.poppins(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
+            color: AppTheme.textSecondary(context),
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey[100],
+            color: AppTheme.surface2(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: AppTheme.hairline(context)),
           ),
           child: TextFormField(
             controller: controller,
             maxLines: maxLines,
-            style: GoogleFonts.poppins(color: Colors.black87, fontSize: 14),
+            style: GoogleFonts.poppins(
+                color: AppTheme.textPrimary(context), fontSize: 14),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.poppins(
-                color: Colors.grey[400],
+                color: AppTheme.textFaint(context),
                 fontSize: 14,
               ),
               border: InputBorder.none,
@@ -955,16 +957,17 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: AppTheme.surface2(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(color: AppTheme.hairline(context)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+            style: GoogleFonts.poppins(
+                fontSize: 14, color: AppTheme.textPrimary(context)),
           ),
           Switch(
             value: value,
@@ -985,7 +988,7 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
           style: GoogleFonts.poppins(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
+            color: AppTheme.textSecondary(context),
           ),
         ),
         const SizedBox(height: 8),
@@ -993,15 +996,15 @@ class _PersonalInformationPageState extends State<PersonalInformationPage> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.grey[200],
+            color: AppTheme.surface2(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: AppTheme.hairline(context)),
           ),
           child: Text(
             value,
             style: GoogleFonts.poppins(
               fontSize: 14,
-              color: Colors.black54,
+              color: AppTheme.textSecondary(context),
               fontWeight: FontWeight.w500,
             ),
           ),

@@ -9,6 +9,7 @@ import '../../services/profile_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/premium_loader.dart';
 import '../../widgets/premium_message.dart';
+import '../../config/theme.dart';
 
 class OptionsPage extends StatefulWidget {
   const OptionsPage({super.key});
@@ -62,12 +63,12 @@ class _OptionsPageState extends State<OptionsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppTheme.bg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface(context),
         elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: Icon(Icons.arrow_back, color: AppTheme.textPrimary(context)),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -75,7 +76,7 @@ class _OptionsPageState extends State<OptionsPage> {
           style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: AppTheme.textPrimary(context),
             letterSpacing: 1.5,
           ),
         ),
@@ -350,18 +351,21 @@ class _OptionsPageState extends State<OptionsPage> {
                       }
                     },
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.grey[300]!, width: 1.5),
+                      side: BorderSide(
+                        color: AppTheme.hairline(context),
+                        width: 1.5,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      backgroundColor: Colors.white,
+                      backgroundColor: AppTheme.surface(context),
                     ),
                     child: Text(
                       'Log Out',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: AppTheme.textPrimary(context),
                       ),
                     ),
                   ),
@@ -419,7 +423,7 @@ class _OptionsPageState extends State<OptionsPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      backgroundColor: Colors.white,
+                      backgroundColor: AppTheme.surface(context),
                     ),
                     child: Text(
                       'Delete Account',
@@ -449,7 +453,7 @@ class _OptionsPageState extends State<OptionsPage> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -483,11 +487,12 @@ class _OptionsPageState extends State<OptionsPage> {
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+                      color: AppTheme.textPrimary(context),
                     ),
                   ),
                 ),
-                Icon(Icons.chevron_right, color: Colors.grey[400], size: 20),
+                Icon(Icons.chevron_right,
+                    color: AppTheme.textFaint(context), size: 20),
               ],
             ),
           ),
@@ -505,7 +510,7 @@ class _OptionsPageState extends State<OptionsPage> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -528,7 +533,7 @@ class _OptionsPageState extends State<OptionsPage> {
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: AppTheme.textPrimary(context),
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -536,7 +541,7 @@ class _OptionsPageState extends State<OptionsPage> {
                     subtitle,
                     style: GoogleFonts.poppins(
                       fontSize: 11,
-                      color: Colors.grey[600],
+                      color: AppTheme.textSecondary(context),
                       height: 1.3,
                     ),
                   ),
@@ -563,7 +568,7 @@ class _OptionsPageState extends State<OptionsPage> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.surface(context),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -588,7 +593,7 @@ class _OptionsPageState extends State<OptionsPage> {
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+                      color: AppTheme.textPrimary(context),
                     ),
                   ),
                 ),

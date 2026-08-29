@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../config/theme.dart';
 
 /// A premium dropdown field that opens a modal bottom sheet for selection.
 /// Replaces the basic Material DropdownButton with a polished mobile-first experience.
@@ -37,7 +38,7 @@ class PremiumDropdown extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: isDarkLabel
                 ? Colors.white.withOpacity(0.9)
-                : Colors.grey[700],
+                : AppTheme.textSecondary(context),
           ),
         ),
         const SizedBox(height: 8),
@@ -49,12 +50,12 @@ class PremiumDropdown extends StatelessWidget {
             decoration: BoxDecoration(
               color: isDarkLabel
                   ? Colors.white.withOpacity(0.9)
-                  : Colors.white,
+                  : AppTheme.surface2(context),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: hasValue
                     ? const Color(0xFFFF5722).withOpacity(0.3)
-                    : Colors.grey[300]!,
+                    : AppTheme.hairline(context),
                 width: hasValue ? 1.5 : 1,
               ),
               boxShadow: [
@@ -74,7 +75,9 @@ class PremiumDropdown extends StatelessWidget {
                     hasValue ? value! : (hint ?? 'Select'),
                     style: GoogleFonts.poppins(
                       fontSize: 14,
-                      color: hasValue ? Colors.black87 : Colors.grey[400],
+                      color: hasValue
+                          ? AppTheme.textPrimary(context)
+                          : AppTheme.textFaint(context),
                       fontWeight: hasValue ? FontWeight.w500 : FontWeight.w400,
                     ),
                   ),
@@ -174,9 +177,9 @@ class _SelectionSheetState extends State<_SelectionSheet> {
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: AppTheme.surface(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -211,7 +214,7 @@ class _SelectionSheetState extends State<_SelectionSheet> {
                   style: GoogleFonts.poppins(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black87,
+                    color: AppTheme.textPrimary(context),
                   ),
                 ),
               ],
@@ -224,7 +227,7 @@ class _SelectionSheetState extends State<_SelectionSheet> {
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: AppTheme.surface2(context),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TextField(
@@ -255,7 +258,7 @@ class _SelectionSheetState extends State<_SelectionSheet> {
           const SizedBox(height: 8),
 
           // Divider
-          Divider(height: 1, color: Colors.grey[200]),
+          Divider(height: 1, color: AppTheme.hairline(context)),
 
           // Items list
           Flexible(
@@ -310,7 +313,7 @@ class _SelectionSheetState extends State<_SelectionSheet> {
                                         : FontWeight.w400,
                                     color: isSelected
                                         ? const Color(0xFFFF5722)
-                                        : Colors.black87,
+                                        : AppTheme.textPrimary(context),
                                   ),
                                 ),
                               ),

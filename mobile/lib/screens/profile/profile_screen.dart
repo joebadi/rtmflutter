@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../config/api_config.dart';
 import '../../widgets/premium_loader.dart';
+import '../../config/theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -38,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.bg(context),
       body: Consumer<ProfileProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading && !provider.hasProfile) {
@@ -106,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: const Icon(Icons.tune_rounded, size: 24),
                             tooltip: 'Match preferences',
                             onPressed: () => context.push('/match-preferences'),
-                            color: Colors.black87,
+                            color: AppTheme.textPrimary(context),
                           ),
                         ],
                       ),

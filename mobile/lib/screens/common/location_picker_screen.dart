@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import '../../services/location_search_service.dart';
 import '../../widgets/premium_loader.dart';
+import '../../config/theme.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key});
@@ -110,19 +111,19 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.bg(context),
       appBar: AppBar(
         title: Text(
           'Select Location',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+            color: AppTheme.textPrimary(context),
             fontSize: 16,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.surface(context),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black87),
+        iconTheme: IconThemeData(color: AppTheme.textPrimary(context)),
       ),
       body: Column(
         children: [
@@ -130,7 +131,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppTheme.surface(context),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -148,7 +149,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 hintText: 'Search city, state, or country',
                 prefixIcon: const Icon(Icons.search, color: Color(0xFFFF5722)),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: AppTheme.surface2(context),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
