@@ -50,6 +50,9 @@ dependencies:
   timeago: ^3.7.0
   agora_rtc_engine: ^6.5.0
   permission_handler: ^11.3.1
+  vector_map_tiles: ^7.3.1
+  vector_tile_renderer: ^5.2.1
+  webview_flutter: ^4.14.1
 
 dev_dependencies:
   flutter_test:
