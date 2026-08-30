@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.mobile"
+    namespace = "com.compatible.app"
     compileSdk = 36
     ndkVersion = "27.0.12077973"
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.mobile"
+        applicationId = "com.compatible.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = 24
@@ -41,4 +41,11 @@ android {
 
 flutter {
     source = "../.."
+}
+
+// Enable Firebase Cloud Messaging only when the config file is present, so the
+// project still builds before Firebase is set up. Drop google-services.json into
+// android/app/ to activate push notifications.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
 }

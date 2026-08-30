@@ -42,8 +42,48 @@ import 'providers/theme_provider.dart';
 import 'config/theme.dart';
 
 import 'services/notification_service.dart';
-void main() {
+import 'services/push_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Register the FCM background handler before any async work.
+  FirebaseMessaging.onBackgroundMessage(firebaseBackgroundHandler);
+
+  // Initialize push (no-ops safely if Firebase isn't configured yet).
+  await PushService.instance.initialize();
+  // Route notification taps through the app router.
+  PushService.instance.onTap = _handleNotificationTap;
+
   runApp(const MyApp());
+}
+
+/// Routes a tapped push notification to the right screen based on its `data`.
+void _handleNotificationTap(Map<String, dynamic> data) {
+  final type = data['type']?.toString();
+  final conversationId = data['conversationId']?.toString();
+  switch (type) {
+    case 'message':
+      if (conversationId != null && conversationId.isNotEmpty) {
+        _router.push('/chat/$conversationId', extra: {
+          'receiverId': data['senderId'] ?? '',
+          'receiverName': data['senderName'] ?? 'User',
+          'receiverPhoto': data['senderPhoto'],
+        });
+      } else {
+        _router.go('/messages');
+      }
+      break;
+    case 'match':
+      _router.go('/matches');
+      break;
+    case 'like':
+      _router.go('/liked-profiles');
+      break;
+    default:
+      _router.go('/notifications');
+  }
 }
 
 final _router = GoRouter(

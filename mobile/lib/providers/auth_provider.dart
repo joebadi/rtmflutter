@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/push_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -23,6 +24,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _authService.login(email, password);
       _isAuthenticated = true;
+      PushService.instance.syncTokenToBackend();
       _error = null;
       return true;
     } catch (e) {
@@ -50,6 +52,7 @@ class AuthProvider extends ChangeNotifier {
         phoneNumber: phoneNumber,
       );
       _isAuthenticated = true;
+      PushService.instance.syncTokenToBackend();
       _error = null;
       return true;
     } catch (e) {
@@ -66,6 +69,7 @@ class AuthProvider extends ChangeNotifier {
     // DEV BYPASS: Allow 123456 to pass locally
     if (otp == '123456') {
       _isAuthenticated = true;
+      PushService.instance.syncTokenToBackend();
       _error = null;
       _setLoading(false);
       return true;
@@ -146,6 +150,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await PushService.instance.clearToken();
     await _authService.logout();
     _isAuthenticated = false;
     notifyListeners();
