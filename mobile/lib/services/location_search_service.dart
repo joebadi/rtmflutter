@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:geolocator/geolocator.dart';
@@ -63,7 +64,7 @@ class LocationSearchService {
       }
       return [];
     } catch (e) {
-      print('Error searching location: $e');
+      debugPrint('Error searching location: $e');
       return [];
     }
   }
@@ -120,7 +121,7 @@ class LocationSearchService {
         );
       }
     } catch (e) {
-      print('Error reverse geocoding: $e');
+      debugPrint('Error reverse geocoding: $e');
     }
     return null;
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/api_config.dart';
@@ -85,7 +86,7 @@ class MatchService {
       return {};
     } catch (e) {
       // ignore: avoid_print
-      print('Error fetching compatibility: $e');
+      debugPrint('Error fetching compatibility: $e');
       return {};
     }
   }
@@ -117,7 +118,7 @@ class MatchService {
         return {};
       }
     } catch (e) {
-      print('Error fetching preferences: $e');
+      debugPrint('Error fetching preferences: $e');
       return {};
     }
   }
@@ -135,7 +136,7 @@ class MatchService {
 
       return response.statusCode == 200 && response.data['success'] == true;
     } catch (e) {
-      print('Error updating preferences: $e');
+      debugPrint('Error updating preferences: $e');
       return false;
     }
   }

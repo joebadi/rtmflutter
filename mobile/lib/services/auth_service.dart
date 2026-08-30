@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../config/api_config.dart';
 
@@ -65,8 +66,6 @@ class AuthService {
         if (gender != null) 'gender': gender,
       };
 
-      print('Registration request data: $requestData');
-
       final response = await _dio.post(ApiConfig.register, data: requestData);
 
       // Extract tokens from response
@@ -86,9 +85,9 @@ class AuthService {
         // Trigger OTP send immediately after successful registration
         try {
           await sendOtp(email);
-          print('Auto-sent OTP after registration to $email');
+          debugPrint('Auto-sent OTP after registration to $email');
         } catch (e) {
-          print('Failed to auto-send OTP: $e');
+          debugPrint('Failed to auto-send OTP: $e');
         }
       }
 
@@ -96,7 +95,7 @@ class AuthService {
     } on DioException catch (e) {
       throw _handleDioError(e, 'Registration failed');
     } catch (e) {
-      print('Unexpected error during registration: $e');
+      debugPrint('Unexpected error during registration: $e');
       throw AuthException(
           'We couldn’t complete your registration. Please try again.');
     }
@@ -105,10 +104,9 @@ class AuthService {
   /// Turns a Dio error into a friendly, human-readable [AuthException] — no raw
   /// "Exception: ..." text and no developer jargon shown to users.
   Exception _handleDioError(DioException e, String defaultMessage) {
-    // Keep full detail in logs for debugging.
-    print('$defaultMessage error: ${e.message}');
-    print('Response data: ${e.response?.data}');
-    print('Status code: ${e.response?.statusCode}');
+    // Log status for debugging; avoid logging response bodies (may contain PII).
+    debugPrint('$defaultMessage error: ${e.message}');
+    debugPrint('Status code: ${e.response?.statusCode}');
 
     // Connectivity problems (no/poor network).
     switch (e.type) {
@@ -300,7 +298,7 @@ class AuthService {
       }
       return null;
     } on DioException catch (e) {
-      print('Token refresh failed: ${e.message}');
+      debugPrint('Token refresh failed: ${e.message}');
       return null;
     }
   }
@@ -316,7 +314,7 @@ class AuthService {
         );
       }
     } catch (e) {
-      print('Logout API call failed: $e');
+      debugPrint('Logout API call failed: $e');
     } finally {
       // Always clear local tokens
       await _storage.delete(key: 'access_token');

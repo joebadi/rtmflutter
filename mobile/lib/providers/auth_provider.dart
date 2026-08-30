@@ -65,16 +65,6 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> verifyOtp(String emailOrPhone, String otp) async {
     _setLoading(true);
-
-    // DEV BYPASS: Allow 123456 to pass locally
-    if (otp == '123456') {
-      _isAuthenticated = true;
-      PushService.instance.syncTokenToBackend();
-      _error = null;
-      _setLoading(false);
-      return true;
-    }
-
     try {
       await _authService.verifyOtp(emailOrPhone, otp);
       _error = null;
@@ -116,7 +106,7 @@ class AuthProvider extends ChangeNotifier {
       }
       return {};
     } catch (e) {
-      print('Check existence failed: $e');
+      debugPrint('Check existence failed: $e');
       return {};
     }
   }

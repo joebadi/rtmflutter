@@ -151,7 +151,7 @@ class _SplashScreenState extends State<SplashScreen>
       // All good - go to home
       context.go('/home');
     } catch (e) {
-      print('Error checking profile status: $e');
+      debugPrint('Error checking profile status: $e');
       // Fallback: If network fails, maybe let them go home or stay on splash with retry?
       // For now, let's go home and let the home page handle errors/empty state
       if (mounted) context.go('/home');
