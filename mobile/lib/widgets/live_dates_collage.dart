@@ -11,7 +11,7 @@ import '../config/theme.dart';
 ///
 /// PHOTOS: drop curated images into `mobile/assets/collage/` named
 /// `1.jpg` … `12.jpg`. Until then, warm stylised gradient tiles render in
-/// their place so the screen always looks intentional. For "Ready to Marry"
+/// their place so the screen always looks intentional. For "Compatible"
 /// the photos should celebrate African connection across ages — youthful
 /// dates, couples, friends, and elders — warm, joyful, real.
 class LiveDatesCollage extends StatefulWidget {

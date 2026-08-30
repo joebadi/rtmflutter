@@ -18,7 +18,7 @@ The widget loads `1.jpg`…`12.jpg` and tiles them across 3 drifting columns.
 You can ship fewer than 12 — any missing number falls back to a stylised warm
 gradient tile automatically (no broken images), so the screen always looks good.
 
-## Art direction (Ready to Marry)
+## Art direction (Compatible)
 
 Celebrate **African** connection across ages — youthful dates and couples,
 friends and groups meeting up, plus mid-life and elder couples. Warm, joyful,
