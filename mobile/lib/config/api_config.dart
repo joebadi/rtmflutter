@@ -1,7 +1,51 @@
 class ApiConfig {
-  // Base URLs
-  static const String baseUrl = 'https://rtmadmin.e-clicks.net/api';
-  static const String socketUrl = 'https://rtmadmin.e-clicks.net';
+  // ---------------------------------------------------------------------------
+  // Environment selection
+  //
+  // Pick an environment at build/run time:
+  //   flutter run --dart-define=APP_ENV=dev        # local backend
+  //   flutter run --dart-define=APP_ENV=staging
+  //   flutter build ... (no flag)                  # prod (default)
+  //
+  // Or override the URLs directly (wins over APP_ENV):
+  //   --dart-define=API_BASE_URL=http://192.168.1.5:4000/api
+  //   --dart-define=SOCKET_URL=http://192.168.1.5:4000
+  //
+  // `dev` defaults to 10.0.2.2 (the Android emulator's alias for the host
+  // machine's localhost); override API_BASE_URL for a physical device or iOS.
+  // ---------------------------------------------------------------------------
+  static const String environment =
+      String.fromEnvironment('APP_ENV', defaultValue: 'prod');
+
+  static const String _explicitBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static const String _explicitSocketUrl = String.fromEnvironment('SOCKET_URL');
+
+  static const bool isProduction = environment == 'prod';
+
+  // Per-environment defaults.
+  static const String _prodBase = 'https://rtmadmin.e-clicks.net/api';
+  static const String _prodSocket = 'https://rtmadmin.e-clicks.net';
+  static const String _stagingBase = 'https://staging.rtmadmin.e-clicks.net/api';
+  static const String _stagingSocket = 'https://staging.rtmadmin.e-clicks.net';
+  static const String _devBase = 'http://10.0.2.2:4000/api';
+  static const String _devSocket = 'http://10.0.2.2:4000';
+
+  // Base URLs — const so the endpoint constants below can interpolate them.
+  static const String baseUrl = _explicitBaseUrl != ''
+      ? _explicitBaseUrl
+      : environment == 'dev'
+          ? _devBase
+          : environment == 'staging'
+              ? _stagingBase
+              : _prodBase;
+
+  static const String socketUrl = _explicitSocketUrl != ''
+      ? _explicitSocketUrl
+      : environment == 'dev'
+          ? _devSocket
+          : environment == 'staging'
+              ? _stagingSocket
+              : _prodSocket;
 
   // API Endpoints
   static const String authBase = '$baseUrl/auth';
