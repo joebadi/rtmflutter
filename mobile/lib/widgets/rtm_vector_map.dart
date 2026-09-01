@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart'
     show Theme, ThemeReader;
@@ -33,6 +34,10 @@ VectorTileLayer rtmVectorTileLayer({bool darkMode = false}) {
     _lightTheme = theme;
   }
   return VectorTileLayer(
+    // Keying on the theme forces a fresh layer when the app toggles light/dark,
+    // so the renderer re-rasterises with the new theme instead of reusing the
+    // previous (e.g. dark) tiles.
+    key: ValueKey('rtm-vector-tile-${darkMode ? 'dark' : 'light'}'),
     theme: theme,
     maximumZoom: 20,
     tileProviders: TileProviders({
