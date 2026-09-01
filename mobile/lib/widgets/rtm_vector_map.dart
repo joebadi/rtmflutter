@@ -34,11 +34,14 @@ VectorTileLayer rtmVectorTileLayer({bool darkMode = false}) {
     _lightTheme = theme;
   }
   return VectorTileLayer(
-    // Keying on the theme forces a fresh layer when the app toggles light/dark,
-    // so the renderer re-rasterises with the new theme instead of reusing the
-    // previous (e.g. dark) tiles.
+    // Keying on the theme forces a fresh layer when the app toggles light/dark.
     key: ValueKey('rtm-vector-tile-${darkMode ? 'dark' : 'light'}'),
     theme: theme,
+    // Vector mode paints from vector data + theme every frame. Raster mode
+    // caches rendered tile IMAGES by coordinate (theme-agnostic), so after a
+    // light/dark toggle already-drawn tiles stayed in the old theme until
+    // scrolled past. Vector mode repaints every visible tile in the new theme.
+    layerMode: VectorTileLayerMode.vector,
     maximumZoom: 20,
     tileProviders: TileProviders({
       'openmaptiles': NetworkVectorTileProvider(
