@@ -428,9 +428,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         return false;
       }
 
-      // Distance filter (only computed for nearby users; top-level)
+      // Distance filter (only computed for nearby users; top-level).
+      // Demo/test accounts are exempt so they surface regardless of the
+      // viewer's location.
+      final isTest = (userObj['isTest'] ?? user['isTest']) == true;
       final distance = user['distance'] ?? 0;
-      if (distance > _distance.round()) {
+      if (!isTest && distance > _distance.round()) {
         return false;
       }
 
