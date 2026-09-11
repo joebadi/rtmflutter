@@ -87,14 +87,22 @@ class _UserProfilePageState extends State<UserProfilePage>
         _theyMatchYou = (they['score'] as num).round();
       }
       if (you != null) {
-        if (you['score'] is num) _youMatchThem = (you['score'] as num).round();
         if (you['matches'] is List) {
           _youMatchThemMatches =
               (you['matches'] as List).map((e) => e.toString()).toSet();
         }
-        if (you['dealBreakers'] is List) {
-          _youMatchThemDealBreakers =
-              (you['dealBreakers'] as List).map((e) => e.toString()).toSet();
+        final reportedDealBreakers = you['dealBreakers'] is List
+            ? (you['dealBreakers'] as List)
+                .map((e) => e.toString())
+                .toSet()
+            : <String>{};
+        _youMatchThemDealBreakers = reportedDealBreakers;
+        // A failed deal breaker can never coexist with a positive match score.
+        // Keep the UI consistent if an older response is cached during rollout.
+        if (you['score'] is num) {
+          _youMatchThem = reportedDealBreakers.isEmpty
+              ? (you['score'] as num).round()
+              : 0;
         }
       }
     });
@@ -1856,17 +1864,124 @@ class _UserProfilePageState extends State<UserProfilePage>
   Widget _reciprocalMatchCard() {
     final score = _youMatchThem ?? 0;
     final name = _user['firstName'] ?? 'them';
+    final failedCount = _youMatchThemDealBreakers.length;
+    final failedDealBreaker = failedCount > 0;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
+          colors: failedDealBreaker
+              ? [
+                  const Color(0xFFFF5252).withValues(alpha: 0.22),
+                  const Color(0xFF8E1B2F).withValues(alpha: 0.16),
+                ]
+              : [
+                  const Color(0xFFFFD700).withValues(alpha: 0.18),
+                  const Color(0xFFFFA500).withValues(alpha: 0.10),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: failedDealBreaker
+              ? const Color(0xFFFF5252).withValues(alpha: 0.55)
+              : const Color(0xFFFFD700).withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: failedDealBreaker
+                    ? const [Color(0xFFFF5252), Color(0xFFC62848)]
+                    : const [Color(0xFFFFD700), Color(0xFFFFA500)],
+              ),
+            ),
+            alignment: Alignment.center,
+            child: failedDealBreaker
+                ? const Icon(
+                    Icons.gpp_bad_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  )
+                : Text(
+                    '$score%',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black,
+                    ),
+                  ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  failedDealBreaker
+                      ? "You're not a match for $name"
+                      : "You're a $score% match for $name",
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  failedDealBreaker
+                      ? 'Your profile failed $failedCount deal-breaker ${failedCount == 1 ? 'preference' : 'preferences'}'
+                      : 'How well your profile fits their preferences',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Introductory banner between the reciprocal score and preference rows.
+  /// Its palette mirrors the app splash screen rather than the gold score card.
+  Widget _partnerPreferenceIntro() {
+    final name = (_user['firstName'] ?? 'Their').toString().trim();
+    final possessive = name.toLowerCase() == 'their'
+        ? 'Their'
+        : name.endsWith('s')
+            ? "$name'"
+            : "$name's";
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            const Color(0xFFFFD700).withOpacity(0.18),
-            const Color(0xFFFFA500).withOpacity(0.10),
+            Color(0xFF180B14),
+            Color(0xFF3A1128),
+            Color(0xFF210E18),
           ],
         ),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.35)),
+        border: Border.all(
+          color: const Color(0xFFF45B45).withValues(alpha: 0.42),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0B0308).withValues(alpha: 0.28),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -1876,41 +1991,25 @@ class _UserProfilePageState extends State<UserProfilePage>
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                colors: [Color(0xFFF45B45), Color(0xFFF4B860)],
               ),
             ),
-            alignment: Alignment.center,
-            child: Text(
-              '$score%',
-              style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: Colors.black,
-              ),
+            child: const Icon(
+              Icons.favorite_border_rounded,
+              color: Colors.white,
+              size: 22,
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "You're a $score% match for $name",
-                  style: GoogleFonts.poppins(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'How well your profile fits their preferences',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
-                ),
-              ],
+            child: Text(
+              "$possessive partner preference...",
+              style: GoogleFonts.poppins(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                height: 1.35,
+              ),
             ),
           ),
         ],
@@ -1929,41 +2028,13 @@ class _UserProfilePageState extends State<UserProfilePage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF5722).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFFFF5722).withOpacity(0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.favorite_border,
-                  color: Color(0xFFFF5722),
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'What ${_user['firstName'] ?? 'they'} is looking for',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
           if (hasPrefs && _youMatchThem != null) _reciprocalMatchCard(),
 
-          if (hasPrefs && _youMatchThem != null) const SizedBox(height: 16),
+          if (hasPrefs && _youMatchThem != null) const SizedBox(height: 12),
+
+          if (hasPrefs) _partnerPreferenceIntro(),
+
+          if (hasPrefs) const SizedBox(height: 16),
 
           if (!hasPrefs)
             Center(
@@ -2004,6 +2075,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               Icons.favorite,
               'Relationship Status',
               _formatList(prefs['relationshipStatus']),
+              matched: _reciprocalMatch('relationshipStatus'),
               isDealBreaker: _isDealBreaker(prefs, 'relationshipIsDealBreaker'),
             ),
 
@@ -2071,7 +2143,8 @@ class _UserProfilePageState extends State<UserProfilePage>
               _buildPreferenceItem(
                 Icons.height,
                 'Preferred Height',
-                '${prefs['heightMin']} to ${prefs['heightMax']}',
+                '${prefs['heightMin']} - ${prefs['heightMax']} cm',
+                matched: _reciprocalMatch('height'),
                 isDealBreaker: _isDealBreaker(prefs, 'heightIsDealBreaker'),
               ),
 

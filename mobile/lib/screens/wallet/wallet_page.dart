@@ -10,8 +10,8 @@ import '../../providers/wallet_provider.dart';
 import '../../widgets/diamond_gem.dart';
 import 'paystack_checkout_page.dart';
 
-/// RTM Reserve — a deliberately quiet, private-banking take on the diamond
-/// wallet. Purchase, verification and history behaviour remain server-backed.
+/// Premium diamond wallet inspired by the app's splash palette. Purchase,
+/// verification and history behaviour remain server-backed.
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key});
 
@@ -21,14 +21,22 @@ class WalletPage extends StatefulWidget {
 
 class _WalletPageState extends State<WalletPage>
     with SingleTickerProviderStateMixin {
-  static const _ink = Color(0xFF0B090C);
-  static const _panel = Color(0xFF151216);
-  static const _wine = Color(0xFF5E1424);
-  static const _wineBright = Color(0xFF9E2942);
-  static const _gold = Color(0xFFE7C98B);
-  static const _goldMuted = Color(0xFF9D8154);
-  static const _cream = Color(0xFFF5EFE4);
-  static const _gem = [Color(0xFFFFF1BF), Color(0xFFE7C98B), Color(0xFF9D6B2D)];
+  static const _wineBright = Color(0xFFF45B45);
+  static const _gold = Color(0xFFF4B860);
+  static const _goldMuted = Color(0xFFF08A7C);
+  static const _gem = [Color(0xFFE8FCFF), Color(0xFF70DFF4), Color(0xFF8978F7)];
+
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _ink => _isDark ? const Color(0xFF180B14) : const Color(0xFFFFF7FA);
+  Color get _panel => _isDark ? const Color(0xFF281520) : Colors.white;
+  Color get _wine =>
+      _isDark ? const Color(0xFF3A1128) : const Color(0xFFFFE5ED);
+  Color get _cream => _isDark ? Colors.white : const Color(0xFF21141C);
+  Color get _muted =>
+      _isDark ? Colors.white.withValues(alpha: 0.62) : const Color(0xFF715E69);
+  Color get _stroke => _isDark
+      ? Colors.white.withValues(alpha: 0.09)
+      : const Color(0xFF3A1128).withValues(alpha: 0.09);
 
   static const List<Map<String, dynamic>> _fallbackPackages = [
     {
@@ -63,6 +71,7 @@ class _WalletPageState extends State<WalletPage>
 
   late final AnimationController _glow;
   String? _busyId;
+  String? _selectedPackageId;
 
   @override
   void initState() {
@@ -88,6 +97,22 @@ class _WalletPageState extends State<WalletPage>
     final packages = wallet.packages.isNotEmpty
         ? wallet.packages
         : _fallbackPackages;
+    final normalizedPackages = packages
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+    final bestValueId = _bestValueId(packages);
+    final packageIds = normalizedPackages
+        .map((item) => item['id']?.toString())
+        .whereType<String>()
+        .toSet();
+    final selectedId = packageIds.contains(_selectedPackageId)
+        ? _selectedPackageId
+        : (bestValueId ?? (packageIds.isEmpty ? null : packageIds.first));
+    final selectedPackage = selectedId == null
+        ? null
+        : normalizedPackages.firstWhere(
+            (item) => item['id']?.toString() == selectedId,
+          );
     final gatewayName = _activeGatewayName(wallet.paymentGateways);
 
     return Scaffold(
@@ -102,7 +127,7 @@ class _WalletPageState extends State<WalletPage>
                 if (wallet.isLoading)
                   const LinearProgressIndicator(
                     minHeight: 1,
-                    color: _gold,
+                    color: _wineBright,
                     backgroundColor: Colors.transparent,
                   ),
                 Expanded(
@@ -114,30 +139,37 @@ class _WalletPageState extends State<WalletPage>
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 44),
                       children: [
-                        _reserveCard(wallet.balance),
-                        const SizedBox(height: 18),
-                        _utilityStrip(),
-                        const SizedBox(height: 30),
+                        _balanceCard(wallet.balance),
+                        const SizedBox(height: 28),
                         _sectionHeading(
-                          'Add to your reserve',
-                          'One-time purchase',
+                          'Choose your diamonds',
+                          'One-time top-up',
                         ),
                         const SizedBox(height: 14),
                         if (wallet.loadedOnce && !wallet.paymentsEnabled) ...[
                           _paymentsPausedNotice(),
                           const SizedBox(height: 14),
                         ],
-                        ...packages.map(
-                          (item) => Padding(
+                        ...normalizedPackages.map(
+                          (package) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _packageTile(
-                              Map<String, dynamic>.from(item as Map),
-                              _bestValueId(packages),
+                              package,
+                              bestValueId,
+                              selectedId,
                               wallet.paymentsEnabled,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 14),
+                        _benefitsCard(),
+                        const SizedBox(height: 22),
+                        if (selectedPackage != null)
+                          _purchaseButton(
+                            selectedPackage,
+                            wallet.paymentsEnabled,
+                          ),
+                        const SizedBox(height: 12),
                         _securityFooter(gatewayName, wallet.paymentsEnabled),
                       ],
                     ),
@@ -152,19 +184,69 @@ class _WalletPageState extends State<WalletPage>
   }
 
   Widget _background() {
-    return AnimatedBuilder(
-      animation: _glow,
-      builder: (context, _) => Positioned.fill(
-        child: DecoratedBox(
+    return Positioned.fill(
+      child: AnimatedBuilder(
+        animation: _glow,
+        builder: (context, _) => DecoratedBox(
           decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: const Alignment(0.9, -1),
-              radius: 1.25,
-              colors: [
-                _wine.withOpacity(0.22 + (_glow.value * 0.07)),
-                _ink.withOpacity(0),
-              ],
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: _isDark
+                  ? const [
+                      Color(0xFF180B14),
+                      Color(0xFF3A1128),
+                      Color(0xFF210E18),
+                    ]
+                  : const [
+                      Color(0xFFFFFBFC),
+                      Color(0xFFFFEDF3),
+                      Color(0xFFFFF7F9),
+                    ],
+              stops: const [0, 0.5, 1],
             ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -110,
+                right: -90,
+                child: Container(
+                  width: 260,
+                  height: 260,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        _wineBright.withValues(
+                          alpha: (_isDark ? 0.14 : 0.10) + _glow.value * 0.04,
+                        ),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -160,
+                left: -120,
+                child: Container(
+                  width: 330,
+                  height: 330,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(
+                          0xFFE91E63,
+                        ).withValues(alpha: _isDark ? 0.12 : 0.07),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -178,7 +260,7 @@ class _WalletPageState extends State<WalletPage>
         children: [
           IconButton(
             tooltip: 'Back',
-            icon: const Icon(Icons.arrow_back_rounded, color: _cream),
+            icon: Icon(Icons.arrow_back_rounded, color: _cream),
             onPressed: () =>
                 context.canPop() ? context.pop() : context.go('/home'),
           ),
@@ -187,20 +269,19 @@ class _WalletPageState extends State<WalletPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'RTM RESERVE',
+                  'Wallet',
                   style: GoogleFonts.poppins(
-                    color: _gold,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 2.4,
+                    color: _cream,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 Text(
-                  'Wallet',
-                  style: GoogleFonts.playfairDisplay(
-                    color: _cream,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
+                  'Diamonds for deeper connections',
+                  style: GoogleFonts.poppins(
+                    color: _muted,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -209,47 +290,51 @@ class _WalletPageState extends State<WalletPage>
           IconButton(
             tooltip: 'Purchase history',
             onPressed: _showTransactions,
-            icon: const Icon(Icons.receipt_long_outlined, color: _cream),
+            icon: Icon(Icons.receipt_long_outlined, color: _cream),
           ),
         ],
       ),
     );
   }
 
-  Widget _reserveCard(int balance) {
+  Widget _balanceCard(int balance) {
     return AnimatedBuilder(
       animation: _glow,
       builder: (context, _) => Container(
-        height: 226,
-        padding: const EdgeInsets.all(24),
+        height: 232,
+        padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(26),
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF3A111C), Color(0xFF171115), Color(0xFF0E0C0E)],
-            stops: [0, 0.58, 1],
+            colors: [Color(0xFFFF6A5E), Color(0xFFE91E63), Color(0xFFF4A261)],
+            stops: [0, 0.56, 1],
           ),
-          border: Border.all(color: _gold.withOpacity(0.25)),
           boxShadow: [
             BoxShadow(
-              color: _wine.withOpacity(0.22 + _glow.value * 0.1),
-              blurRadius: 34,
-              offset: const Offset(0, 18),
+              color: const Color(
+                0xFFE91E63,
+              ).withValues(alpha: (_isDark ? 0.25 : 0.18) + _glow.value * 0.05),
+              blurRadius: 30,
+              offset: const Offset(0, 14),
             ),
           ],
         ),
         child: Stack(
           children: [
             Positioned(
-              right: -28,
-              top: -34,
+              right: -34,
+              top: -42,
               child: Container(
                 width: 150,
                 height: 150,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: _gold.withOpacity(0.08), width: 24),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.10),
+                    width: 24,
+                  ),
                 ),
               ),
             ),
@@ -260,15 +345,26 @@ class _WalletPageState extends State<WalletPage>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'AVAILABLE BALANCE',
+                      'YOUR DIAMOND BALANCE',
                       style: GoogleFonts.poppins(
-                        color: _cream.withOpacity(0.58),
+                        color: Colors.white.withValues(alpha: 0.78),
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 1.8,
                       ),
                     ),
-                    DiamondGem(size: 34, colors: _gem, shine: _glow.value),
+                    Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        shape: BoxShape.circle,
+                      ),
+                      child: DiamondGem(
+                        size: 34,
+                        colors: _gem,
+                        shine: _glow.value,
+                      ),
+                    ),
                   ],
                 ),
                 const Spacer(),
@@ -277,10 +373,10 @@ class _WalletPageState extends State<WalletPage>
                   children: [
                     Text(
                       _money(balance),
-                      style: GoogleFonts.playfairDisplay(
-                        color: _cream,
-                        fontSize: 55,
-                        fontWeight: FontWeight.w700,
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 50,
+                        fontWeight: FontWeight.w800,
                         height: 0.95,
                       ),
                     ),
@@ -289,7 +385,7 @@ class _WalletPageState extends State<WalletPage>
                       child: Text(
                         'DIAMONDS',
                         style: GoogleFonts.poppins(
-                          color: _gold,
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.4,
@@ -301,26 +397,21 @@ class _WalletPageState extends State<WalletPage>
                 const Spacer(),
                 Row(
                   children: [
-                    const Icon(Icons.auto_awesome, color: _goldMuted, size: 15),
+                    const Icon(
+                      Icons.auto_awesome,
+                      color: Colors.white,
+                      size: 15,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         balance > 0
-                            ? '$balance meaningful conversation${balance == 1 ? '' : 's'} within reach'
+                            ? 'Ready for messages, unveils and live dates'
                             : 'Your next meaningful connection starts here',
                         style: GoogleFonts.poppins(
-                          color: _cream.withOpacity(0.56),
+                          color: Colors.white.withValues(alpha: 0.78),
                           fontSize: 11.5,
                         ),
-                      ),
-                    ),
-                    Text(
-                      'READY TO MARRY',
-                      style: GoogleFonts.poppins(
-                        color: _cream.withOpacity(0.25),
-                        fontSize: 8,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
                       ),
                     ),
                   ],
@@ -333,50 +424,63 @@ class _WalletPageState extends State<WalletPage>
     );
   }
 
-  Widget _utilityStrip() {
+  Widget _benefitsCard() {
     final items = [
-      (Icons.forum_outlined, 'Message'),
-      (Icons.visibility_outlined, 'Unveil'),
-      (Icons.video_camera_front_outlined, 'Live date'),
+      (Icons.forum_rounded, 'Keep meaningful conversations going'),
+      (Icons.visibility_rounded, 'Unveil your Live Date connections'),
+      (Icons.video_camera_front_rounded, 'Join more face-to-face Live Dates'),
     ];
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 15),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
       decoration: BoxDecoration(
-        color: _panel.withOpacity(0.88),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.055)),
+        color: _panel.withValues(alpha: _isDark ? 0.86 : 0.94),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _stroke),
       ),
-      child: Row(
-        children: List.generate(items.length, (index) {
-          final item = items[index];
-          return Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                border: index == items.length - 1
-                    ? null
-                    : Border(
-                        right: BorderSide(
-                          color: Colors.white.withOpacity(0.07),
-                        ),
-                      ),
-              ),
-              child: Column(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'What your diamonds unlock',
+            style: GoogleFonts.poppins(
+              color: _cream,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 9),
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Row(
                 children: [
-                  Icon(item.$1, color: _gold, size: 21),
-                  const SizedBox(height: 7),
-                  Text(
-                    item.$2,
-                    style: GoogleFonts.poppins(
-                      color: _cream.withOpacity(0.7),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                  Container(
+                    width: 29,
+                    height: 29,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF45B45), Color(0xFFE91E63)],
+                      ),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(item.$1, color: Colors.white, size: 15),
+                  ),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Text(
+                      item.$2,
+                      style: GoogleFonts.poppins(
+                        color: _muted,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-          );
-        }),
+          ),
+        ],
       ),
     );
   }
@@ -388,19 +492,16 @@ class _WalletPageState extends State<WalletPage>
         Expanded(
           child: Text(
             title,
-            style: GoogleFonts.playfairDisplay(
+            style: GoogleFonts.poppins(
               color: _cream,
-              fontSize: 23,
-              fontWeight: FontWeight.w700,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ),
         Text(
           trailing,
-          style: GoogleFonts.poppins(
-            color: _cream.withOpacity(0.34),
-            fontSize: 10.5,
-          ),
+          style: GoogleFonts.poppins(color: _muted, fontSize: 10.5),
         ),
       ],
     );
@@ -410,9 +511,9 @@ class _WalletPageState extends State<WalletPage>
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: _gold.withOpacity(0.08),
+        color: _panel.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _gold.withOpacity(0.2)),
+        border: Border.all(color: _gold.withValues(alpha: 0.34)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,7 +524,7 @@ class _WalletPageState extends State<WalletPage>
             child: Text(
               'Top-ups are temporarily unavailable. Your existing balance remains ready to use.',
               style: GoogleFonts.poppins(
-                color: _cream.withOpacity(0.7),
+                color: _muted,
                 fontSize: 11.5,
                 height: 1.45,
               ),
@@ -455,6 +556,7 @@ class _WalletPageState extends State<WalletPage>
   Widget _packageTile(
     Map<String, dynamic> package,
     String? bestId,
+    String? selectedId,
     bool paymentsEnabled,
   ) {
     final id = package['id']?.toString() ?? '';
@@ -464,48 +566,52 @@ class _WalletPageState extends State<WalletPage>
     final total = diamonds + bonus;
     final featured = package['popular'] == true;
     final best = id == bestId;
+    final selected = id == selectedId;
     final busy = _busyId == id;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: busy
-            ? null
-            : () {
-                if (!paymentsEnabled) {
-                  _toast('Top-ups are temporarily unavailable.', _panel);
-                  return;
-                }
-                _showPurchaseSheet(id, diamonds, price, bonus);
-              },
+        onTap: busy ? null : () => setState(() => _selectedPackageId = id),
         child: AnimatedOpacity(
           opacity: paymentsEnabled ? 1 : 0.55,
           duration: const Duration(milliseconds: 200),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(16, 15, 14, 15),
+            padding: const EdgeInsets.fromLTRB(15, 14, 13, 14),
             decoration: BoxDecoration(
-              color: featured ? const Color(0xFF211317) : _panel,
+              color: _panel.withValues(alpha: _isDark ? 0.90 : 0.96),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: featured
-                    ? _gold.withOpacity(0.42)
-                    : Colors.white.withOpacity(0.065),
+                color: selected ? const Color(0xFFF45B75) : _stroke,
+                width: selected ? 2 : 1,
               ),
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFE91E63).withValues(alpha: 0.12),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ]
+                  : null,
             ),
             child: Row(
               children: [
                 Container(
-                  width: 54,
-                  height: 54,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
-                    color: featured
-                        ? _wine.withOpacity(0.5)
-                        : Colors.white.withOpacity(0.035),
-                    borderRadius: BorderRadius.circular(17),
+                    gradient: selected
+                        ? const LinearGradient(
+                            colors: [Color(0xFFFF6A5E), Color(0xFFE91E63)],
+                          )
+                        : null,
+                    color: selected ? null : _wine,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Center(
-                    child: DiamondGem(size: 31, colors: _gem, shine: 0.55),
+                    child: DiamondGem(size: 30, colors: _gem, shine: 0.55),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -517,17 +623,17 @@ class _WalletPageState extends State<WalletPage>
                         children: [
                           Text(
                             '$total',
-                            style: GoogleFonts.playfairDisplay(
+                            style: GoogleFonts.poppins(
                               color: _cream,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'diamonds',
                             style: GoogleFonts.poppins(
-                              color: _cream.withOpacity(0.45),
+                              color: _muted,
                               fontSize: 11,
                             ),
                           ),
@@ -547,7 +653,7 @@ class _WalletPageState extends State<WalletPage>
                         Text(
                           '₦${(price / max(total, 1)).toStringAsFixed(0)} per diamond',
                           style: GoogleFonts.poppins(
-                            color: _cream.withOpacity(0.34),
+                            color: _muted,
                             fontSize: 10.5,
                           ),
                         ),
@@ -565,13 +671,16 @@ class _WalletPageState extends State<WalletPage>
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: _gold.withOpacity(0.12),
+                          color: (selected ? const Color(0xFFE91E63) : _gold)
+                              .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           featured ? 'MOST CHOSEN' : 'BEST VALUE',
                           style: GoogleFonts.poppins(
-                            color: _gold,
+                            color: selected
+                                ? const Color(0xFFE91E63)
+                                : (_isDark ? _gold : const Color(0xFF9A5C10)),
                             fontSize: 7.5,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.6,
@@ -584,7 +693,7 @@ class _WalletPageState extends State<WalletPage>
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: _gold,
+                              color: _wineBright,
                             ),
                           )
                         : Text(
@@ -600,10 +709,70 @@ class _WalletPageState extends State<WalletPage>
                 const SizedBox(width: 5),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: _cream.withOpacity(0.25),
+                  color: _muted.withValues(alpha: 0.62),
                   size: 20,
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _purchaseButton(Map<String, dynamic> package, bool paymentsEnabled) {
+    final id = package['id']?.toString() ?? '';
+    final diamonds = (package['diamonds'] as num? ?? 0).toInt();
+    final bonus = (package['bonus'] as num? ?? 0).toInt();
+    final price = (package['price'] as num? ?? 0).toInt();
+    final total = diamonds + bonus;
+    final busy = _busyId == id;
+
+    return AnimatedOpacity(
+      opacity: paymentsEnabled ? 1 : 0.55,
+      duration: const Duration(milliseconds: 180),
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          height: 58,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFF6A5E), Color(0xFFE91E63), Color(0xFFF4A261)],
+            ),
+            borderRadius: BorderRadius.circular(19),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFE91E63).withValues(alpha: 0.22),
+                blurRadius: 20,
+                offset: const Offset(0, 9),
+              ),
+            ],
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(19),
+            onTap: !paymentsEnabled || busy
+                ? null
+                : () => _showPurchaseSheet(id, diamonds, price, bonus),
+            child: Center(
+              child: busy
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.4,
+                      ),
+                    )
+                  : Text(
+                      paymentsEnabled
+                          ? 'Continue with $total diamonds'
+                          : 'Top-ups temporarily unavailable',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -618,9 +787,7 @@ class _WalletPageState extends State<WalletPage>
           onPressed: _showTransactions,
           icon: const Icon(Icons.history_rounded, size: 18),
           label: const Text('View purchase history'),
-          style: TextButton.styleFrom(
-            foregroundColor: _cream.withOpacity(0.58),
-          ),
+          style: TextButton.styleFrom(foregroundColor: _muted),
         ),
         const SizedBox(height: 8),
         Row(
@@ -636,10 +803,7 @@ class _WalletPageState extends State<WalletPage>
               enabled
                   ? 'Secure checkout by $gatewayName'
                   : 'Purchases managed by RTM',
-              style: GoogleFonts.poppins(
-                color: _cream.withOpacity(0.32),
-                fontSize: 10.5,
-              ),
+              style: GoogleFonts.poppins(color: _muted, fontSize: 10.5),
             ),
           ],
         ),
@@ -685,7 +849,7 @@ class _WalletPageState extends State<WalletPage>
                 width: 42,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.white24,
+                  color: _muted.withValues(alpha: 0.28),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -702,37 +866,33 @@ class _WalletPageState extends State<WalletPage>
               const SizedBox(height: 14),
               Text(
                 '$total diamonds',
-                style: GoogleFonts.playfairDisplay(
+                style: GoogleFonts.poppins(
                   color: _cream,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               if (bonus > 0)
                 Text(
                   'Includes $bonus complimentary diamonds',
-                  style: GoogleFonts.poppins(
-                    color: _cream.withOpacity(0.48),
-                    fontSize: 11.5,
-                  ),
+                  style: GoogleFonts.poppins(color: _muted, fontSize: 11.5),
                 ),
               const SizedBox(height: 24),
               Container(
                 padding: const EdgeInsets.all(17),
                 decoration: BoxDecoration(
-                  color: _ink.withOpacity(0.62),
+                  color: _isDark
+                      ? _ink.withValues(alpha: 0.62)
+                      : const Color(0xFFFFF3F6),
                   borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: Colors.white.withOpacity(0.06)),
+                  border: Border.all(color: _stroke),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Total due',
-                      style: GoogleFonts.poppins(
-                        color: _cream.withOpacity(0.55),
-                        fontSize: 13,
-                      ),
+                      style: GoogleFonts.poppins(color: _muted, fontSize: 13),
                     ),
                     Text(
                       '₦${_money(price)}',
@@ -774,10 +934,7 @@ class _WalletPageState extends State<WalletPage>
               const SizedBox(height: 11),
               Text(
                 '$gatewayName encrypted checkout · instant credit',
-                style: GoogleFonts.poppins(
-                  color: _cream.withOpacity(0.3),
-                  fontSize: 10.5,
-                ),
+                style: GoogleFonts.poppins(color: _muted, fontSize: 10.5),
               ),
             ],
           ),
@@ -867,7 +1024,7 @@ class _WalletPageState extends State<WalletPage>
   void _showSuccess(int diamonds, int balance) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.76),
+      barrierColor: Colors.black.withValues(alpha: 0.76),
       builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 30),
@@ -876,7 +1033,7 @@ class _WalletPageState extends State<WalletPage>
           decoration: BoxDecoration(
             color: _panel,
             borderRadius: BorderRadius.circular(27),
-            border: Border.all(color: _gold.withOpacity(0.3)),
+            border: Border.all(color: _stroke),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -885,19 +1042,16 @@ class _WalletPageState extends State<WalletPage>
               const SizedBox(height: 17),
               Text(
                 diamonds > 0 ? '+$diamonds diamonds' : 'Payment received',
-                style: GoogleFonts.playfairDisplay(
+                style: GoogleFonts.poppins(
                   color: _cream,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
-                'Reserve balance · ${_money(balance)}',
-                style: GoogleFonts.poppins(
-                  color: _cream.withOpacity(0.48),
-                  fontSize: 12,
-                ),
+                'Wallet balance · ${_money(balance)} diamonds',
+                style: GoogleFonts.poppins(color: _muted, fontSize: 12),
               ),
               const SizedBox(height: 23),
               SizedBox(
@@ -947,17 +1101,17 @@ class _WalletPageState extends State<WalletPage>
               width: 42,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: _muted.withValues(alpha: 0.28),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
             const SizedBox(height: 18),
             Text(
               'Purchase history',
-              style: GoogleFonts.playfairDisplay(
+              style: GoogleFonts.poppins(
                 color: _cream,
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 10),
@@ -981,14 +1135,14 @@ class _WalletPageState extends State<WalletPage>
                         children: [
                           Icon(
                             Icons.receipt_long_outlined,
-                            color: _cream.withOpacity(0.17),
+                            color: _muted.withValues(alpha: 0.35),
                             size: 48,
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'No purchases yet',
                             style: GoogleFonts.poppins(
-                              color: _cream.withOpacity(0.42),
+                              color: _muted,
                               fontSize: 13,
                             ),
                           ),
@@ -1000,10 +1154,8 @@ class _WalletPageState extends State<WalletPage>
                     controller: scrollController,
                     padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
                     itemCount: transactions.length,
-                    separatorBuilder: (_, __) => Divider(
-                      color: Colors.white.withOpacity(0.06),
-                      height: 22,
-                    ),
+                    separatorBuilder: (_, __) =>
+                        Divider(color: _stroke, height: 22),
                     itemBuilder: (_, index) => _transactionRow(
                       Map<String, dynamic>.from(transactions[index] as Map),
                     ),
@@ -1036,12 +1188,12 @@ class _WalletPageState extends State<WalletPage>
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: (complete ? _gold : Colors.white).withOpacity(0.08),
+            color: (complete ? _gold : _muted).withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(13),
           ),
           child: Icon(
             complete ? Icons.diamond_outlined : Icons.schedule_rounded,
-            color: complete ? _gold : Colors.white38,
+            color: complete ? _gold : _muted,
             size: 20,
           ),
         ),
@@ -1061,10 +1213,7 @@ class _WalletPageState extends State<WalletPage>
               const SizedBox(height: 2),
               Text(
                 _formatDate(transaction['createdAt']?.toString()),
-                style: GoogleFonts.poppins(
-                  color: _cream.withOpacity(0.32),
-                  fontSize: 10.5,
-                ),
+                style: GoogleFonts.poppins(color: _muted, fontSize: 10.5),
               ),
             ],
           ),
@@ -1084,7 +1233,7 @@ class _WalletPageState extends State<WalletPage>
             Text(
               complete ? 'Completed' : status.toLowerCase(),
               style: GoogleFonts.poppins(
-                color: complete ? _gold : Colors.white38,
+                color: complete ? _gold : _muted,
                 fontSize: 10.5,
               ),
             ),
@@ -1125,9 +1274,13 @@ class _WalletPageState extends State<WalletPage>
   }
 
   void _toast(String message, Color color) {
+    final textColor =
+        ThemeData.estimateBrightnessForColor(color) == Brightness.dark
+        ? Colors.white
+        : const Color(0xFF21141C);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.poppins()),
+        content: Text(message, style: GoogleFonts.poppins(color: textColor)),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
