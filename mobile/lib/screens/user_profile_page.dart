@@ -1446,6 +1446,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                     height: 500,
                                     child: TabBarView(
                                       controller: _tabController,
+                                      clipBehavior: Clip.none,
                                       children: [
                                         _buildUserProfileTab(),
                                         _buildPreferredPartnerTab(),
@@ -2061,9 +2062,8 @@ class _UserProfilePageState extends State<UserProfilePage>
         ? "$name'"
         : "$name's";
 
-    return FractionallySizedBox(
+    return Align(
       alignment: Alignment.centerLeft,
-      widthFactor: 0.82,
       child: Transform.translate(
         offset: const Offset(-24, 0),
         child: Container(
@@ -2101,6 +2101,7 @@ class _UserProfilePageState extends State<UserProfilePage>
     final bool hasPrefs = prefs is Map && prefs.isNotEmpty;
 
     return SingleChildScrollView(
+      clipBehavior: Clip.none,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
