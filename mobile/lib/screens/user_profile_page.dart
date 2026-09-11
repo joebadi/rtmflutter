@@ -60,11 +60,11 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
     _tabController = TabController(length: 2, vsync: this);
     _pageController = PageController();
-    
+
     // Extract user data
     _user = widget.userData;
     _userObj = _user['user'] ?? {};
-    
+
     // Load images
     _loadImages();
 
@@ -88,13 +88,12 @@ class _UserProfilePageState extends State<UserProfilePage>
       }
       if (you != null) {
         if (you['matches'] is List) {
-          _youMatchThemMatches =
-              (you['matches'] as List).map((e) => e.toString()).toSet();
+          _youMatchThemMatches = (you['matches'] as List)
+              .map((e) => e.toString())
+              .toSet();
         }
         final reportedDealBreakers = you['dealBreakers'] is List
-            ? (you['dealBreakers'] as List)
-                .map((e) => e.toString())
-                .toSet()
+            ? (you['dealBreakers'] as List).map((e) => e.toString()).toSet()
             : <String>{};
         _youMatchThemDealBreakers = reportedDealBreakers;
         // A failed deal breaker can never coexist with a positive match score.
@@ -121,18 +120,23 @@ class _UserProfilePageState extends State<UserProfilePage>
   void _loadImages() {
     final List photos = _user['photos'] ?? [];
     if (photos.isNotEmpty) {
-      _images = photos.map((p) {
-        String url = p['url'] ?? '';
-        if (url.isNotEmpty && !url.startsWith('http')) {
-          url = '${ApiConfig.socketUrl}$url';
-        }
-        return url;
-      }).where((u) => u.isNotEmpty).toList();
+      _images = photos
+          .map((p) {
+            String url = p['url'] ?? '';
+            if (url.isNotEmpty && !url.startsWith('http')) {
+              url = '${ApiConfig.socketUrl}$url';
+            }
+            return url;
+          })
+          .where((u) => u.isNotEmpty)
+          .toList();
     }
-    
+
     // Fallback to placeholder if no photos
     if (_images.isEmpty) {
-      _images = ['https://ui-avatars.com/api/?name=${_getFullName()}&size=600&background=FF5722&color=fff'];
+      _images = [
+        'https://ui-avatars.com/api/?name=${_getFullName()}&size=600&background=FF5722&color=fff',
+      ];
     }
   }
 
@@ -182,8 +186,7 @@ class _UserProfilePageState extends State<UserProfilePage>
     });
   }
 
-  String? get _targetUserId =>
-      (_userObj['id'] ?? _user['userId'])?.toString();
+  String? get _targetUserId => (_userObj['id'] ?? _user['userId'])?.toString();
 
   void _toast(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -239,7 +242,11 @@ class _UserProfilePageState extends State<UserProfilePage>
       Divider(height: 1, color: Colors.white.withOpacity(0.12));
 
   Widget _menuRow(
-      IconData icon, String label, Color color, VoidCallback onTap) {
+    IconData icon,
+    String label,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -507,11 +514,14 @@ class _UserProfilePageState extends State<UserProfilePage>
     final photoUrl = _images.isNotEmpty ? _images[0] : null;
 
     // Use userId as conversationId for now - backend will handle conversation creation
-    context.push('/chat/$userId', extra: {
-      'receiverId': userId,
-      'receiverName': firstName,
-      'receiverPhoto': photoUrl,
-    });
+    context.push(
+      '/chat/$userId',
+      extra: {
+        'receiverId': userId,
+        'receiverName': firstName,
+        'receiverPhoto': photoUrl,
+      },
+    );
   }
 
   void _showDealBreakerWarning() {
@@ -536,25 +546,30 @@ class _UserProfilePageState extends State<UserProfilePage>
                   color: const Color(0xFFFF5252).withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.gpp_bad_rounded,
-                    color: Color(0xFFFF5252), size: 32),
+                child: const Icon(
+                  Icons.gpp_bad_rounded,
+                  color: Color(0xFFFF5252),
+                  size: 32,
+                ),
               ),
               const SizedBox(height: 16),
               Text(
                 'Deal breakers not met',
                 style: GoogleFonts.poppins(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 '$name marked these as deal breakers, and your profile doesn\'t align with them:',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.poppins(
-                    fontSize: 12.5,
-                    color: Colors.white.withOpacity(0.7),
-                    height: 1.4),
+                  fontSize: 12.5,
+                  color: Colors.white.withOpacity(0.7),
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 14),
               Wrap(
@@ -562,21 +577,29 @@ class _UserProfilePageState extends State<UserProfilePage>
                 spacing: 8,
                 runSpacing: 8,
                 children: labels
-                    .map((l) => Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF5252).withOpacity(0.14),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color: const Color(0xFFFF5252).withOpacity(0.5)),
+                    .map(
+                      (l) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF5252).withOpacity(0.14),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: const Color(0xFFFF5252).withOpacity(0.5),
                           ),
-                          child: Text(l,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFFFF8A80))),
-                        ))
+                        ),
+                        child: Text(
+                          l,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFFF8A80),
+                          ),
+                        ),
+                      ),
+                    )
                     .toList(),
               ),
               const SizedBox(height: 20),
@@ -588,24 +611,32 @@ class _UserProfilePageState extends State<UserProfilePage>
                     backgroundColor: const Color(0xFFFF5722),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   onPressed: () {
                     Navigator.pop(ctx);
                     _openChat();
                   },
-                  child: Text('Proceed anyway',
-                      style: GoogleFonts.poppins(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)),
+                  child: Text(
+                    'Proceed anyway',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('Maybe not',
-                    style: GoogleFonts.poppins(
-                        color: Colors.white54, fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Maybe not',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white54,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
@@ -665,9 +696,11 @@ class _UserProfilePageState extends State<UserProfilePage>
                         child: CircularProgressIndicator(
                           value: loadingProgress.expectedTotalBytes != null
                               ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
+                                    loadingProgress.expectedTotalBytes!
                               : null,
-                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF5722)),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFFFF5722),
+                          ),
                         ),
                       ),
                     );
@@ -677,7 +710,8 @@ class _UserProfilePageState extends State<UserProfilePage>
                 // Only hero the first image to match the grid thumbnail
                 if (index == 0) {
                   return Hero(
-                    tag: 'user-photo-${_userObj['id'] ?? _user['userId'] ?? ''}',
+                    tag:
+                        'user-photo-${_userObj['id'] ?? _user['userId'] ?? ''}',
                     child: Material(
                       color: Colors.transparent,
                       child: imageWidget,
@@ -790,23 +824,33 @@ class _UserProfilePageState extends State<UserProfilePage>
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            _menuRow(Icons.bookmark_border_rounded,
-                                                'Save profile', Colors.white,
-                                                _saveUser),
+                                            _menuRow(
+                                              Icons.bookmark_border_rounded,
+                                              'Save profile',
+                                              Colors.white,
+                                              _saveUser,
+                                            ),
                                             _menuDivider(),
                                             _menuRow(
-                                                Icons.visibility_off_rounded,
-                                                'Hide from feed',
-                                                Colors.white,
-                                                _hideUser),
+                                              Icons.visibility_off_rounded,
+                                              'Hide from feed',
+                                              Colors.white,
+                                              _hideUser,
+                                            ),
                                             _menuDivider(),
-                                            _menuRow(Icons.block_rounded,
-                                                'Block', Colors.orangeAccent,
-                                                _blockUser),
+                                            _menuRow(
+                                              Icons.block_rounded,
+                                              'Block',
+                                              Colors.orangeAccent,
+                                              _blockUser,
+                                            ),
                                             _menuDivider(),
-                                            _menuRow(Icons.flag_rounded,
-                                                'Report', Colors.red,
-                                                _reportUser),
+                                            _menuRow(
+                                              Icons.flag_rounded,
+                                              'Report',
+                                              Colors.red,
+                                              _reportUser,
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -868,7 +912,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                           color: Colors.white,
                                           shadows: [
                                             Shadow(
-                                              color: Colors.black.withOpacity(0.5),
+                                              color: Colors.black.withOpacity(
+                                                0.5,
+                                              ),
                                               offset: const Offset(0, 2),
                                               blurRadius: 4,
                                             ),
@@ -886,7 +932,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                         color: Colors.white,
                                         shadows: [
                                           Shadow(
-                                            color: Colors.black.withOpacity(0.5),
+                                            color: Colors.black.withOpacity(
+                                              0.5,
+                                            ),
                                             offset: const Offset(0, 2),
                                             blurRadius: 4,
                                           ),
@@ -918,7 +966,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                                   ),
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                                      colors: [
+                                        Color(0xFFFFD700),
+                                        Color(0xFFFFA500),
+                                      ],
                                     ),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -956,7 +1007,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
-                                  location.isNotEmpty ? location : 'Location not set',
+                                  location.isNotEmpty
+                                      ? location
+                                      : 'Location not set',
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
                                     color: Colors.white.withOpacity(0.9),
@@ -980,7 +1033,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF4CAF50).withOpacity(0.2),
+                                    color: const Color(
+                                      0xFF4CAF50,
+                                    ).withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: const Color(0xFF4CAF50),
@@ -1110,10 +1165,14 @@ class _UserProfilePageState extends State<UserProfilePage>
                                 itemBuilder: (context, index) {
                                   return GestureDetector(
                                     onTap: () {
-                                      setState(() => _currentImageIndex = index);
+                                      setState(
+                                        () => _currentImageIndex = index,
+                                      );
                                       _pageController.animateToPage(
                                         index,
-                                        duration: const Duration(milliseconds: 300),
+                                        duration: const Duration(
+                                          milliseconds: 300,
+                                        ),
                                         curve: Curves.easeInOut,
                                       );
                                     },
@@ -1138,15 +1197,15 @@ class _UserProfilePageState extends State<UserProfilePage>
                                           fit: BoxFit.cover,
                                           errorBuilder:
                                               (context, error, stackTrace) {
-                                            return Container(
-                                              color: Colors.grey[700],
-                                              child: const Icon(
-                                                Icons.person,
-                                                size: 30,
-                                                color: Colors.white,
-                                              ),
-                                            );
-                                          },
+                                                return Container(
+                                                  color: Colors.grey[700],
+                                                  child: const Icon(
+                                                    Icons.person,
+                                                    size: 30,
+                                                    color: Colors.white,
+                                                  ),
+                                                );
+                                              },
                                         ),
                                       ),
                                     ),
@@ -1295,7 +1354,9 @@ class _UserProfilePageState extends State<UserProfilePage>
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
-                                          location.isNotEmpty ? location : 'Location not set',
+                                          location.isNotEmpty
+                                              ? location
+                                              : 'Location not set',
                                           style: GoogleFonts.poppins(
                                             fontSize: 14,
                                             color: Colors.white.withOpacity(
@@ -1372,9 +1433,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             bottom: 12,
                                           ),
                                           alignment: Alignment.centerRight,
-                                          child: const Text(
-                                            'Preferences',
-                                          ),
+                                          child: const Text('Preferences'),
                                         ),
                                       ],
                                     ),
@@ -1423,7 +1482,7 @@ class _UserProfilePageState extends State<UserProfilePage>
 
   Widget _buildInfoSection(String title, String? content) {
     if (content == null || content.isEmpty) return const SizedBox.shrink();
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1450,7 +1509,7 @@ class _UserProfilePageState extends State<UserProfilePage>
 
   Widget _buildDetailItem(IconData icon, String label, String? value) {
     if (value == null || value.isEmpty) return const SizedBox.shrink();
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -1552,10 +1611,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               child: _isLiking
                   ? const Padding(
                       padding: EdgeInsets.all(11),
-                      child: PremiumLoader(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                      child: PremiumLoader(strokeWidth: 2, color: Colors.white),
                     )
                   : Icon(
                       _isLiked ? Icons.favorite : Icons.favorite_border,
@@ -1595,7 +1651,8 @@ class _UserProfilePageState extends State<UserProfilePage>
         children: [
           // About Me
           _buildInfoSection('About Me', _user['aboutMe']),
-          if (_user['aboutMe'] != null && _user['aboutMe'].toString().isNotEmpty)
+          if (_user['aboutMe'] != null &&
+              _user['aboutMe'].toString().isNotEmpty)
             const SizedBox(height: 20),
 
           // Personal Details
@@ -1612,10 +1669,18 @@ class _UserProfilePageState extends State<UserProfilePage>
           _buildDetailItem(Icons.church, 'Religion', _user['religion']),
           _buildDetailItem(Icons.school, 'Education', _user['education']),
           _buildDetailItem(Icons.work, 'Work Status', _user['workStatus']),
-          _buildDetailItem(Icons.favorite, 'Relationship', _user['relationshipStatus']),
+          _buildDetailItem(
+            Icons.favorite,
+            'Relationship',
+            _user['relationshipStatus'],
+          ),
           _buildDetailItem(Icons.language, 'Language', _user['language']),
           _buildDetailItem(Icons.star, 'Zodiac Sign', _user['zodiacSign']),
-          _buildDetailItem(Icons.psychology, 'Personality', _user['personalityType']),
+          _buildDetailItem(
+            Icons.psychology,
+            'Personality',
+            _user['personalityType'],
+          ),
 
           const SizedBox(height: 20),
 
@@ -1629,10 +1694,22 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ),
           const SizedBox(height: 10),
-          _buildDetailItem(Icons.fitness_center, 'Body Type', _user['bodyType']),
+          _buildDetailItem(
+            Icons.fitness_center,
+            'Body Type',
+            _user['bodyType'],
+          ),
           _buildDetailItem(Icons.palette, 'Skin Color', _user['skinColor']),
-          _buildDetailItem(Icons.remove_red_eye, 'Eye Color', _user['eyeColor']),
-          _buildDetailItem(Icons.auto_awesome, 'Best Feature', _user['bestFeature']),
+          _buildDetailItem(
+            Icons.remove_red_eye,
+            'Eye Color',
+            _user['eyeColor'],
+          ),
+          _buildDetailItem(
+            Icons.auto_awesome,
+            'Best Feature',
+            _user['bestFeature'],
+          ),
 
           const SizedBox(height: 20),
 
@@ -1646,7 +1723,11 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ),
           const SizedBox(height: 10),
-          _buildDetailItem(Icons.medical_services, 'Genotype', _user['genotype']),
+          _buildDetailItem(
+            Icons.medical_services,
+            'Genotype',
+            _user['genotype'],
+          ),
           _buildDetailItem(Icons.bloodtype, 'Blood Group', _user['bloodGroup']),
 
           const SizedBox(height: 20),
@@ -1661,10 +1742,26 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ),
           const SizedBox(height: 10),
-          _buildDetailItem(Icons.local_bar, 'Drinking', _user['drinkingStatus']),
-          _buildDetailItem(Icons.smoking_rooms, 'Smoking', _user['smokingStatus']),
-          _buildDetailItem(Icons.child_care, 'Has Children', _user['hasChildren']),
-          _buildDetailItem(Icons.home, 'Living Conditions', _user['livingConditions']),
+          _buildDetailItem(
+            Icons.local_bar,
+            'Drinking',
+            _user['drinkingStatus'],
+          ),
+          _buildDetailItem(
+            Icons.smoking_rooms,
+            'Smoking',
+            _user['smokingStatus'],
+          ),
+          _buildDetailItem(
+            Icons.child_care,
+            'Has Children',
+            _user['hasChildren'],
+          ),
+          _buildDetailItem(
+            Icons.home,
+            'Living Conditions',
+            _user['livingConditions'],
+          ),
 
           const SizedBox(height: 24),
 
@@ -1780,8 +1877,8 @@ class _UserProfilePageState extends State<UserProfilePage>
               color: matched
                   ? const Color(0xFF4CAF50)
                   : (failedDealBreaker
-                      ? const Color(0xFFFF5252)
-                      : Colors.white.withOpacity(0.28)),
+                        ? const Color(0xFFFF5252)
+                        : Colors.white.withOpacity(0.28)),
               size: 18,
             ),
           ],
@@ -1802,8 +1899,11 @@ class _UserProfilePageState extends State<UserProfilePage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(failed ? Icons.gpp_bad_rounded : Icons.gpp_maybe_rounded,
-              color: color, size: 11),
+          Icon(
+            failed ? Icons.gpp_bad_rounded : Icons.gpp_maybe_rounded,
+            color: color,
+            size: 11,
+          ),
           const SizedBox(width: 3),
           Text(
             'Deal breaker',
@@ -1840,7 +1940,9 @@ class _UserProfilePageState extends State<UserProfilePage>
   /// falls back to the legacy "Nigeria (Edo, Delta, Lagos)".
   String _formatPreferredLocation(Map prefs) {
     if (_hasLocationBlocks(prefs)) {
-      return formatLocationBlocks(parseLocationBlocks(prefs['locationPreferences']));
+      return formatLocationBlocks(
+        parseLocationBlocks(prefs['locationPreferences']),
+      );
     }
     final country = prefs['locationCountry']?.toString() ?? '';
     final states = (prefs['locationStates'] is List)
@@ -1949,79 +2051,53 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
-  /// Introductory banner between the reciprocal score and preference rows.
-  /// Its palette mirrors the app splash screen rather than the gold score card.
+  /// Compact section ribbon between the reciprocal score and preference rows.
+  /// It deliberately breaks out of the modal's left content inset.
   Widget _partnerPreferenceIntro() {
     final name = (_user['firstName'] ?? 'Their').toString().trim();
     final possessive = name.toLowerCase() == 'their'
         ? 'Their'
         : name.endsWith('s')
-            ? "$name'"
-            : "$name's";
+        ? "$name'"
+        : "$name's";
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF180B14),
-            Color(0xFF3A1128),
-            Color(0xFF210E18),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: const Color(0xFFF45B45).withValues(alpha: 0.42),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0B0308).withValues(alpha: 0.28),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [Color(0xFFF45B45), Color(0xFFF4B860)],
-              ),
+    return FractionallySizedBox(
+      alignment: Alignment.centerLeft,
+      widthFactor: 0.82,
+      child: Transform.translate(
+        offset: const Offset(-24, 0),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(24, 10, 20, 10),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [Color(0xFF3A1128), Color(0xFFFF5722)],
             ),
-            child: const Icon(
-              Icons.favorite_border_rounded,
+            borderRadius: BorderRadius.horizontal(right: Radius.circular(24)),
+          ),
+          child: Text(
+            "$possessive partner preference...",
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
               color: Colors.white,
-              size: 22,
+              height: 1.3,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              "$possessive partner preference...",
-              style: GoogleFonts.poppins(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildPreferredPartnerTab() {
-    final prefs = _user['preferences']
-        ?? _user['matchPreferences']
-        ?? _userObj['matchPreferences']
-        ?? {};
+    final prefs =
+        _user['preferences'] ??
+        _user['matchPreferences'] ??
+        _userObj['matchPreferences'] ??
+        {};
     final bool hasPrefs = prefs is Map && prefs.isNotEmpty;
 
     return SingleChildScrollView(
