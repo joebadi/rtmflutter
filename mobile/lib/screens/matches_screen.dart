@@ -504,7 +504,7 @@ class _MatchesScreenState extends State<MatchesScreen>
                         'Match')
                   else if (score != null)
                     _badge(const Color(0xFFFFA500), Icons.auto_awesome_rounded,
-                        '$score%'),
+                        '$score%', foregroundColor: Colors.black),
                   const Spacer(),
                   if (online)
                     Container(
@@ -584,7 +584,8 @@ class _MatchesScreenState extends State<MatchesScreen>
     );
   }
 
-  Widget _badge(Color color, IconData icon, String label) {
+  Widget _badge(Color color, IconData icon, String label,
+      {Color foregroundColor = Colors.white}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -601,11 +602,11 @@ class _MatchesScreenState extends State<MatchesScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white, size: 11),
+          Icon(icon, color: foregroundColor, size: 11),
           const SizedBox(width: 4),
           Text(label,
               style: GoogleFonts.poppins(
-                  color: Colors.white,
+                  color: foregroundColor,
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700)),
         ],

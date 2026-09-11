@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
 import '../providers/auth_provider.dart';
 import '../services/profile_service.dart';
 
@@ -14,95 +17,93 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
+    with SingleTickerProviderStateMixin {
+  static const _brandMark = 'assets/icon/compatible_mark.png';
+
+  late final AnimationController _entranceController;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+    _entranceController = AnimationController(
+      duration: const Duration(milliseconds: 1050),
       vsync: this,
     );
+    _fadeAnimation = CurvedAnimation(
+      parent: _entranceController,
+      curve: const Interval(0, 0.72, curve: Curves.easeOutCubic),
+    );
+    _scaleAnimation = Tween<double>(begin: 0.88, end: 1).animate(
+      CurvedAnimation(
+        parent: _entranceController,
+        curve: const Interval(0, 0.82, curve: Curves.easeOutBack),
+      ),
+    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.18), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entranceController,
+            curve: const Interval(0.16, 1, curve: Curves.easeOutCubic),
+          ),
+        );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
-
-    _scaleAnimation = Tween<double>(
-      begin: 0.5,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
-
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    _pulseAnimation = Tween<double>(
-      begin: 0.95,
-      end: 1.05,
-    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
-
-    _controller.forward();
+    _entranceController.forward();
     _checkAuth();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
-    _pulseController.dispose();
+    _entranceController.dispose();
     super.dispose();
   }
 
   Future<void> _checkAuth() async {
-    // Wait for animation
-    await Future.delayed(const Duration(seconds: 3));
+    // Let the brand entrance finish, but begin the real startup work immediately.
+    final minimumDisplay = Future<void>.delayed(
+      const Duration(milliseconds: 1850),
+    );
 
+    String? seenOnboarding;
+    final authProvider = context.read<AuthProvider>();
+
+    try {
+      const storage = FlutterSecureStorage();
+      seenOnboarding = await storage.read(key: 'seenOnboarding');
+      await authProvider.checkAuthStatus();
+    } catch (error) {
+      // Secure storage failures should never leave someone trapped on splash.
+      debugPrint('Startup session check failed: $error');
+    }
+
+    await minimumDisplay;
     if (!mounted) return;
 
-    const storage = FlutterSecureStorage();
-    final String? seenOnboarding = await storage.read(key: 'seenOnboarding');
-
-    final authProvider = context.read<AuthProvider>();
-    await authProvider.checkAuthStatus();
-
-    if (mounted) {
-      // Priority: Onboarding → Login → Profile Check → Home
-      if (seenOnboarding != 'true') {
-        context.go('/onboarding');
-      } else if (authProvider.isAuthenticated) {
-        // Check profile completion status
-        await _routeBasedOnProfileStatus();
-      } else {
-        context.go('/login');
-      }
+    // Priority: onboarding -> authentication -> profile completion -> home.
+    if (seenOnboarding != 'true') {
+      context.go('/onboarding');
+    } else if (authProvider.isAuthenticated) {
+      await _routeBasedOnProfileStatus();
+    } else {
+      context.go('/login');
     }
   }
 
   Future<void> _routeBasedOnProfileStatus() async {
     try {
-      final profileService = ProfileService();
-      final profileData = await profileService.getMyProfile();
+      final profileData = await ProfileService().getMyProfile();
 
       if (!mounted) return;
-
       if (profileData == null || profileData['data'] == null) {
-        // No profile data found
         context.go('/profile-details');
         return;
       }
 
       final user = profileData['data'];
-
-      // 1. Check verified status
       if (user['emailVerified'] == false && user['phoneVerified'] == false) {
-        context.push(
+        context.go(
           '/otp-verification',
           extra: {
             'phoneNumber': user['phoneNumber'] ?? '',
@@ -115,211 +116,351 @@ class _SplashScreenState extends State<SplashScreen>
       }
 
       final profile = user['profile'];
-
-      // 2. Check basic profile details
       if (profile == null ||
           profile['aboutMe'] == null ||
           profile['dateOfBirth'] == null ||
           profile['gender'] == null) {
-        
-        // Backend stores names in Profile, not User.
-        // If profile is null, we can't get names easily unless provided in user object
-        // by a custom backend projection, but based on schema it's in Profile.
-        // Assuming profile is at least created with names during registration.
-        final fName = profile != null ? profile['firstName'] : user['firstName'];
-        final lName = profile != null ? profile['lastName'] : user['lastName'];
-
         context.go(
           '/profile-details',
-          extra: {'firstName': fName, 'lastName': lName},
+          extra: {
+            'firstName': profile?['firstName'] ?? user['firstName'],
+            'lastName': profile?['lastName'] ?? user['lastName'],
+          },
         );
         return;
       }
 
-      // 3. Check photos
-      if (profile['photos'] == null || (profile['photos'] as List).isEmpty) {
+      final photos = profile['photos'] as List?;
+      if (photos == null || photos.isEmpty) {
         context.go('/image-upload');
         return;
       }
 
-      // 4. Check preferences (Optional but good to check)
-      // if (profile['preferences'] == null) {
-      //   context.go('/preferred-partner');
-      //   return;
-      // }
-
-      // All good - go to home
       context.go('/home');
-    } catch (e) {
-      debugPrint('Error checking profile status: $e');
-      // Fallback: If network fails, maybe let them go home or stay on splash with retry?
-      // For now, let's go home and let the home page handle errors/empty state
+    } catch (error) {
+      debugPrint('Profile routing check failed: $error');
       if (mounted) context.go('/home');
     }
   }
 
-  // Romantic Pexels hero (verified). Swappable; a gradient fallback renders if
-  // it fails to load so the splash always looks premium.
-  static const String _heroImage =
-      'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=1200';
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF120A07),
+      backgroundColor: const Color(0xFF210E18),
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Background imagery
-          Image.network(
-            _heroImage,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, progress) =>
-                progress == null ? child : _gradientBackdrop(),
-            errorBuilder: (_, __, ___) => _gradientBackdrop(),
-          ),
-          // Readability scrim
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withOpacity(0.45),
-                  Colors.black.withOpacity(0.35),
-                  const Color(0xFF120A07).withOpacity(0.92),
-                ],
-                stops: const [0.0, 0.45, 1.0],
-              ),
-            ),
-          ),
+          const _BrandBackdrop(),
           SafeArea(
-            child: Column(
-              children: [
-                const Spacer(flex: 5),
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Column(
-                      children: [
-                        // Pulsing logo with glow
-                        AnimatedBuilder(
-                          animation: _pulseAnimation,
-                          builder: (context, child) {
-                            return Transform.scale(
-                              scale: _pulseAnimation.value,
-                              child: child,
-                            );
-                          },
-                          child: Container(
-                            width: 116,
-                            height: 116,
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.12),
-                              border: Border.all(
-                                  color: Colors.white.withOpacity(0.25), width: 1.5),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFFFF6B35).withOpacity(0.5),
-                                  blurRadius: 40,
-                                  spreadRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: Image.asset(
-                              'assets/icon/app_icon.png',
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.favorite_rounded,
-                                size: 52,
-                                color: Color(0xFFFF6B35),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        // App name
-                        ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [Colors.white, Color(0xFFFFE0D2)],
-                          ).createShader(bounds),
-                          child: Text(
-                            'Compatible',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 42,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: Colors.white.withOpacity(0.15)),
-                          ),
-                          child: Text(
-                            'Find someone truly compatible',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxHeight < 650;
+                final proposedSize = constraints.maxWidth * 0.42;
+                final markSize = proposedSize.clamp(118.0, 166.0);
+
+                return Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    26,
+                    compact ? 16 : 28,
+                    26,
+                    compact ? 20 : 30,
                   ),
-                ),
-                const Spacer(flex: 5),
-                const _PremiumLoadingDots(),
-                const SizedBox(height: 48),
-              ],
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 3),
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: ScaleTransition(
+                          scale: _scaleAnimation,
+                          child: _LogoStage(
+                            assetPath: _brandMark,
+                            markSize: markSize,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: compact ? 18 : 28),
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _slideAnimation,
+                          child: Column(
+                            children: [
+                              Text(
+                                'Compatible',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  color: const Color(0xFFFFFAF6),
+                                  fontSize: compact ? 34 : 41,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -1.25,
+                                  height: 1.05,
+                                ),
+                              ),
+                              SizedBox(height: compact ? 8 : 12),
+                              Text(
+                                'Meaningful connections, rooted in Africa.',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  color: const Color(
+                                    0xFFFFE8DD,
+                                  ).withValues(alpha: 0.78),
+                                  fontSize: compact ? 12.5 : 14,
+                                  fontWeight: FontWeight.w400,
+                                  letterSpacing: 0.1,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Spacer(flex: 4),
+                      const _BrandLoader(),
+                      const SizedBox(height: 18),
+                      Text(
+                        'MEET WITH INTENTION',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                          color: const Color(
+                            0xFFF4B860,
+                          ).withValues(alpha: 0.82),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 2.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _gradientBackdrop() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2A1206), Color(0xFF16100E), Color(0xFF0F0A14)],
+class _LogoStage extends StatelessWidget {
+  const _LogoStage({required this.assetPath, required this.markSize});
+
+  final String assetPath;
+  final double markSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final stageSize = markSize + 62;
+
+    return Semantics(
+      image: true,
+      label: 'Compatible logo',
+      child: SizedBox.square(
+        dimension: stageSize,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: stageSize,
+              height: stageSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFF45B45).withValues(alpha: 0.20),
+                    const Color(0xFFF45B45).withValues(alpha: 0.055),
+                    Colors.transparent,
+                  ],
+                  stops: const [0, 0.56, 1],
+                ),
+              ),
+            ),
+            Container(
+              width: markSize + 30,
+              height: markSize + 30,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.045),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.10),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0B0308).withValues(alpha: 0.32),
+                    blurRadius: 32,
+                    offset: const Offset(0, 16),
+                  ),
+                ],
+              ),
+            ),
+            Image.asset(
+              assetPath,
+              width: markSize,
+              height: markSize,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              excludeFromSemantics: true,
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.favorite_rounded,
+                size: markSize * 0.62,
+                color: const Color(0xFFF45B45),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _PremiumLoadingDots extends StatefulWidget {
-  const _PremiumLoadingDots();
+class _BrandBackdrop extends StatelessWidget {
+  const _BrandBackdrop();
 
   @override
-  State<_PremiumLoadingDots> createState() => _PremiumLoadingDotsState();
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF180B14),
+                  Color(0xFF3A1128),
+                  Color(0xFF210E18),
+                ],
+                stops: [0, 0.5, 1],
+              ),
+            ),
+          ),
+          Positioned(
+            top: -150,
+            right: -130,
+            child: _GlowOrb(
+              size: 360,
+              color: const Color(0xFFF45B45).withValues(alpha: 0.17),
+            ),
+          ),
+          Positioned(
+            bottom: -190,
+            left: -145,
+            child: _GlowOrb(
+              size: 410,
+              color: const Color(0xFFF4B860).withValues(alpha: 0.10),
+            ),
+          ),
+          const Positioned.fill(
+            child: ExcludeSemantics(
+              child: CustomPaint(painter: _ConnectionPatternPainter()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _PremiumLoadingDotsState extends State<_PremiumLoadingDots>
+class _GlowOrb extends StatelessWidget {
+  const _GlowOrb({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: [color, Colors.transparent]),
+      ),
+    );
+  }
+}
+
+class _ConnectionPatternPainter extends CustomPainter {
+  const _ConnectionPatternPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = const Color(0xFFF4B860).withValues(alpha: 0.075)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final dotPaint = Paint()
+      ..color = const Color(0xFFFFE8DD).withValues(alpha: 0.12)
+      ..style = PaintingStyle.fill;
+
+    final topCenter = Offset(size.width * 0.96, size.height * 0.08);
+    for (final radius in <double>[92, 132, 172]) {
+      canvas.drawArc(
+        Rect.fromCircle(center: topCenter, radius: radius),
+        math.pi * 0.58,
+        math.pi * 0.72,
+        false,
+        linePaint,
+      );
+    }
+
+    final bottomCenter = Offset(size.width * 0.02, size.height * 0.90);
+    for (var index = 0; index < 8; index++) {
+      final angle = -math.pi * 0.44 + index * 0.17;
+      final radius = 104 + (index.isEven ? 0 : 18);
+      canvas.drawCircle(
+        Offset(
+          bottomCenter.dx + math.cos(angle) * radius,
+          bottomCenter.dy + math.sin(angle) * radius,
+        ),
+        index % 3 == 0 ? 2.3 : 1.45,
+        dotPaint,
+      );
+    }
+
+    final connectionPath = Path()
+      ..moveTo(size.width * 0.10, size.height * 0.31)
+      ..cubicTo(
+        size.width * 0.28,
+        size.height * 0.22,
+        size.width * 0.34,
+        size.height * 0.43,
+        size.width * 0.50,
+        size.height * 0.35,
+      )
+      ..cubicTo(
+        size.width * 0.66,
+        size.height * 0.27,
+        size.width * 0.72,
+        size.height * 0.48,
+        size.width * 0.90,
+        size.height * 0.39,
+      );
+    canvas.drawPath(connectionPath, linePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _BrandLoader extends StatefulWidget {
+  const _BrandLoader();
+
+  @override
+  State<_BrandLoader> createState() => _BrandLoaderState();
+}
+
+class _BrandLoaderState extends State<_BrandLoader>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+  late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1250),
       vsync: this,
     )..repeat();
   }
@@ -332,46 +473,34 @@ class _PremiumLoadingDotsState extends State<_PremiumLoadingDots>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(3, (index) {
-            final delay = index * 0.2;
-            final progress = (_controller.value - delay).clamp(0.0, 1.0);
-            final bounce = (progress < 0.5)
-                ? Curves.easeOut.transform(progress * 2)
-                : Curves.easeIn.transform((1 - progress) * 2);
-
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 5),
-              child: Transform.translate(
-                offset: Offset(0, -8 * bounce),
-                child: Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: Color.lerp(
-                      const Color(0xFFFF6B35).withOpacity(0.4),
-                      const Color(0xFFFF6B35),
-                      bounce,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF6B35).withOpacity(0.3 * bounce),
-                        blurRadius: 8,
-                        spreadRadius: 2 * bounce,
-                      ),
-                    ],
+    return Semantics(
+      label: 'Preparing Compatible',
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return Container(
+            width: 72,
+            height: 4,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.09),
+              borderRadius: BorderRadius.circular(99),
+            ),
+            child: Align(
+              alignment: Alignment(-1 + (_controller.value * 2), 0),
+              child: Container(
+                width: 28,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(99),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFF45B45), Color(0xFFF4B860)],
                   ),
                 ),
               ),
-            );
-          }),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 }

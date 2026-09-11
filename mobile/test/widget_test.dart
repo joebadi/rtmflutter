@@ -11,17 +11,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ready_to_marry/main.dart';
 
 void main() {
-  testWidgets('App smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('branded splash renders and app starts', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(const MyApp());
+    await tester.pump(const Duration(milliseconds: 1100));
 
-    // Allow the splash screen timer (3 seconds) to complete
-    await tester.pump(const Duration(seconds: 4));
+    expect(find.text('Compatible'), findsOneWidget);
+    expect(
+      find.text('Meaningful connections, rooted in Africa.'),
+      findsOneWidget,
+    );
+    expect(find.text('MEET WITH INTENTION'), findsOneWidget);
+    expect(tester.takeException(), isNull);
 
-    // Allow any navigation animations to complete
+    // Allow startup checks and the minimum brand-display time to complete.
+    await tester.pump(const Duration(seconds: 3));
     await tester.pump();
 
-    // Verify that the app builds without errors
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

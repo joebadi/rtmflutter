@@ -20,51 +20,50 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(height * 0.28),
-          child: Image.asset(
-            'assets/icon/app_icon.png',
+    return Semantics(
+      image: true,
+      label: 'Compatible',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            'assets/icon/compatible_mark.png',
             height: height,
             width: height,
-            fit: BoxFit.cover,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+            excludeFromSemantics: true,
             errorBuilder: (_, __, ___) => Container(
               height: height,
               width: height,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: AppTheme.accentGradient,
-                borderRadius: BorderRadius.circular(height * 0.28),
+                shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.favorite_rounded,
-                  color: Colors.white, size: 16),
+              child: Icon(
+                Icons.favorite_rounded,
+                color: Colors.white,
+                size: height * 0.58,
+              ),
             ),
           ),
-        ),
-        if (showWordmark) ...[
-          SizedBox(width: height * 0.34),
-          RichText(
-            text: TextSpan(
-              style: GoogleFonts.poppins(
-                fontSize: height * 0.72,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.2,
+          if (showWordmark) ...[
+            SizedBox(width: height * 0.28),
+            ExcludeSemantics(
+              child: Text(
+                'Compatible',
+                style: GoogleFonts.poppins(
+                  color: color ?? AppTheme.textPrimary(context),
+                  fontSize: height * 0.69,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.25,
+                  height: 1,
+                ),
               ),
-              children: [
-                TextSpan(
-                  text: 'Compat',
-                  style: TextStyle(color: color ?? AppTheme.textPrimary(context)),
-                ),
-                const TextSpan(
-                  text: 'ible',
-                  style: TextStyle(color: AppTheme.accent),
-                ),
-              ],
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

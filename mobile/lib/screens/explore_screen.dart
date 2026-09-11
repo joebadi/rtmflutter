@@ -2200,12 +2200,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.favorite_rounded,
-                                  color: Colors.white, size: 9),
+                                  color: Colors.black, size: 9),
                               const SizedBox(width: 3),
                               Text(
                                 '$matchScore% match',
                                 style: GoogleFonts.poppins(
-                                  color: Colors.white,
+                                  color: Colors.black,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 9.5,
                                 ),

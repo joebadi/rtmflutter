@@ -1698,14 +1698,14 @@ class _UserProfilePageState extends State<UserProfilePage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.favorite_rounded, color: Colors.white, size: 13),
+          const Icon(Icons.favorite_rounded, color: Colors.black, size: 13),
           const SizedBox(width: 4),
           Text(
             '$score% match',
             style: GoogleFonts.poppins(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: Colors.black,
             ),
           ),
         ],
@@ -1885,7 +1885,7 @@ class _UserProfilePageState extends State<UserProfilePage>
               style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: Colors.white,
+                color: Colors.black,
               ),
             ),
           ),
