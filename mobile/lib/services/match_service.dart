@@ -19,6 +19,7 @@ class MatchService {
     required double longitude,
     int radius = 50,
     int limit = 20,
+    bool useCustomLocation = false,
   }) async {
     try {
       final token = await _storage.read(key: 'access_token');
@@ -31,19 +32,25 @@ class MatchService {
           'longitude': longitude,
           'radius': radius,
           'limit': limit,
+          'useCustomLocation': useCustomLocation,
         },
       );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         return response.data['data']['users'];
       } else {
-        throw Exception(response.data['message'] ?? 'Failed to fetch nearby users');
+        throw Exception(
+          response.data['message'] ?? 'Failed to fetch nearby users',
+        );
       }
     } catch (e) {
       if (e is DioException && e.response?.statusCode == 401) {
         await _storage.delete(key: 'access_token');
         await _storage.delete(key: 'refresh_token');
         throw Exception('UNAUTHORIZED');
+      }
+      if (e is DioException && e.response?.statusCode == 403) {
+        throw Exception('PREMIUM_REQUIRED');
       }
       throw Exception('Error fetching nearby users: $e');
     }
@@ -63,12 +70,15 @@ class MatchService {
       if (response.statusCode == 200 && response.data['success'] == true) {
         return response.data['data']['suggestions'];
       } else {
-        throw Exception(response.data['message'] ?? 'Failed to fetch suggestions');
+        throw Exception(
+          response.data['message'] ?? 'Failed to fetch suggestions',
+        );
       }
     } catch (e) {
       throw Exception('Error fetching suggestions: $e');
     }
   }
+
   /// Get mutual compatibility with another user.
   /// Returns `{ theyMatchYou: {score, matches, dealBreakers},
   ///            youMatchThem: {score, matches, dealBreakers} }`.
@@ -96,13 +106,14 @@ class MatchService {
     try {
       final token = await _storage.read(key: 'access_token');
       if (token != null) {
-        _dio.options.headers['Authorization'] = 'Bearer $token'; // Update header logic
+        _dio.options.headers['Authorization'] =
+            'Bearer $token'; // Update header logic
       } else {
-         // Handle case where token might be missing or rely on what's set elsewhere? 
-         // For now, let's just ensure we try to read it.
+        // Handle case where token might be missing or rely on what's set elsewhere?
+        // For now, let's just ensure we try to read it.
       }
-      // Note: check where 'access_token' vs 'accessToken' key consistency. 
-      // AuthService uses 'access_token'. MatchService uses 'accessToken'. 
+      // Note: check where 'access_token' vs 'accessToken' key consistency.
+      // AuthService uses 'access_token'. MatchService uses 'accessToken'.
       // I MUST FIX THIS KEY MISMATCH FIRST.
 
       final response = await _dio.get(ApiConfig.preferences);
@@ -110,7 +121,9 @@ class MatchService {
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'];
         // Backend returns { preferences: { ... } } - extract the inner object
-        if (data is Map && data.containsKey('preferences') && data['preferences'] != null) {
+        if (data is Map &&
+            data.containsKey('preferences') &&
+            data['preferences'] != null) {
           return Map<String, dynamic>.from(data['preferences']);
         }
         return Map<String, dynamic>.from(data ?? {});
@@ -127,7 +140,7 @@ class MatchService {
   Future<bool> updatePreferences(Map<String, dynamic> preferences) async {
     try {
       final token = await _storage.read(key: 'access_token');
-       _dio.options.headers['Authorization'] = 'Bearer $token';
+      _dio.options.headers['Authorization'] = 'Bearer $token';
 
       final response = await _dio.post(
         ApiConfig.preferences,

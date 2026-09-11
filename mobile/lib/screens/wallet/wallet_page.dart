@@ -22,6 +22,8 @@ class WalletPage extends StatefulWidget {
 class _WalletPageState extends State<WalletPage>
     with SingleTickerProviderStateMixin {
   static const _wineBright = Color(0xFFF45B45);
+  static const _orange = Color(0xFFFF5722);
+  static const _orangeLight = Color(0xFFFF7043);
   static const _gold = Color(0xFFF4B860);
   static const _goldMuted = Color(0xFFF08A7C);
   static const _gem = [Color(0xFFE8FCFF), Color(0xFF70DFF4), Color(0xFF8978F7)];
@@ -137,22 +139,22 @@ class _WalletPageState extends State<WalletPage>
                     onRefresh: wallet.refresh,
                     child: ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 44),
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
                       children: [
                         _balanceCard(wallet.balance),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 20),
                         _sectionHeading(
                           'Choose your diamonds',
                           'One-time top-up',
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
                         if (wallet.loadedOnce && !wallet.paymentsEnabled) ...[
                           _paymentsPausedNotice(),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 10),
                         ],
                         ...normalizedPackages.map(
                           (package) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.only(bottom: 9),
                             child: _packageTile(
                               package,
                               bestValueId,
@@ -161,15 +163,15 @@ class _WalletPageState extends State<WalletPage>
                             ),
                           ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 8),
                         _benefitsCard(),
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 16),
                         if (selectedPackage != null)
                           _purchaseButton(
                             selectedPackage,
                             wallet.paymentsEnabled,
                           ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         _securityFooter(gatewayName, wallet.paymentsEnabled),
                       ],
                     ),
@@ -199,9 +201,9 @@ class _WalletPageState extends State<WalletPage>
                       Color(0xFF210E18),
                     ]
                   : const [
-                      Color(0xFFFFFBFC),
-                      Color(0xFFFFEDF3),
-                      Color(0xFFFFF7F9),
+                      Color(0xFFFFFBF9),
+                      Color(0xFFFFEEE9),
+                      Color(0xFFFFF8F5),
                     ],
               stops: const [0, 0.5, 1],
             ),
@@ -255,7 +257,7 @@ class _WalletPageState extends State<WalletPage>
 
   Widget _header() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 10, 4),
+      padding: const EdgeInsets.fromLTRB(6, 4, 8, 2),
       child: Row(
         children: [
           IconButton(
@@ -272,7 +274,7 @@ class _WalletPageState extends State<WalletPage>
                   'Wallet',
                   style: GoogleFonts.poppins(
                     color: _cream,
-                    fontSize: 24,
+                    fontSize: 21,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -280,7 +282,7 @@ class _WalletPageState extends State<WalletPage>
                   'Diamonds for deeper connections',
                   style: GoogleFonts.poppins(
                     color: _muted,
-                    fontSize: 10.5,
+                    fontSize: 9.5,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -301,39 +303,39 @@ class _WalletPageState extends State<WalletPage>
     return AnimatedBuilder(
       animation: _glow,
       builder: (context, _) => Container(
-        height: 232,
-        padding: const EdgeInsets.all(22),
+        height: 178,
+        padding: const EdgeInsets.all(17),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(22),
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFFF6A5E), Color(0xFFE91E63), Color(0xFFF4A261)],
-            stops: [0, 0.56, 1],
+            colors: [Color(0xFF3A1128), _orange, _orangeLight],
+            stops: [0, 0.54, 1],
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(
-                0xFFE91E63,
-              ).withValues(alpha: (_isDark ? 0.25 : 0.18) + _glow.value * 0.05),
-              blurRadius: 30,
-              offset: const Offset(0, 14),
+              color: _orange.withValues(
+                alpha: (_isDark ? 0.22 : 0.16) + _glow.value * 0.04,
+              ),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         child: Stack(
           children: [
             Positioned(
-              right: -34,
-              top: -42,
+              right: -38,
+              top: -48,
               child: Container(
-                width: 150,
-                height: 150,
+                width: 130,
+                height: 130,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: Colors.white.withValues(alpha: 0.10),
-                    width: 24,
+                    width: 20,
                   ),
                 ),
               ),
@@ -348,19 +350,19 @@ class _WalletPageState extends State<WalletPage>
                       'YOUR DIAMOND BALANCE',
                       style: GoogleFonts.poppins(
                         color: Colors.white.withValues(alpha: 0.78),
-                        fontSize: 10,
+                        fontSize: 8.5,
                         fontWeight: FontWeight.w600,
-                        letterSpacing: 1.8,
+                        letterSpacing: 1.5,
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.all(9),
+                      padding: const EdgeInsets.all(7),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.16),
                         shape: BoxShape.circle,
                       ),
                       child: DiamondGem(
-                        size: 34,
+                        size: 28,
                         colors: _gem,
                         shine: _glow.value,
                       ),
@@ -375,20 +377,20 @@ class _WalletPageState extends State<WalletPage>
                       _money(balance),
                       style: GoogleFonts.poppins(
                         color: Colors.white,
-                        fontSize: 50,
+                        fontSize: 38,
                         fontWeight: FontWeight.w800,
                         height: 0.95,
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(left: 10, bottom: 5),
+                      padding: const EdgeInsets.only(left: 8, bottom: 3),
                       child: Text(
                         'DIAMONDS',
                         style: GoogleFonts.poppins(
                           color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 10,
+                          fontSize: 8.5,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 1.4,
+                          letterSpacing: 1.1,
                         ),
                       ),
                     ),
@@ -400,9 +402,9 @@ class _WalletPageState extends State<WalletPage>
                     const Icon(
                       Icons.auto_awesome,
                       color: Colors.white,
-                      size: 15,
+                      size: 13,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         balance > 0
@@ -410,7 +412,7 @@ class _WalletPageState extends State<WalletPage>
                             : 'Your next meaningful connection starts here',
                         style: GoogleFonts.poppins(
                           color: Colors.white.withValues(alpha: 0.78),
-                          fontSize: 11.5,
+                          fontSize: 10,
                         ),
                       ),
                     ),
@@ -431,10 +433,10 @@ class _WalletPageState extends State<WalletPage>
       (Icons.video_camera_front_rounded, 'Join more face-to-face Live Dates'),
     ];
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 10),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
       decoration: BoxDecoration(
         color: _panel.withValues(alpha: _isDark ? 0.86 : 0.94),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(17),
         border: Border.all(color: _stroke),
       ),
       child: Column(
@@ -444,34 +446,34 @@ class _WalletPageState extends State<WalletPage>
             'What your diamonds unlock',
             style: GoogleFonts.poppins(
               color: _cream,
-              fontSize: 14,
+              fontSize: 12.5,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 6),
           ...items.map(
             (item) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 7),
+              padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(
                 children: [
                   Container(
-                    width: 29,
-                    height: 29,
+                    width: 25,
+                    height: 25,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFFF45B45), Color(0xFFE91E63)],
+                        colors: [Color(0xFF3A1128), _orange],
                       ),
-                      borderRadius: BorderRadius.circular(9),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(item.$1, color: Colors.white, size: 15),
+                    child: Icon(item.$1, color: Colors.white, size: 13),
                   ),
-                  const SizedBox(width: 11),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: Text(
                       item.$2,
                       style: GoogleFonts.poppins(
                         color: _muted,
-                        fontSize: 11.5,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -494,14 +496,14 @@ class _WalletPageState extends State<WalletPage>
             title,
             style: GoogleFonts.poppins(
               color: _cream,
-              fontSize: 20,
+              fontSize: 17,
               fontWeight: FontWeight.w800,
             ),
           ),
         ),
         Text(
           trailing,
-          style: GoogleFonts.poppins(color: _muted, fontSize: 10.5),
+          style: GoogleFonts.poppins(color: _muted, fontSize: 9.5),
         ),
       ],
     );
@@ -509,23 +511,23 @@ class _WalletPageState extends State<WalletPage>
 
   Widget _paymentsPausedNotice() {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: _panel.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _gold.withValues(alpha: 0.34)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.schedule_rounded, color: _gold, size: 20),
-          const SizedBox(width: 11),
+          const Icon(Icons.schedule_rounded, color: _gold, size: 17),
+          const SizedBox(width: 9),
           Expanded(
             child: Text(
               'Top-ups are temporarily unavailable. Your existing balance remains ready to use.',
               style: GoogleFonts.poppins(
                 color: _muted,
-                fontSize: 11.5,
+                fontSize: 10.5,
                 height: 1.45,
               ),
             ),
@@ -572,26 +574,26 @@ class _WalletPageState extends State<WalletPage>
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         onTap: busy ? null : () => setState(() => _selectedPackageId = id),
         child: AnimatedOpacity(
           opacity: paymentsEnabled ? 1 : 0.55,
           duration: const Duration(milliseconds: 200),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(15, 14, 13, 14),
+            padding: const EdgeInsets.fromLTRB(12, 10, 11, 10),
             decoration: BoxDecoration(
               color: _panel.withValues(alpha: _isDark ? 0.90 : 0.96),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: selected ? const Color(0xFFF45B75) : _stroke,
+                color: selected ? _orange : _stroke,
                 width: selected ? 2 : 1,
               ),
               boxShadow: selected
                   ? [
                       BoxShadow(
-                        color: const Color(0xFFE91E63).withValues(alpha: 0.12),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
+                        color: _orange.withValues(alpha: 0.12),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
                       ),
                     ]
                   : null,
@@ -599,22 +601,22 @@ class _WalletPageState extends State<WalletPage>
             child: Row(
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 43,
+                  height: 43,
                   decoration: BoxDecoration(
                     gradient: selected
                         ? const LinearGradient(
-                            colors: [Color(0xFFFF6A5E), Color(0xFFE91E63)],
+                            colors: [Color(0xFF3A1128), _orange],
                           )
                         : null,
                     color: selected ? null : _wine,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(13),
                   ),
                   child: Center(
-                    child: DiamondGem(size: 30, colors: _gem, shine: 0.55),
+                    child: DiamondGem(size: 25, colors: _gem, shine: 0.55),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 11),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -625,27 +627,27 @@ class _WalletPageState extends State<WalletPage>
                             '$total',
                             style: GoogleFonts.poppins(
                               color: _cream,
-                              fontSize: 20,
+                              fontSize: 17,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 5),
                           Text(
                             'diamonds',
                             style: GoogleFonts.poppins(
                               color: _muted,
-                              fontSize: 11,
+                              fontSize: 10,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 1),
                       if (bonus > 0)
                         Text(
                           '$diamonds + $bonus complimentary',
                           style: GoogleFonts.poppins(
-                            color: _gold,
-                            fontSize: 10.5,
+                            color: _isDark ? _gold : const Color(0xFF9A5C10),
+                            fontSize: 9.5,
                             fontWeight: FontWeight.w600,
                           ),
                         )
@@ -654,7 +656,7 @@ class _WalletPageState extends State<WalletPage>
                           '₦${(price / max(total, 1)).toStringAsFixed(0)} per diamond',
                           style: GoogleFonts.poppins(
                             color: _muted,
-                            fontSize: 10.5,
+                            fontSize: 9.5,
                           ),
                         ),
                     ],
@@ -665,23 +667,24 @@ class _WalletPageState extends State<WalletPage>
                   children: [
                     if (featured || best)
                       Container(
-                        margin: const EdgeInsets.only(bottom: 7),
+                        margin: const EdgeInsets.only(bottom: 5),
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
+                          horizontal: 6,
+                          vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: (selected ? const Color(0xFFE91E63) : _gold)
-                              .withValues(alpha: 0.12),
+                          color: (selected ? _orange : _gold).withValues(
+                            alpha: 0.12,
+                          ),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           featured ? 'MOST CHOSEN' : 'BEST VALUE',
                           style: GoogleFonts.poppins(
                             color: selected
-                                ? const Color(0xFFE91E63)
+                                ? _orange
                                 : (_isDark ? _gold : const Color(0xFF9A5C10)),
-                            fontSize: 7.5,
+                            fontSize: 6.8,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.6,
                           ),
@@ -689,8 +692,8 @@ class _WalletPageState extends State<WalletPage>
                       ),
                     busy
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 17,
+                            height: 17,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: _wineBright,
@@ -700,17 +703,17 @@ class _WalletPageState extends State<WalletPage>
                             '₦${_money(price)}',
                             style: GoogleFonts.poppins(
                               color: _cream,
-                              fontSize: 15,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                   ],
                 ),
-                const SizedBox(width: 5),
+                const SizedBox(width: 3),
                 Icon(
                   Icons.chevron_right_rounded,
                   color: _muted.withValues(alpha: 0.62),
-                  size: 20,
+                  size: 18,
                 ),
               ],
             ),
@@ -734,22 +737,22 @@ class _WalletPageState extends State<WalletPage>
       child: Material(
         color: Colors.transparent,
         child: Ink(
-          height: 58,
+          height: 50,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFFF6A5E), Color(0xFFE91E63), Color(0xFFF4A261)],
+              colors: [Color(0xFF3A1128), _orange, _orangeLight],
             ),
-            borderRadius: BorderRadius.circular(19),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFE91E63).withValues(alpha: 0.22),
-                blurRadius: 20,
-                offset: const Offset(0, 9),
+                color: _orange.withValues(alpha: 0.20),
+                blurRadius: 16,
+                offset: const Offset(0, 7),
               ),
             ],
           ),
           child: InkWell(
-            borderRadius: BorderRadius.circular(19),
+            borderRadius: BorderRadius.circular(16),
             onTap: !paymentsEnabled || busy
                 ? null
                 : () => _showPurchaseSheet(id, diamonds, price, bonus),
@@ -769,7 +772,7 @@ class _WalletPageState extends State<WalletPage>
                           : 'Top-ups temporarily unavailable',
                       style: GoogleFonts.poppins(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

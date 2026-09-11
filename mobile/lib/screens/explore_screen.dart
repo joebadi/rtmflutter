@@ -28,10 +28,11 @@ class ExploreScreen extends StatefulWidget {
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateMixin {
+class _ExploreScreenState extends State<ExploreScreen>
+    with TickerProviderStateMixin {
   // 0 = Map (Default), 1 = Swipe (Cards view)
   // Grid view (2) removed from tabs - now accessible via overlay from map
-  int _viewMode = 0; 
+  int _viewMode = 0;
   final CardSwiperController swipeController = CardSwiperController();
   final MapController mapController = MapController();
   final LocationSearchService _locationSearchService = LocationSearchService();
@@ -44,6 +45,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   List<dynamic> _nearbyUsers = [];
   List<dynamic> _suggestions = [];
   String _locationName = 'Locating...';
+  bool _isPremium = false;
+  bool _usingCustomLocation = false;
 
   // Two-tap interaction state
   String? _selectedUserId;
@@ -54,7 +57,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   // Filter State
   RangeValues _ageRange = const RangeValues(25, 35);
   double _distance = 50;
-  String? _genderFilter; // mandatory single choice; defaults to the opposite user
+  String?
+  _genderFilter; // mandatory single choice; defaults to the opposite user
   String? _userGender; // current user's gender, for the default above
   RangeValues _heightRange = const RangeValues(160, 185);
   // Multi-select facets (empty list = "Any").
@@ -97,27 +101,36 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     super.dispose();
   }
 
+  double get _distanceLimit => _isPremium ? 500 : 50;
+
   Future<void> _loadUserGender() async {
     try {
       final data = await ProfileService().getMyProfile();
-      final gender = data?['data']?['profile']?['gender'] ??
-          data?['data']?['gender'];
+      final profile = data?['data']?['profile'] ?? data?['data'];
+      final gender = profile?['gender'];
+      final isPremium = profile?['user']?['isPremium'] == true;
       if (gender is String && gender.isNotEmpty) {
         _userGender = gender.toUpperCase();
         // Default the gender filter to the opposite gender.
         _genderFilter ??= _userGender == 'MALE' ? 'FEMALE' : 'MALE';
-        if (mounted) setState(() {});
       }
+      _isPremium = isPremium;
+      if (!_isPremium) {
+        _distance = min(_distance, 50);
+        _usingCustomLocation = false;
+      }
+      if (mounted) setState(() {});
     } catch (_) {
       // Non-fatal: gender filter simply stays unset.
     }
   }
 
-  String get _defaultGender =>
-      _userGender == 'MALE' ? 'FEMALE' : (_userGender == 'FEMALE' ? 'MALE' : 'FEMALE');
+  String get _defaultGender => _userGender == 'MALE'
+      ? 'FEMALE'
+      : (_userGender == 'FEMALE' ? 'MALE' : 'FEMALE');
 
   Future<void> _initializeData() async {
-    _loadUserGender();
+    await _loadUserGender();
     await _getCurrentLocation();
     if (_currentLocation != null) {
       await _fetchNearbyUsers();
@@ -134,13 +147,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      
-      if (permission == LocationPermission.whileInUse || 
+
+      if (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always) {
         final position = await Geolocator.getCurrentPosition();
         if (!mounted) return;
         setState(() {
           _currentLocation = LatLng(position.latitude, position.longitude);
+          _usingCustomLocation = false;
         });
         // Reverse geocode to get location name
         await _updateLocationName(_currentLocation!);
@@ -158,13 +172,13 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         location.latitude,
         location.longitude,
       );
-      
+
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
         final city = place.locality ?? place.subAdministrativeArea ?? '';
         final state = place.administrativeArea ?? '';
         final country = place.country ?? '';
-        
+
         String locationText = '';
         if (city.isNotEmpty) {
           locationText = city;
@@ -177,7 +191,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         } else {
           locationText = 'Unknown location';
         }
-        
+
         if (!mounted) return;
         setState(() => _locationName = locationText);
       }
@@ -244,35 +258,31 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   void _centerMapOnUser(double lat, double lng) {
     final camera = mapController.camera;
     final currentZoom = camera.zoom;
-    
+
     // Use animated rotation with custom curve for smooth, natural movement
-    mapController.moveAndRotate(
-      LatLng(lat, lng),
-      currentZoom,
-      0.0,
-    );
-    
+    mapController.moveAndRotate(LatLng(lat, lng), currentZoom, 0.0);
+
     // For even smoother transition, we can use a custom animation
     // This simulates finger-dragging movement
     final currentCenter = camera.center;
     final targetCenter = LatLng(lat, lng);
-    
+
     // Calculate distance to determine animation duration
     final distance = const Distance().as(
       LengthUnit.Kilometer,
       currentCenter,
       targetCenter,
     );
-    
+
     // Longer distances = longer animation (max 1.5 seconds)
     final duration = Duration(
       milliseconds: (distance * 100).clamp(300, 1500).toInt(),
     );
-    
+
     // Animate with easeInOutCubic curve for natural feel
     _animateMapCamera(currentCenter, targetCenter, currentZoom, duration);
   }
-  
+
   void _animateMapCamera(
     LatLng start,
     LatLng end,
@@ -280,49 +290,62 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     Duration duration,
   ) {
     final startTime = DateTime.now();
-    
+
     void animate() {
       final elapsed = DateTime.now().difference(startTime);
-      final progress = (elapsed.inMilliseconds / duration.inMilliseconds).clamp(0.0, 1.0);
-      
+      final progress = (elapsed.inMilliseconds / duration.inMilliseconds).clamp(
+        0.0,
+        1.0,
+      );
+
       if (progress >= 1.0) {
         mapController.move(end, zoom);
         return;
       }
-      
+
       // Cubic easing for smooth deceleration
       final t = progress < 0.5
           ? 4 * progress * progress * progress
           : 1 - pow(-2 * progress + 2, 3) / 2;
-      
+
       final lat = start.latitude + (end.latitude - start.latitude) * t;
       final lng = start.longitude + (end.longitude - start.longitude) * t;
-      
+
       mapController.move(LatLng(lat, lng), zoom);
-      
+
       Future.delayed(const Duration(milliseconds: 16), animate);
     }
-    
+
     animate();
   }
 
   void _scrollToCard(int index) {
     if (!_horizontalScrollController.hasClients) return;
-    
+
     final cardWidth = 280.0; // Card width (260) + margin (20)
     final screenWidth = MediaQuery.of(context).size.width;
-    final targetOffset = (index * cardWidth) - (screenWidth / 2) + (cardWidth / 2);
-    
+    final targetOffset =
+        (index * cardWidth) - (screenWidth / 2) + (cardWidth / 2);
+
     _horizontalScrollController.animateTo(
-      targetOffset.clamp(0.0, _horizontalScrollController.position.maxScrollExtent),
+      targetOffset.clamp(
+        0.0,
+        _horizontalScrollController.position.maxScrollExtent,
+      ),
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
   }
 
   // Calculate distance between two coordinates (in kilometers)
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2) / 1000; // Convert meters to km
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2) /
+        1000; // Convert meters to km
   }
 
   Future<void> _fetchNearbyUsers() async {
@@ -334,24 +357,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       final users = await _matchService.getNearbyUsers(
         latitude: lat,
         longitude: lng,
-        radius: 50, // 50km
+        radius: _distance.round().clamp(1, _distanceLimit.round()).toInt(),
+        limit: 100,
+        useCustomLocation: _usingCustomLocation,
       );
 
-      // Calculate distance for each user
-      final usersWithDistance = users.map((user) {
-        if (_currentLocation != null && user['latitude'] != null && user['longitude'] != null) {
-          final distance = _calculateDistance(
-            _currentLocation!.latitude,
-            _currentLocation!.longitude,
-            user['latitude'] as double,
-            user['longitude'] as double,
-          );
-          user['distance'] = distance.round(); // Store as integer km
-        } else {
-          user['distance'] = 0;
-        }
-        return user;
-      }).toList();
+      final usersWithDistance = _addDistances(users);
 
       // Apply filters
       final filteredUsers = _applyFilters(usersWithDistance);
@@ -375,20 +386,22 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       debugPrint('Error fetching nearby users: $e');
       if (mounted) {
         if (e.toString().contains('UNAUTHORIZED')) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Session expired. Please login again.'),
-                backgroundColor: Colors.red,
-              ),
-            );
-            // clear navigation stack and go to login
-            context.go('/login'); 
-            return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Session expired. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          // clear navigation stack and go to login
+          context.go('/login');
+          return;
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load nearby users. Please try re-logging in.'),
+            content: Text(
+              'Failed to load nearby users. Please try re-logging in.',
+            ),
             backgroundColor: Colors.red,
             action: SnackBarAction(
               label: 'Retry',
@@ -404,12 +417,35 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   Future<void> _fetchSuggestions() async {
     try {
       final users = await _matchService.getMatchSuggestions(limit: 10);
-      final filteredUsers = _applyFilters(users);
+      // Swipe suggestions share the same distance gate as map results.
+      final filteredUsers = _applyFilters(_addDistances(users));
       if (!mounted) return;
       setState(() => _suggestions = filteredUsers);
     } catch (e) {
       debugPrint('Error fetching suggestions: $e');
     }
+  }
+
+  List<dynamic> _addDistances(List<dynamic> users) {
+    return users.map((user) {
+      final profile = (user['profile'] ?? user) as Map;
+      final latitude = profile['latitude'];
+      final longitude = profile['longitude'];
+      if (_currentLocation != null && latitude is num && longitude is num) {
+        user['distance'] = _calculateDistance(
+          _currentLocation!.latitude,
+          _currentLocation!.longitude,
+          latitude.toDouble(),
+          longitude.toDouble(),
+        ).round();
+      } else if (user['distance'] is num) {
+        user['distance'] = (user['distance'] as num).round();
+      } else {
+        // Unknown distance must not slip through a radius filter.
+        user['distance'] = double.infinity;
+      }
+      return user;
+    }).toList();
   }
 
   // Apply client-side filters to users
@@ -480,7 +516,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
       // Verified filter
       if (_showOnlyVerified &&
-          (user['isVerified'] ?? profile['isVerified'] ?? userObj['isVerified']) != true) {
+          (user['isVerified'] ??
+                  profile['isVerified'] ??
+                  userObj['isVerified']) !=
+              true) {
         return false;
       }
 
@@ -504,7 +543,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   Widget build(BuildContext context) {
     // Determine background color based on view mode (Map handles its own background)
     final backgroundColor = AppTheme.bg(context);
-    
+
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
@@ -522,9 +561,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
             // Content
             Expanded(
-              child: _isLoading 
-                ? const Center(child: PremiumLoader()) 
-                : _buildContent(),
+              child: _isLoading
+                  ? const Center(child: PremiumLoader())
+                  : _buildContent(),
             ),
           ],
         ),
@@ -572,52 +611,191 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   Widget _buildLocationButton() {
-    return GestureDetector(
-      onTap: _showLocationSearch,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(8, 7, 10, 7),
-        decoration: BoxDecoration(
-          color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-              color: const Color(0xFFFF5722).withOpacity(0.3), width: 1.4),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFF5722).withOpacity(0.10),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(5),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                    colors: [Color(0xFFFF5722), Color(0xFFFF7043)]),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.place_rounded,
-                  color: Colors.white, size: 13),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                _locationName,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: AppTheme.textPrimary(context),
-                  fontWeight: FontWeight.w600,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: _isPremium ? _showLocationSearch : _showLocationUpgrade,
+        child: Ink(
+          height: 44,
+          padding: const EdgeInsets.fromLTRB(7, 5, 8, 5),
+          decoration: BoxDecoration(
+            color: AppTheme.surface(context).withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.hairline(context)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: AppTheme.isLight(context) ? 0.07 : 0.18,
                 ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
+                blurRadius: 18,
+                offset: const Offset(0, 7),
               ),
-            ),
-            Icon(Icons.keyboard_arrow_down_rounded,
-                color: AppTheme.textFaint(context), size: 16),
-          ],
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: AppTheme.isLight(context)
+                      ? const Color(0xFFF1E8ED)
+                      : const Color(0xFF382330),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _usingCustomLocation
+                      ? Icons.flight_takeoff_rounded
+                      : Icons.near_me_rounded,
+                  color: AppTheme.isLight(context)
+                      ? const Color(0xFF4A263A)
+                      : const Color(0xFFF5DCE8),
+                  size: 15,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _usingCustomLocation ? 'TRAVEL MODE' : 'DISCOVERING',
+                      style: GoogleFonts.poppins(
+                        fontSize: 7.5,
+                        height: 1.05,
+                        letterSpacing: 0.8,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textFaint(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _locationName,
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        height: 1.15,
+                        color: AppTheme.textPrimary(context),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 3),
+              Icon(
+                _isPremium
+                    ? Icons.keyboard_arrow_down_rounded
+                    : Icons.lock_outline_rounded,
+                color: _isPremium
+                    ? AppTheme.textFaint(context)
+                    : const Color(0xFFC29445),
+                size: 15,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLocationUpgrade() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 24),
+          decoration: BoxDecoration(
+            color: AppTheme.surface(sheetContext),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.fg(sheetContext, 0.18),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 22),
+              Container(
+                width: 58,
+                height: 58,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF3A1128), Color(0xFF8C315E)],
+                  ),
+                ),
+                child: const Icon(
+                  Icons.travel_explore_rounded,
+                  color: Colors.white,
+                  size: 27,
+                ),
+              ),
+              const SizedBox(height: 15),
+              Text(
+                'Explore beyond your area',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  color: AppTheme.textPrimary(sheetContext),
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                'Free discovery includes people within 50 km. Premium expands your range to 500 km and unlocks travel mode for any city.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  color: AppTheme.textSecondary(sheetContext),
+                  fontSize: 12.5,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF3A1128), Color(0xFF8C315E)],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        context.push('/premium');
+                      },
+                      child: Center(
+                        child: Text(
+                          'View Premium',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -625,20 +803,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
 
   Widget _buildSwitchButton(String label, IconData icon, int index) {
     final bool isActive = _viewMode == index;
-    
+
     return GestureDetector(
       onTap: () => setState(() => _viewMode = index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeInOut,
-        padding: EdgeInsets.symmetric(horizontal: isActive ? 16 : 12, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: isActive ? 16 : 12,
+          vertical: 8,
+        ),
         decoration: BoxDecoration(
-          gradient: isActive 
-              ? const LinearGradient(colors: [Color(0xFFFF5722), Color(0xFFFF7043)]) 
+          gradient: isActive
+              ? const LinearGradient(
+                  colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
+                )
               : null,
-          color: isActive 
-              ? null 
-              : AppTheme.surface2(context),
+          color: isActive ? null : AppTheme.surface2(context),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isActive ? Colors.transparent : AppTheme.hairline(context),
@@ -647,8 +828,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         child: Row(
           children: [
             Icon(
-              icon, 
-              size: 18, 
+              icon,
+              size: 18,
               color: isActive ? Colors.white : AppTheme.textSecondary(context),
             ),
             if (isActive) ...[
@@ -696,8 +877,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             ),
             TextButton(
               onPressed: _initializeData,
-              child: const Text('Retry', style: TextStyle(color: Color(0xFFFF5722))),
-            )
+              child: const Text(
+                'Retry',
+                style: TextStyle(color: Color(0xFFFF5722)),
+              ),
+            ),
           ],
         ),
       );
@@ -713,7 +897,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             initialZoom: 10.0,
             keepAlive: true,
             interactionOptions: const InteractionOptions(
-              flags: InteractiveFlag.all & ~InteractiveFlag.rotate, 
+              flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
             ),
           ),
           children: [
@@ -766,14 +950,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 },
                 onMarkerTap: (marker) {
                   // Find user from marker point
-                  final user = _nearbyUsers.firstWhere(
-                    (u) {
-                      final lat = (u['latitude'] as num?)?.toDouble() ?? 0.0;
-                      final lng = (u['longitude'] as num?)?.toDouble() ?? 0.0;
-                      return marker.point.latitude == lat && marker.point.longitude == lng;
-                    },
-                    orElse: () => null,
-                  );
+                  final user = _nearbyUsers.firstWhere((u) {
+                    final lat = (u['latitude'] as num?)?.toDouble() ?? 0.0;
+                    final lng = (u['longitude'] as num?)?.toDouble() ?? 0.0;
+                    return marker.point.latitude == lat &&
+                        marker.point.longitude == lng;
+                  }, orElse: () => null);
                   if (user != null) {
                     _handleUserTap(user, fromCard: false);
                   }
@@ -822,8 +1004,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   child: GestureDetector(
                     onTap: _showGridOverlay,
                     child: Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
                           colors: [Color(0xFFFF5722), Color(0xFFFF7043)],
@@ -840,8 +1024,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.grid_view,
-                              color: Colors.white, size: 16),
+                          const Icon(
+                            Icons.grid_view,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'View Grid',
@@ -873,16 +1060,20 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   child: ListView.builder(
                     controller: _horizontalScrollController,
                     scrollDirection: Axis.horizontal,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     itemCount: _nearbyUsers.length,
                     itemBuilder: (context, index) {
                       final user = _nearbyUsers[index];
-                      final userId =
-                          (user['user']?['id'] ?? user['userId'])?.toString();
+                      final userId = (user['user']?['id'] ?? user['userId'])
+                          ?.toString();
                       final isSelected = userId == _selectedUserId;
-                      return _buildHorizontalUserCard(user,
-                          isSelected: isSelected);
+                      return _buildHorizontalUserCard(
+                        user,
+                        isSelected: isSelected,
+                      );
                     },
                   ),
                 ),
@@ -908,9 +1099,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       final photos = user['photos'] as List? ?? [];
       final rawUrl = photos.isNotEmpty
           ? (photos.firstWhere(
-              (p) => p['isPrimary'] == true,
-              orElse: () => photos.first,
-            )['url'] ?? '')
+                  (p) => p['isPrimary'] == true,
+                  orElse: () => photos.first,
+                )['url'] ??
+                '')
           : '';
       final photoUrl = _getFullPhotoUrl(rawUrl);
 
@@ -929,7 +1121,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? const Color(0xFFFF5722) : Colors.white,
+                      color: isSelected
+                          ? const Color(0xFFFF5722)
+                          : Colors.white,
                       width: isSelected ? 3 : 2,
                     ),
                     boxShadow: [
@@ -944,11 +1138,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                     ],
                   ),
                   child: photoUrl.isNotEmpty
-                      ? CircleAvatar(
-                          backgroundImage: NetworkImage(photoUrl),
-                        )
+                      ? CircleAvatar(backgroundImage: NetworkImage(photoUrl))
                       : CircleAvatar(
-                          backgroundColor: const Color(0xFFFF5722).withOpacity(0.2),
+                          backgroundColor: const Color(
+                            0xFFFF5722,
+                          ).withOpacity(0.2),
                           child: const Icon(
                             Icons.person,
                             color: Color(0xFFFF5722),
@@ -982,21 +1176,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     // Backend now returns data at root level, not nested under 'profile'
     final photos = user['photos'] as List? ?? [];
     final userObj = user['user'] ?? {};
-    
+
     final firstName = user['firstName'] ?? 'User';
-    final age = user['dateOfBirth'] != null 
-        ? (DateTime.now().year - DateTime.parse(user['dateOfBirth']).year).toString()
+    final age = user['dateOfBirth'] != null
+        ? (DateTime.now().year - DateTime.parse(user['dateOfBirth']).year)
+              .toString()
         : user['age']?.toString() ?? '??';
-    
+
     // Get primary photo or first photo
     final rawUrl = photos.isNotEmpty
         ? (photos.firstWhere(
-            (p) => p['isPrimary'] == true,
-            orElse: () => photos.first,
-          )['url'] ?? '')
+                (p) => p['isPrimary'] == true,
+                orElse: () => photos.first,
+              )['url'] ??
+              '')
         : '';
     final photoUrl = _getFullPhotoUrl(rawUrl);
-    
+
     final distance = user['distance']?.toString() ?? '0';
     final isOnline = userObj['isOnline'] ?? false;
     final isPremium = userObj['isPremium'] ?? false;
@@ -1010,12 +1206,12 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          border: isSelected 
+          border: isSelected
               ? Border.all(color: const Color(0xFFFF5722), width: 3)
               : null,
           boxShadow: [
             BoxShadow(
-              color: isSelected 
+              color: isSelected
                   ? const Color(0xFFFF5722).withOpacity(0.4)
                   : Colors.black.withOpacity(0.15),
               blurRadius: isSelected ? 15 : 10,
@@ -1070,10 +1266,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.7),
-                    ],
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
                     stops: const [0.5, 1.0],
                   ),
                 ),
@@ -1204,27 +1397,25 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   }
 
   Widget _buildPulsingUserMarker() {
-     // TODO: Add complex animation if desired
-     return Container(
-       decoration: BoxDecoration(
-         color: const Color(0xFFFF5722).withOpacity(0.3),
-         shape: BoxShape.circle,
-       ),
-       child: Center(
-         child: Container(
-           width: 20,
-           height: 20,
-           decoration: BoxDecoration(
-             color: const Color(0xFFFF5722),
-             shape: BoxShape.circle,
-             border: Border.all(color: Colors.white, width: 2),
-             boxShadow: const [
-               BoxShadow(color: Colors.black26, blurRadius: 4),
-             ],
-           ),
-         ),
-       ),
-     );
+    // TODO: Add complex animation if desired
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF5722).withOpacity(0.3),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFF5722),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showUserPreview(dynamic user) {
@@ -1236,22 +1427,24 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         // Backend returns data at root level now
         final photos = user['photos'] as List? ?? [];
         final userObj = user['user'] ?? {};
-        
+
         final firstName = user['firstName'] ?? 'User';
         final lastName = user['lastName'] ?? '';
-        final age = user['dateOfBirth'] != null 
-            ? (DateTime.now().year - DateTime.parse(user['dateOfBirth']).year).toString()
+        final age = user['dateOfBirth'] != null
+            ? (DateTime.now().year - DateTime.parse(user['dateOfBirth']).year)
+                  .toString()
             : user['age']?.toString() ?? '??';
-        
+
         // Get primary photo or first photo
         final rawUrl = photos.isNotEmpty
             ? (photos.firstWhere(
-                (p) => p['isPrimary'] == true,
-                orElse: () => photos.first,
-              )['url'] ?? '')
+                    (p) => p['isPrimary'] == true,
+                    orElse: () => photos.first,
+                  )['url'] ??
+                  '')
             : '';
         final photoUrl = _getFullPhotoUrl(rawUrl);
-        
+
         final distance = user['distance']?.toString() ?? '0';
         final isOnline = userObj['isOnline'] ?? false;
         final isPremium = userObj['isPremium'] ?? false;
@@ -1375,7 +1568,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                       shape: BoxShape.circle,
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFF4CAF50).withOpacity(0.3),
+                                          color: const Color(
+                                            0xFF4CAF50,
+                                          ).withOpacity(0.3),
                                           blurRadius: 8,
                                           spreadRadius: 2,
                                         ),
@@ -1396,7 +1591,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                       ),
                                       decoration: BoxDecoration(
                                         gradient: const LinearGradient(
-                                          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                                          colors: [
+                                            Color(0xFFFFD700),
+                                            Color(0xFFFFA500),
+                                          ],
                                         ),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -1433,7 +1631,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF4CAF50).withOpacity(0.1),
+                                  color: const Color(
+                                    0xFF4CAF50,
+                                  ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
                                     color: const Color(0xFF4CAF50),
@@ -1528,7 +1728,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFFF5722).withOpacity(0.4),
+                                  color: const Color(
+                                    0xFFFF5722,
+                                  ).withOpacity(0.4),
                                   blurRadius: 12,
                                   offset: const Offset(0, 6),
                                 ),
@@ -1596,7 +1798,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     final users = _suggestions.isNotEmpty ? _suggestions : _nearbyUsers;
 
     if (users.isEmpty) {
-       return _buildEmptyState('No active people nearby.', Icons.explore_off);
+      return _buildEmptyState('No active people nearby.', Icons.explore_off);
     }
 
     return Column(
@@ -1621,10 +1823,26 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildActionButton(Icons.refresh, Colors.orange, () => swipeController.undo()),
-              _buildActionButton(Icons.close, Colors.red, () => swipeController.swipe(CardSwiperDirection.left)),
-              _buildActionButton(Icons.star, Colors.blue, () => swipeController.swipe(CardSwiperDirection.top)),
-              _buildActionButton(Icons.favorite, Colors.green, () => swipeController.swipe(CardSwiperDirection.right)),
+              _buildActionButton(
+                Icons.refresh,
+                Colors.orange,
+                () => swipeController.undo(),
+              ),
+              _buildActionButton(
+                Icons.close,
+                Colors.red,
+                () => swipeController.swipe(CardSwiperDirection.left),
+              ),
+              _buildActionButton(
+                Icons.star,
+                Colors.blue,
+                () => swipeController.swipe(CardSwiperDirection.top),
+              ),
+              _buildActionButton(
+                Icons.favorite,
+                Colors.green,
+                () => swipeController.swipe(CardSwiperDirection.right),
+              ),
             ],
           ),
         ),
@@ -1637,28 +1855,32 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     final profile = user['profile'] ?? user;
     final photos = profile['photos'] as List? ?? [];
     final userObj = profile['user'] ?? {};
-    
+
     final firstName = profile['firstName'] ?? 'User';
-    final age = profile['dateOfBirth'] != null 
-        ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year).toString()
+    final age = profile['dateOfBirth'] != null
+        ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year)
+              .toString()
         : profile['age']?.toString() ?? '??';
-    
+
     final bio = profile['aboutMe'] ?? 'No bio yet.';
     final city = profile['city'] ?? '';
     final state = profile['state'] ?? '';
-    final location = city.isNotEmpty ? (state.isNotEmpty ? '$city, $state' : city) : 'Nearby';
-    
+    final location = city.isNotEmpty
+        ? (state.isNotEmpty ? '$city, $state' : city)
+        : 'Nearby';
+
     // Get primary photo or first photo
     String photoUrl = photos.isNotEmpty
         ? (photos.firstWhere(
-            (p) => p['isPrimary'] == true,
-            orElse: () => photos.first,
-          )['url'] ?? '')
+                (p) => p['isPrimary'] == true,
+                orElse: () => photos.first,
+              )['url'] ??
+              '')
         : '';
-    
+
     // Ensure full URL
     photoUrl = _getFullPhotoUrl(photoUrl);
-    
+
     final distance = user['distance']?.toString() ?? '0';
     final isOnline = userObj['isOnline'] ?? false;
     final isPremium = userObj['isPremium'] ?? false;
@@ -1709,10 +1931,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.85),
-                  ],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.85)],
                   stops: const [0.5, 1.0],
                 ),
               ),
@@ -1924,7 +2143,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
-   Widget _buildActionButton(IconData icon, Color color, VoidCallback onPressed) {
+  Widget _buildActionButton(
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -1949,7 +2172,7 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
   // --- GRID VIEW ---
   Widget _buildGridView() {
     if (_nearbyUsers.isEmpty) {
-       return _buildEmptyState('No users nearby yet.', Icons.people_outline);
+      return _buildEmptyState('No users nearby yet.', Icons.people_outline);
     }
 
     return GridView.builder(
@@ -1985,22 +2208,24 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     final profile = user['profile'] ?? user;
     final photos = profile['photos'] as List? ?? [];
     final userObj = profile['user'] ?? {};
-    
+
     final firstName = profile['firstName'] ?? 'User';
-    final age = profile['dateOfBirth'] != null 
-        ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year).toString()
+    final age = profile['dateOfBirth'] != null
+        ? (DateTime.now().year - DateTime.parse(profile['dateOfBirth']).year)
+              .toString()
         : profile['age']?.toString() ?? '??';
-    
+
     // Get primary photo or first photo
     String photoUrl = photos.isNotEmpty
         ? (photos.firstWhere(
-            (p) => p['isPrimary'] == true,
-            orElse: () => photos.first,
-          )['url'] ?? '')
+                (p) => p['isPrimary'] == true,
+                orElse: () => photos.first,
+              )['url'] ??
+              '')
         : '';
 
     photoUrl = _getFullPhotoUrl(photoUrl);
-    
+
     final distance = user['distance']?.toString() ?? '0';
     final isOnline = userObj['isOnline'] ?? false;
     final isPremium = userObj['isPremium'] ?? false;
@@ -2037,7 +2262,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 ),
                 child: photoUrl.isNotEmpty
                     ? Hero(
-                        tag: 'user-photo-${userObj['id'] ?? profile['userId'] ?? ''}',
+                        tag:
+                            'user-photo-${userObj['id'] ?? profile['userId'] ?? ''}',
                         child: Material(
                           color: Colors.transparent,
                           child: Image.network(
@@ -2189,7 +2415,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                       if (matchScore != null) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 3),
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
@@ -2199,8 +2427,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.favorite_rounded,
-                                  color: Colors.black, size: 9),
+                              const Icon(
+                                Icons.favorite_rounded,
+                                color: Colors.black,
+                                size: 9,
+                              ),
                               const SizedBox(width: 3),
                               Text(
                                 '$matchScore% match',
@@ -2286,7 +2517,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               height: MediaQuery.of(context).size.height * 0.95,
               decoration: BoxDecoration(
                 color: AppTheme.bg(context),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
               ),
               child: Column(
                 children: [
@@ -2336,7 +2569,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 13, vertical: 8),
+                              horizontal: 13,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               gradient: AppTheme.accentGradient,
                               borderRadius: BorderRadius.circular(20),
@@ -2344,8 +2579,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.tune_rounded,
-                                    color: Colors.white, size: 15),
+                                const Icon(
+                                  Icons.tune_rounded,
+                                  color: Colors.white,
+                                  size: 15,
+                                ),
                                 const SizedBox(width: 5),
                                 Text(
                                   'Filter',
@@ -2368,8 +2606,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               color: AppTheme.fg(context, 0.08),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Icon(Icons.close_rounded,
-                                size: 17, color: AppTheme.fg(context, 0.7)),
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 17,
+                              color: AppTheme.fg(context, 0.7),
+                            ),
                           ),
                         ),
                       ],
@@ -2383,11 +2624,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             padding: const EdgeInsets.fromLTRB(14, 4, 14, 20),
                             gridDelegate:
                                 const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: 0.72,
-                            ),
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                  childAspectRatio: 0.72,
+                                ),
                             itemCount: _nearbyUsers.length,
                             itemBuilder: (context, index) =>
                                 _buildGridItem(_nearbyUsers[index]),
@@ -2413,8 +2654,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               color: AppTheme.accent.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.people_outline_rounded,
-                size: 44, color: AppTheme.accent.withOpacity(0.8)),
+            child: Icon(
+              Icons.people_outline_rounded,
+              size: 44,
+              color: AppTheme.accent.withOpacity(0.8),
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -2438,7 +2682,6 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
-
   // Live location search backed by Nominatim (OpenStreetMap). Typing fetches
   // matching places; selecting one recenters the map and refetches matches.
   void _showLocationSearch() {
@@ -2454,8 +2697,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
         child: StatefulBuilder(
           builder: (context, setModalState) {
             // Geo-locate the device, then recenter on it.
@@ -2466,15 +2710,24 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 if (!sheetContext.mounted) return;
                 setModalState(() => locating = false);
                 if (loc != null) {
-                  _selectSearchResult(loc, sheetContext);
+                  _selectSearchResult(
+                    loc,
+                    sheetContext,
+                    useCustomLocation: false,
+                  );
                 } else {
-                  showPremiumSnack(context, 'Could not determine your location');
+                  showPremiumSnack(
+                    context,
+                    'Could not determine your location',
+                  );
                 }
               } catch (_) {
                 if (!sheetContext.mounted) return;
                 setModalState(() => locating = false);
-                showPremiumSnack(context,
-                    'Location unavailable. Enable location access and try again.');
+                showPremiumSnack(
+                  context,
+                  'Location unavailable. Enable location access and try again.',
+                );
               }
             }
 
@@ -2524,11 +2777,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                     padding: const EdgeInsets.fromLTRB(18, 14, 12, 6),
                     child: Row(
                       children: [
-                        Text('Search location',
-                            style: GoogleFonts.poppins(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.textPrimary(sheetContext))),
+                        Text(
+                          'Search location',
+                          style: GoogleFonts.poppins(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary(sheetContext),
+                          ),
+                        ),
                         const Spacer(),
                         GestureDetector(
                           onTap: () => Navigator.pop(sheetContext),
@@ -2538,9 +2794,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               color: AppTheme.surface2(sheetContext),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Icon(Icons.close_rounded,
-                                size: 17,
-                                color: AppTheme.textSecondary(sheetContext)),
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 17,
+                              color: AppTheme.textSecondary(sheetContext),
+                            ),
                           ),
                         ),
                       ],
@@ -2566,23 +2824,32 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         textInputAction: TextInputAction.search,
                         cursorColor: AppTheme.accent,
                         style: GoogleFonts.poppins(
-                            color: AppTheme.textPrimary(sheetContext),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500),
+                          color: AppTheme.textPrimary(sheetContext),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
                         onChanged: runSearch,
                         decoration: InputDecoration(
                           hintText: 'Type a city, state or country',
                           hintStyle: GoogleFonts.poppins(
-                              color: Colors.grey.shade500, fontSize: 14),
-                          prefixIcon: const Icon(Icons.search_rounded,
-                              color: AppTheme.accent, size: 22),
+                            color: Colors.grey.shade500,
+                            fontSize: 14,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: AppTheme.accent,
+                            size: 22,
+                          ),
                           suffixIcon: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (query.isNotEmpty)
                                 IconButton(
-                                  icon: Icon(Icons.close_rounded,
-                                      color: Colors.grey.shade500, size: 20),
+                                  icon: Icon(
+                                    Icons.close_rounded,
+                                    color: Colors.grey.shade500,
+                                    size: 20,
+                                  ),
                                   onPressed: () {
                                     searchController.clear();
                                     runSearch('');
@@ -2598,22 +2865,27 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                         child: Padding(
                                           padding: EdgeInsets.all(2),
                                           child: CircularProgressIndicator(
-                                              strokeWidth: 2.2,
-                                              color: AppTheme.accent),
+                                            strokeWidth: 2.2,
+                                            color: AppTheme.accent,
+                                          ),
                                         ),
                                       )
                                     : IconButton(
                                         tooltip: 'Use my location',
-                                        icon: const Icon(Icons.my_location_rounded,
-                                            color: AppTheme.accent, size: 22),
+                                        icon: const Icon(
+                                          Icons.my_location_rounded,
+                                          color: AppTheme.accent,
+                                          size: 22,
+                                        ),
                                         onPressed: useDevice,
                                       ),
                               ),
                             ],
                           ),
                           border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 16),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                          ),
                         ),
                       ),
                     ),
@@ -2646,7 +2918,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         child: SizedBox(
           width: 28,
           height: 28,
-          child: CircularProgressIndicator(strokeWidth: 2.4, color: AppTheme.accent),
+          child: CircularProgressIndicator(
+            strokeWidth: 2.4,
+            color: AppTheme.accent,
+          ),
         ),
       );
     }
@@ -2685,31 +2960,46 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 color: AppTheme.accent.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: AppTheme.accent.withOpacity(0.85), size: 36),
+              child: Icon(
+                icon,
+                color: AppTheme.accent.withOpacity(0.85),
+                size: 36,
+              ),
             ),
             const SizedBox(height: 14),
-            Text(title,
-                style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary(context))),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary(context),
+              ),
+            ),
             const SizedBox(height: 6),
-            Text(subtitle,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                    fontSize: 12.5,
-                    color: AppTheme.textSecondary(context),
-                    height: 1.4)),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                color: AppTheme.textSecondary(context),
+                height: 1.4,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _locationResultTile(LocationSearchResult r, BuildContext sheetContext) {
-    final label = [r.city, r.state, r.country]
-        .where((s) => s.trim().isNotEmpty)
-        .join(', ');
+  Widget _locationResultTile(
+    LocationSearchResult r,
+    BuildContext sheetContext,
+  ) {
+    final label = [
+      r.city,
+      r.state,
+      r.country,
+    ].where((s) => s.trim().isNotEmpty).join(', ');
     final title = label.isNotEmpty ? label : r.displayName;
     return Material(
       color: Colors.transparent,
@@ -2731,33 +3021,45 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   color: AppTheme.accent.withOpacity(0.14),
                   borderRadius: BorderRadius.circular(11),
                 ),
-                child: const Icon(Icons.location_on_rounded,
-                    color: AppTheme.accent, size: 18),
+                child: const Icon(
+                  Icons.location_on_rounded,
+                  color: AppTheme.accent,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary(context))),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary(context),
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(r.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(
-                            fontSize: 11.5,
-                            color: AppTheme.textFaint(context))),
+                    Text(
+                      r.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        color: AppTheme.textFaint(context),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              Icon(Icons.north_east_rounded,
-                  color: AppTheme.textFaint(context), size: 16),
+              Icon(
+                Icons.north_east_rounded,
+                color: AppTheme.textFaint(context),
+                size: 16,
+              ),
             ],
           ),
         ),
@@ -2765,11 +3067,17 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     );
   }
 
-  void _selectSearchResult(LocationSearchResult r, BuildContext sheetContext) {
+  void _selectSearchResult(
+    LocationSearchResult r,
+    BuildContext sheetContext, {
+    bool useCustomLocation = true,
+  }) {
     final newLocation = LatLng(r.lat, r.lon);
-    final label = [r.city, r.state, r.country]
-        .where((s) => s.trim().isNotEmpty)
-        .join(', ');
+    final label = [
+      r.city,
+      r.state,
+      r.country,
+    ].where((s) => s.trim().isNotEmpty).join(', ');
     try {
       mapController.move(newLocation, 10.0);
     } catch (_) {
@@ -2778,19 +3086,20 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     setState(() {
       _currentLocation = newLocation;
       _locationName = label.isNotEmpty ? label : r.displayName;
+      _usingCustomLocation = _isPremium && useCustomLocation;
     });
     _fetchNearbyUsers();
     Navigator.pop(sheetContext);
   }
-
 
   /// Compact dark filter sheet. When [onApplied] is supplied (e.g. opened from
   /// Browse Matches), it's invoked on Apply instead of the default refetch so
   /// the caller can refresh its own view.
   Future<void> _showFilterModal({VoidCallback? onApplied}) {
     // Tribe options across all states (used when no state of origin is chosen).
-    final allTribes = (<String>{for (final t in kStateTribes.values) ...t}.toList()
-      ..sort());
+    final allTribes = (<String>{
+      for (final t in kStateTribes.values) ...t,
+    }.toList()..sort());
 
     return showModalBottomSheet(
       context: context,
@@ -2821,15 +3130,16 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   onTap: () async {
                     await _openMultiSelect(
                       title: label,
-                      sections:
-                          sections ?? [(header: null, options: options)],
+                      sections: sections ?? [(header: null, options: options)],
                       selected: selected,
                     );
                     setModalState(() {});
                   },
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 9,
+                    ),
                     child: Row(
                       children: [
                         Icon(icon, size: 18, color: AppTheme.accent),
@@ -2838,24 +3148,28 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(label,
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textSecondary(context))),
+                              Text(
+                                label,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.textSecondary(context),
+                                ),
+                              ),
                               const SizedBox(height: 1),
                               Text(
                                 summary,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(
-                                    fontSize: 13.5,
-                                    fontWeight: selected.isEmpty
-                                        ? FontWeight.w500
-                                        : FontWeight.w600,
-                                    color: selected.isEmpty
-                                        ? AppTheme.textFaint(context)
-                                        : AppTheme.textPrimary(context)),
+                                  fontSize: 13.5,
+                                  fontWeight: selected.isEmpty
+                                      ? FontWeight.w500
+                                      : FontWeight.w600,
+                                  color: selected.isEmpty
+                                      ? AppTheme.textFaint(context)
+                                      : AppTheme.textPrimary(context),
+                                ),
                               ),
                             ],
                           ),
@@ -2864,19 +3178,26 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           Container(
                             margin: const EdgeInsets.only(right: 6),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 7, vertical: 2),
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.accent,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Text('${selected.length}',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white)),
+                            child: Text(
+                              '${selected.length}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
-                        Icon(Icons.keyboard_arrow_down_rounded,
-                            color: AppTheme.textFaint(context)),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: AppTheme.textFaint(context),
+                        ),
                       ],
                     ),
                   ),
@@ -2897,17 +3218,24 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.wc_rounded, size: 18, color: AppTheme.accent),
+                  const Icon(
+                    Icons.wc_rounded,
+                    size: 18,
+                    color: AppTheme.accent,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Gender',
-                            style: GoogleFonts.poppins(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.textSecondary(context))),
+                        Text(
+                          'Gender',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.textSecondary(context),
+                          ),
+                        ),
                         SizedBox(
                           height: 30,
                           child: DropdownButtonHideUnderline(
@@ -2918,20 +3246,27 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                               dropdownColor: AppTheme.surface(context),
                               borderRadius: BorderRadius.circular(14),
                               icon: Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  color: AppTheme.textFaint(context)),
+                                Icons.keyboard_arrow_down_rounded,
+                                color: AppTheme.textFaint(context),
+                              ),
                               style: GoogleFonts.poppins(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.textPrimary(context)),
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.textPrimary(context),
+                              ),
                               items: const [
                                 DropdownMenuItem(
-                                    value: 'MALE', child: Text('Male')),
+                                  value: 'MALE',
+                                  child: Text('Male'),
+                                ),
                                 DropdownMenuItem(
-                                    value: 'FEMALE', child: Text('Female')),
+                                  value: 'FEMALE',
+                                  child: Text('Female'),
+                                ),
                               ],
                               onChanged: (v) => setModalState(
-                                  () => _genderFilter = v ?? _defaultGender),
+                                () => _genderFilter = v ?? _defaultGender,
+                              ),
                             ),
                           ),
                         ),
@@ -2949,15 +3284,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                 ? [(header: null, options: allTribes)]
                 : [
                     for (final s in _stateOfOriginFilter)
-                      (header: s, options: tribesForState(s))
+                      (header: s, options: tribesForState(s)),
                   ];
-            return multiField('Tribe', Icons.diversity_3_outlined, _tribeFilter,
-                allTribes,
-                sections: sections);
+            return multiField(
+              'Tribe',
+              Icons.diversity_3_outlined,
+              _tribeFilter,
+              allTribes,
+              sections: sections,
+            );
           }
 
           Widget sliderField(
-              String label, IconData icon, String valueText, Widget slider) {
+            String label,
+            IconData icon,
+            String valueText,
+            Widget slider,
+          ) {
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
@@ -2973,17 +3316,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                     children: [
                       Icon(icon, size: 16, color: AppTheme.accent),
                       const SizedBox(width: 8),
-                      Text(label,
-                          style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textSecondary(context))),
+                      Text(
+                        label,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary(context),
+                        ),
+                      ),
                       const Spacer(),
-                      Text(valueText,
-                          style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.accent)),
+                      Text(
+                        valueText,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.accent,
+                        ),
+                      ),
                     ],
                   ),
                   _slimSlider(slider),
@@ -2996,7 +3345,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             height: MediaQuery.of(context).size.height * 0.9,
             decoration: BoxDecoration(
               color: AppTheme.bg(context),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
             ),
             child: Column(
               children: [
@@ -3013,11 +3364,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   padding: const EdgeInsets.fromLTRB(18, 12, 12, 8),
                   child: Row(
                     children: [
-                      Text('Filters',
-                          style: GoogleFonts.poppins(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.textPrimary(context))),
+                      Text(
+                        'Filters',
+                        style: GoogleFonts.poppins(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary(context),
+                        ),
+                      ),
                       const Spacer(),
                       TextButton(
                         onPressed: () => setModalState(() {
@@ -3043,11 +3397,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           _showOnlyPremium = false;
                           _showOnlyOnline = false;
                         }),
-                        child: Text('Reset',
-                            style: GoogleFonts.poppins(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.accent)),
+                        child: Text(
+                          'Reset',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.accent,
+                          ),
+                        ),
                       ),
                       GestureDetector(
                         onTap: () => Navigator.pop(context),
@@ -3057,8 +3414,11 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             color: AppTheme.fg(context, 0.08),
                             borderRadius: BorderRadius.circular(9),
                           ),
-                          child: Icon(Icons.close_rounded,
-                              size: 16, color: AppTheme.fg(context, 0.7)),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: AppTheme.fg(context, 0.7),
+                          ),
                         ),
                       ),
                     ],
@@ -3073,18 +3433,23 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Find your kind of person',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.textPrimary(context))),
+                            Text(
+                              'Find your kind of person',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textPrimary(context),
+                              ),
+                            ),
                             const SizedBox(height: 3),
                             Text(
-                                'Dial in the details and we\'ll surface the matches that fit.',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    color: AppTheme.textSecondary(context),
-                                    height: 1.35)),
+                              'Dial in the details and we\'ll surface the matches that fit.',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: AppTheme.textSecondary(context),
+                                height: 1.35,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -3100,8 +3465,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           divisions: 82,
                           activeColor: AppTheme.accent,
                           inactiveColor: AppTheme.fg(context, 0.12),
-                          labels: RangeLabels('${_ageRange.start.round()}',
-                              '${_ageRange.end.round()}'),
+                          labels: RangeLabels(
+                            '${_ageRange.start.round()}',
+                            '${_ageRange.end.round()}',
+                          ),
                           onChanged: (v) => setModalState(() => _ageRange = v),
                         ),
                       ),
@@ -3110,42 +3477,135 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         Icons.social_distance_rounded,
                         'Within ${_distance.round()} km',
                         Slider(
-                          value: _distance,
+                          value: _distance.clamp(1, _distanceLimit).toDouble(),
                           min: 1,
-                          max: 500,
-                          divisions: 499,
+                          max: _distanceLimit,
+                          divisions: _distanceLimit.round() - 1,
                           activeColor: AppTheme.accent,
                           inactiveColor: AppTheme.fg(context, 0.12),
                           label: '${_distance.round()} km',
                           onChanged: (v) => setModalState(() => _distance = v),
                         ),
                       ),
-                      multiField('Location (lives in)', Icons.place_outlined,
-                          _residenceStateFilter, kNigerianStates),
-                      multiField('State of Origin', Icons.flag_outlined,
-                          _stateOfOriginFilter, kNigerianStates),
+                      GestureDetector(
+                        onTap: _isPremium
+                            ? null
+                            : () {
+                                Navigator.pop(context);
+                                Future<void>.delayed(
+                                  Duration.zero,
+                                  _showLocationUpgrade,
+                                );
+                              },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 13,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.isLight(context)
+                                ? const Color(0xFFF4EEF1)
+                                : const Color(0xFF241720),
+                            borderRadius: BorderRadius.circular(13),
+                            border: Border.all(
+                              color: AppTheme.hairline(context),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _isPremium
+                                    ? Icons.workspace_premium_rounded
+                                    : Icons.lock_outline_rounded,
+                                color: _isPremium
+                                    ? const Color(0xFFC99A48)
+                                    : AppTheme.textSecondary(context),
+                                size: 17,
+                              ),
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Text(
+                                  _isPremium
+                                      ? 'Premium range: up to 500 km, plus travel mode.'
+                                      : 'Free range: up to 50 km. Tap to unlock 500 km and travel mode.',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10.5,
+                                    height: 1.35,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.textSecondary(context),
+                                  ),
+                                ),
+                              ),
+                              if (!_isPremium)
+                                Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 15,
+                                  color: AppTheme.textFaint(context),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      multiField(
+                        'Location (lives in)',
+                        Icons.place_outlined,
+                        _residenceStateFilter,
+                        kNigerianStates,
+                      ),
+                      multiField(
+                        'State of Origin',
+                        Icons.flag_outlined,
+                        _stateOfOriginFilter,
+                        kNigerianStates,
+                      ),
                       tribeField(),
                       multiField(
-                          'Zodiac',
-                          Icons.star_outline_rounded,
-                          _zodiacFilter,
-                          const [
-                            'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo',
-                            'Virgo', 'Libra', 'Scorpio', 'Sagittarius',
-                            'Capricorn', 'Aquarius', 'Pisces'
-                          ]),
+                        'Zodiac',
+                        Icons.star_outline_rounded,
+                        _zodiacFilter,
+                        const [
+                          'Aries',
+                          'Taurus',
+                          'Gemini',
+                          'Cancer',
+                          'Leo',
+                          'Virgo',
+                          'Libra',
+                          'Scorpio',
+                          'Sagittarius',
+                          'Capricorn',
+                          'Aquarius',
+                          'Pisces',
+                        ],
+                      ),
                       multiField(
-                          'Religion',
-                          Icons.church_outlined,
-                          _religionFilter,
-                          const ['Christianity', 'Islam', 'Traditional', 'Other']),
-                      multiField('Genotype', Icons.biotech_outlined,
-                          _genotypeFilter, const ['AA', 'AS', 'SS', 'AC', 'SC']),
+                        'Religion',
+                        Icons.church_outlined,
+                        _religionFilter,
+                        const ['Christianity', 'Islam', 'Traditional', 'Other'],
+                      ),
                       multiField(
-                          'Blood Group',
-                          Icons.bloodtype_outlined,
-                          _bloodGroupFilter,
-                          const ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-']),
+                        'Genotype',
+                        Icons.biotech_outlined,
+                        _genotypeFilter,
+                        const ['AA', 'AS', 'SS', 'AC', 'SC'],
+                      ),
+                      multiField(
+                        'Blood Group',
+                        Icons.bloodtype_outlined,
+                        _bloodGroupFilter,
+                        const [
+                          'O+',
+                          'O-',
+                          'A+',
+                          'A-',
+                          'B+',
+                          'B-',
+                          'AB+',
+                          'AB-',
+                        ],
+                      ),
                       sliderField(
                         'Height',
                         Icons.height_rounded,
@@ -3157,45 +3617,71 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                           divisions: 80,
                           activeColor: AppTheme.accent,
                           inactiveColor: AppTheme.fg(context, 0.12),
-                          labels: RangeLabels('${_heightRange.start.round()}',
-                              '${_heightRange.end.round()}'),
+                          labels: RangeLabels(
+                            '${_heightRange.start.round()}',
+                            '${_heightRange.end.round()}',
+                          ),
                           onChanged: (v) =>
                               setModalState(() => _heightRange = v),
                         ),
                       ),
                       multiField(
-                          'Body Type',
-                          Icons.accessibility_new_rounded,
-                          _bodyTypeFilter,
-                          const [
-                            'Slim', 'Petite', 'Average', 'Athletic', 'Muscular',
-                            'Curvy', 'Stocky', 'Full-figured', 'Heavyset'
-                          ]),
+                        'Body Type',
+                        Icons.accessibility_new_rounded,
+                        _bodyTypeFilter,
+                        const [
+                          'Slim',
+                          'Petite',
+                          'Average',
+                          'Athletic',
+                          'Muscular',
+                          'Curvy',
+                          'Stocky',
+                          'Full-figured',
+                          'Heavyset',
+                        ],
+                      ),
                       multiField(
-                          'Education',
-                          Icons.school_outlined,
-                          _educationFilter,
-                          const [
-                            'High School', 'Bachelor\'s Degree',
-                            'Master\'s Degree', 'PhD'
-                          ]),
+                        'Education',
+                        Icons.school_outlined,
+                        _educationFilter,
+                        const [
+                          'High School',
+                          'Bachelor\'s Degree',
+                          'Master\'s Degree',
+                          'PhD',
+                        ],
+                      ),
                       multiField(
-                          'Relationship Status',
-                          Icons.favorite_border_rounded,
-                          _relationshipStatusFilter,
-                          const ['Single', 'Divorced', 'Widowed', 'Separated']),
-                      multiField('Children', Icons.child_care_outlined,
-                          _hasChildrenFilter,
-                          const ['Yes', 'No', 'Want children']),
-                      multiField('Smoking', Icons.smoking_rooms_outlined,
-                          _smokingFilter, const ['Yes', 'No', 'Occasionally']),
-                      multiField('Drinking', Icons.local_bar_outlined,
-                          _drinkingFilter, const ['Yes', 'No', 'Socially']),
+                        'Relationship Status',
+                        Icons.favorite_border_rounded,
+                        _relationshipStatusFilter,
+                        const ['Single', 'Divorced', 'Widowed', 'Separated'],
+                      ),
                       multiField(
-                          'Views on HIV+ Partner',
-                          Icons.health_and_safety_outlined,
-                          _hivPartnerViewFilter,
-                          const ['Open to discussion', 'Yes', 'No']),
+                        'Children',
+                        Icons.child_care_outlined,
+                        _hasChildrenFilter,
+                        const ['Yes', 'No', 'Want children'],
+                      ),
+                      multiField(
+                        'Smoking',
+                        Icons.smoking_rooms_outlined,
+                        _smokingFilter,
+                        const ['Yes', 'No', 'Occasionally'],
+                      ),
+                      multiField(
+                        'Drinking',
+                        Icons.local_bar_outlined,
+                        _drinkingFilter,
+                        const ['Yes', 'No', 'Socially'],
+                      ),
+                      multiField(
+                        'Views on HIV+ Partner',
+                        Icons.health_and_safety_outlined,
+                        _hivPartnerViewFilter,
+                        const ['Open to discussion', 'Yes', 'No'],
+                      ),
                       Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
@@ -3206,12 +3692,21 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         ),
                         child: Column(
                           children: [
-                            _filterToggle('Verified users', _showOnlyVerified,
-                                (v) => setModalState(() => _showOnlyVerified = v)),
-                            _filterToggle('Premium users', _showOnlyPremium,
-                                (v) => setModalState(() => _showOnlyPremium = v)),
-                            _filterToggle('Online now', _showOnlyOnline,
-                                (v) => setModalState(() => _showOnlyOnline = v)),
+                            _filterToggle(
+                              'Verified users',
+                              _showOnlyVerified,
+                              (v) => setModalState(() => _showOnlyVerified = v),
+                            ),
+                            _filterToggle(
+                              'Premium users',
+                              _showOnlyPremium,
+                              (v) => setModalState(() => _showOnlyPremium = v),
+                            ),
+                            _filterToggle(
+                              'Online now',
+                              _showOnlyOnline,
+                              (v) => setModalState(() => _showOnlyOnline = v),
+                            ),
                           ],
                         ),
                       ),
@@ -3223,7 +3718,8 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   decoration: BoxDecoration(
                     color: AppTheme.bg(context),
                     border: Border(
-                        top: BorderSide(color: AppTheme.hairline(context))),
+                      top: BorderSide(color: AppTheme.hairline(context)),
+                    ),
                   ),
                   child: SizedBox(
                     width: double.infinity,
@@ -3234,9 +3730,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         borderRadius: BorderRadius.circular(15),
                         boxShadow: [
                           BoxShadow(
-                              color: AppTheme.accent.withOpacity(0.35),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6)),
+                            color: AppTheme.accent.withOpacity(0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
                         ],
                       ),
                       child: Material(
@@ -3248,11 +3745,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                             _applyFiltersWithAnimation(onApplied);
                           },
                           child: Center(
-                            child: Text('Apply Filters',
-                                style: GoogleFonts.poppins(
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white)),
+                            child: Text(
+                              'Apply Filters',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -3285,7 +3785,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
             height: MediaQuery.of(sheetCtx).size.height * 0.7,
             decoration: BoxDecoration(
               color: AppTheme.bg(sheetCtx),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
             ),
             child: Column(
               children: [
@@ -3294,27 +3796,34 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: AppTheme.fg(sheetCtx, 0.2),
-                      borderRadius: BorderRadius.circular(2)),
+                    color: AppTheme.fg(sheetCtx, 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 12, 12, 6),
                   child: Row(
                     children: [
-                      Text(title,
-                          style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.textPrimary(sheetCtx))),
+                      Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary(sheetCtx),
+                        ),
+                      ),
                       const Spacer(),
                       if (selected.isNotEmpty)
                         TextButton(
                           onPressed: () => setSheet(() => selected.clear()),
-                          child: Text('Clear',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.accent)),
+                          child: Text(
+                            'Clear',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.accent,
+                            ),
+                          ),
                         ),
                     ],
                   ),
@@ -3327,31 +3836,38 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                         if (section.header != null)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
-                            child: Text(section.header!.toUpperCase(),
-                                style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.6,
-                                    color: AppTheme.accent)),
+                            child: Text(
+                              section.header!.toUpperCase(),
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
+                                color: AppTheme.accent,
+                              ),
+                            ),
                           ),
                         ...section.options.map((o) {
                           final on = selected.contains(o);
                           return GestureDetector(
-                            onTap: () => setSheet(() =>
-                                on ? selected.remove(o) : selected.add(o)),
+                            onTap: () => setSheet(
+                              () => on ? selected.remove(o) : selected.add(o),
+                            ),
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 8),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 13),
+                                horizontal: 14,
+                                vertical: 13,
+                              ),
                               decoration: BoxDecoration(
                                 color: on
                                     ? AppTheme.accent.withOpacity(0.16)
                                     : AppTheme.surface(sheetCtx),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                    color: on
-                                        ? AppTheme.accent
-                                        : AppTheme.hairline(sheetCtx)),
+                                  color: on
+                                      ? AppTheme.accent
+                                      : AppTheme.hairline(sheetCtx),
+                                ),
                               ),
                               child: Row(
                                 children: [
@@ -3366,13 +3882,16 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
-                                    child: Text(o,
-                                        style: GoogleFonts.poppins(
-                                            fontSize: 13.5,
-                                            fontWeight: on
-                                                ? FontWeight.w600
-                                                : FontWeight.w500,
-                                            color: AppTheme.textPrimary(sheetCtx))),
+                                    child: Text(
+                                      o,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 13.5,
+                                        fontWeight: on
+                                            ? FontWeight.w600
+                                            : FontWeight.w500,
+                                        color: AppTheme.textPrimary(sheetCtx),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -3404,9 +3923,10 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
                                   ? 'Done'
                                   : 'Done · ${selected.length} selected',
                               style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -3426,11 +3946,14 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: GoogleFonts.poppins(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.textPrimary(context))),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.textPrimary(context),
+          ),
+        ),
         Transform.scale(
           scale: 0.78,
           child: Switch(
@@ -3476,7 +3999,9 @@ class _ExploreScreenState extends State<ExploreScreen> with TickerProviderStateM
         trackHeight: 3,
         overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-        rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 8),
+        rangeThumbShape: const RoundRangeSliderThumbShape(
+          enabledThumbRadius: 8,
+        ),
       ),
       child: slider,
     );
@@ -3541,8 +4066,7 @@ class _FilteringOverlayState extends State<_FilteringOverlay>
                     alignment: Alignment.center,
                     children: [
                       // Expanding rings
-                      for (int i = 0; i < 3; i++)
-                        _ring((i / 3.0)),
+                      for (int i = 0; i < 3; i++) _ring((i / 3.0)),
                       // Center heart
                       Container(
                         width: 44,
@@ -3558,8 +4082,11 @@ class _FilteringOverlayState extends State<_FilteringOverlay>
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.favorite_rounded,
-                            color: Colors.white, size: 22),
+                        child: const Icon(
+                          Icons.favorite_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                       ),
                     ],
                   );
