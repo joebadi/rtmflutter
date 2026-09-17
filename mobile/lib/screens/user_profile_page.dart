@@ -42,6 +42,12 @@ class _UserProfilePageState extends State<UserProfilePage>
   Set<String> _youMatchThemMatches = {};
   // Their deal-breakers that this viewer's profile fails to meet.
   Set<String> _youMatchThemDealBreakers = {};
+  // How well THEY fit MY prefs — which of my criteria their profile satisfies
+  // (used for the ✓/✗ markers on the Profile tab).
+  Set<String> _theyMatchYouMatches = {};
+  // My own preferences, used to flag which fields I marked as deal-breakers and
+  // which fields I actually expressed a preference on.
+  Map<String, dynamic> _myPrefs = {};
 
   List<String> _images = [];
   late Map<String, dynamic> _user;
@@ -73,6 +79,18 @@ class _UserProfilePageState extends State<UserProfilePage>
 
     // Load mutual match compatibility
     _loadCompatibility();
+
+    // Load my own preferences (for deal-breaker flags on the Profile tab)
+    _loadMyPrefs();
+  }
+
+  Future<void> _loadMyPrefs() async {
+    try {
+      final prefs = await _matchService.getPreferences();
+      if (mounted && prefs.isNotEmpty) setState(() => _myPrefs = prefs);
+    } catch (_) {
+      // Non-fatal — markers just won't render without my preferences.
+    }
   }
 
   Future<void> _loadCompatibility() async {
@@ -83,8 +101,14 @@ class _UserProfilePageState extends State<UserProfilePage>
     final they = data['theyMatchYou'] as Map<String, dynamic>?;
     final you = data['youMatchThem'] as Map<String, dynamic>?;
     setState(() {
-      if (they != null && they['score'] is num) {
-        _theyMatchYou = (they['score'] as num).round();
+      if (they != null) {
+        if (they['score'] is num) {
+          _theyMatchYou = (they['score'] as num).round();
+        }
+        if (they['matches'] is List) {
+          _theyMatchYouMatches =
+              (they['matches'] as List).map((e) => e.toString()).toSet();
+        }
       }
       if (you != null) {
         if (you['matches'] is List) {
@@ -1423,7 +1447,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             bottom: 12,
                                           ),
                                           alignment: Alignment.centerLeft,
-                                          child: const Text('Profile'),
+                                          child: const Text('My Profile'),
                                         ),
                                         Container(
                                           padding: const EdgeInsets.only(
@@ -1433,7 +1457,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                             bottom: 12,
                                           ),
                                           alignment: Alignment.centerRight,
-                                          child: const Text('Preferences'),
+                                          child: const Text('My Preference'),
                                         ),
                                       ],
                                     ),
@@ -1446,7 +1470,6 @@ class _UserProfilePageState extends State<UserProfilePage>
                                     height: 500,
                                     child: TabBarView(
                                       controller: _tabController,
-                                      clipBehavior: Clip.none,
                                       children: [
                                         _buildUserProfileTab(),
                                         _buildPreferredPartnerTab(),
@@ -1666,17 +1689,37 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ),
           const SizedBox(height: 10),
-          _buildDetailItem(Icons.height, 'Height', _user['height']),
-          _buildDetailItem(Icons.church, 'Religion', _user['religion']),
+          _fieldRow(
+            Icons.height,
+            'Height',
+            _user['height'],
+            matched: _theyMatchYouField('height'),
+            isDealBreaker: _myDealBreaker('height'),
+          ),
+          _fieldRow(
+            Icons.church,
+            'Religion',
+            _user['religion'],
+            matched: _theyMatchYouField('religion'),
+            isDealBreaker: _myDealBreaker('religion'),
+          ),
           _buildDetailItem(Icons.school, 'Education', _user['education']),
           _buildDetailItem(Icons.work, 'Work Status', _user['workStatus']),
-          _buildDetailItem(
+          _fieldRow(
             Icons.favorite,
             'Relationship',
             _user['relationshipStatus'],
+            matched: _theyMatchYouField('relationshipStatus'),
+            isDealBreaker: _myDealBreaker('relationshipStatus'),
           ),
           _buildDetailItem(Icons.language, 'Language', _user['language']),
-          _buildDetailItem(Icons.star, 'Zodiac Sign', _user['zodiacSign']),
+          _fieldRow(
+            Icons.star,
+            'Zodiac Sign',
+            _user['zodiacSign'],
+            matched: _theyMatchYouField('zodiac'),
+            isDealBreaker: _myDealBreaker('zodiac'),
+          ),
           _buildDetailItem(
             Icons.psychology,
             'Personality',
@@ -1695,10 +1738,12 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ),
           const SizedBox(height: 10),
-          _buildDetailItem(
+          _fieldRow(
             Icons.fitness_center,
             'Body Type',
             _user['bodyType'],
+            matched: _theyMatchYouField('bodyType'),
+            isDealBreaker: _myDealBreaker('bodyType'),
           ),
           _buildDetailItem(Icons.palette, 'Skin Color', _user['skinColor']),
           _buildDetailItem(
@@ -1724,12 +1769,20 @@ class _UserProfilePageState extends State<UserProfilePage>
             ),
           ),
           const SizedBox(height: 10),
-          _buildDetailItem(
+          _fieldRow(
             Icons.medical_services,
             'Genotype',
             _user['genotype'],
+            matched: _theyMatchYouField('genotype'),
+            isDealBreaker: _myDealBreaker('genotype'),
           ),
-          _buildDetailItem(Icons.bloodtype, 'Blood Group', _user['bloodGroup']),
+          _fieldRow(
+            Icons.bloodtype,
+            'Blood Group',
+            _user['bloodGroup'],
+            matched: _theyMatchYouField('bloodGroup'),
+            isDealBreaker: _myDealBreaker('bloodGroup'),
+          ),
 
           const SizedBox(height: 20),
 
@@ -1819,6 +1872,7 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
+  // Preference rows now share the Profile tab's arrangement + font size.
   Widget _buildPreferenceItem(
     IconData icon,
     String label,
@@ -1826,65 +1880,12 @@ class _UserProfilePageState extends State<UserProfilePage>
     bool? matched,
     bool isDealBreaker = false,
   }) {
-    if (value == 'Any' || value.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    // A deal-breaker the viewer fails to meet is highlighted red.
-    final bool failedDealBreaker = isDealBreaker && matched == false;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: const Color(0xFFFF5722), size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        label,
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.white.withOpacity(0.6),
-                        ),
-                      ),
-                    ),
-                    if (isDealBreaker) ...[
-                      const SizedBox(width: 6),
-                      _dealBreakerChip(failedDealBreaker),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withOpacity(0.95),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (matched != null) ...[
-            const SizedBox(width: 8),
-            Icon(
-              matched ? Icons.check_circle_rounded : Icons.cancel_rounded,
-              color: matched
-                  ? const Color(0xFF4CAF50)
-                  : (failedDealBreaker
-                        ? const Color(0xFFFF5252)
-                        : Colors.white.withOpacity(0.28)),
-              size: 18,
-            ),
-          ],
-        ],
-      ),
+    return _fieldRow(
+      icon,
+      label,
+      value,
+      matched: matched,
+      isDealBreaker: isDealBreaker,
     );
   }
 
@@ -1929,6 +1930,122 @@ class _UserProfilePageState extends State<UserProfilePage>
   bool? _reciprocalMatch(String fieldKey) {
     if (_youMatchThem == null) return null;
     return _youMatchThemMatches.contains(fieldKey);
+  }
+
+  // Maps a compatibility field key to the deal-breaker flag in a preferences map.
+  static const Map<String, String> _dealBreakerKeys = {
+    'age': 'ageIsDealBreaker',
+    'relationshipStatus': 'relationshipIsDealBreaker',
+    'location': 'locationIsDealBreaker',
+    'tribe': 'locationIsDealBreaker',
+    'religion': 'religionIsDealBreaker',
+    'zodiac': 'zodiacIsDealBreaker',
+    'genotype': 'genotypeIsDealBreaker',
+    'bloodGroup': 'bloodGroupIsDealBreaker',
+    'height': 'heightIsDealBreaker',
+    'bodyType': 'bodyTypeIsDealBreaker',
+    'tattoos': 'tattoosIsDealBreaker',
+    'piercings': 'piercingsIsDealBreaker',
+  };
+
+  /// Whether *I* marked [fieldKey] as a deal-breaker in my own preferences.
+  bool _myDealBreaker(String fieldKey) {
+    final k = _dealBreakerKeys[fieldKey];
+    return k != null && _myPrefs[k] == true;
+  }
+
+  /// Whether I actually expressed a preference on [fieldKey] — markers only show
+  /// for fields I care about.
+  bool _iExpressed(String fieldKey) {
+    switch (fieldKey) {
+      case 'religion':
+      case 'zodiac':
+      case 'genotype':
+      case 'bloodGroup':
+      case 'bodyType':
+      case 'relationshipStatus':
+        final v = _myPrefs[fieldKey];
+        return v is List && v.isNotEmpty;
+      case 'height':
+        return _myPrefs['heightMin'] != null && _myPrefs['heightMax'] != null;
+      default:
+        return false;
+    }
+  }
+
+  /// Whether the viewed person's profile satisfies MY preference on [fieldKey].
+  /// Returns null (no marker) when I have no such preference or no data yet.
+  bool? _theyMatchYouField(String fieldKey) {
+    if (_theyMatchYou == null || !_iExpressed(fieldKey)) return null;
+    return _theyMatchYouMatches.contains(fieldKey);
+  }
+
+  /// Shared field row used by BOTH the Profile and Preferences tabs: an icon, a
+  /// label (with optional deal-breaker chip), a right-aligned value, and an
+  /// optional ✓/✗ match marker.
+  Widget _fieldRow(
+    IconData icon,
+    String label,
+    String? value, {
+    bool? matched,
+    bool isDealBreaker = false,
+  }) {
+    if (value == null || value.isEmpty || value == 'Any') {
+      return const SizedBox.shrink();
+    }
+    final bool failedDealBreaker = isDealBreaker && matched == false;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFFFF5722), size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.7),
+                    ),
+                  ),
+                ),
+                if (isDealBreaker) ...[
+                  const SizedBox(width: 6),
+                  _dealBreakerChip(failedDealBreaker),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          if (matched != null) ...[
+            const SizedBox(width: 8),
+            Icon(
+              matched ? Icons.check_circle_rounded : Icons.cancel_rounded,
+              color: matched
+                  ? const Color(0xFF4CAF50)
+                  : (failedDealBreaker
+                        ? const Color(0xFFFF5252)
+                        : Colors.white.withOpacity(0.28)),
+              size: 18,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   /// True when the new coupled location/origin blocks are present.
@@ -2062,31 +2179,37 @@ class _UserProfilePageState extends State<UserProfilePage>
         ? "$name'"
         : "$name's";
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Transform.translate(
-        offset: const Offset(-24, 0),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(24, 10, 20, 10),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-              colors: [Color(0xFF3A1128), Color(0xFFFF5722)],
-            ),
-            borderRadius: BorderRadius.horizontal(right: Radius.circular(24)),
-          ),
-          child: Text(
-            "$possessive partner preference...",
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.poppins(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              height: 1.3,
-            ),
-          ),
+    // Full-width band: bright at the left, deepening to a dark wine, then fading
+    // to transparent so the right end blends into the page instead of ending on
+    // a hard rounded edge.
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 9, 24, 9),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            Color(0xFFFF5722), // bright
+            Color(0xFF7A2237), // dark wine
+            Color(0x003A1128), // fades into the page background
+          ],
+          stops: [0.0, 0.5, 1.0],
+        ),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(10),
+          bottomLeft: Radius.circular(10),
+        ),
+      ),
+      child: Text(
+        "$possessive partner preferences",
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.poppins(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          height: 1.3,
         ),
       ),
     );
@@ -2101,7 +2224,6 @@ class _UserProfilePageState extends State<UserProfilePage>
     final bool hasPrefs = prefs is Map && prefs.isNotEmpty;
 
     return SingleChildScrollView(
-      clipBehavior: Clip.none,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

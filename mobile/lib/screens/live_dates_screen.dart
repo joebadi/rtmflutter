@@ -250,32 +250,43 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
               ],
             ),
           ),
-          // Diamond balance chip
-          Consumer<WalletProvider>(
-            builder: (context, wallet, _) => GestureDetector(
-              onTap: () => context.push('/wallet'),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(
-                  color: AppTheme.accent.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.accent.withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.diamond, color: AppTheme.accent, size: 16),
-                    const SizedBox(width: 5),
-                    Text('${wallet.balance}',
-                        style: GoogleFonts.poppins(
-                            color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 13)),
-                  ],
+          // Trailing actions — diamond balance chip + notification bell, kept on
+          // one baseline and aligned with each other.
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Consumer<WalletProvider>(
+                builder: (context, wallet, _) => GestureDetector(
+                  onTap: () => context.push('/wallet'),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppTheme.accent.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.diamond,
+                            color: AppTheme.accent, size: 16),
+                        const SizedBox(width: 5),
+                        Text('${wallet.balance}',
+                            style: GoogleFonts.poppins(
+                                color: AppTheme.accent,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13)),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(width: 8),
+              NotificationIcon(isDark: !AppTheme.isLight(context)),
+            ],
           ),
-          const SizedBox(width: 4),
-          const NotificationIcon(isDark: true),
         ],
       ),
     );

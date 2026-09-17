@@ -11,8 +11,8 @@ import '../widgets/app_logo.dart';
 
 /// Matches — replaces the old Likes page. Two tabs:
 ///  • Mutual: people you and they have both liked.
-///  • Preferred: profiles that meet 100% of your match preferences, with
-///    sorting and quick filters.
+///  • Preferred: people whose OWN partner preferences your profile satisfies
+///    100% (i.e. people looking for you), with sorting and quick filters.
 class MatchesScreen extends StatefulWidget {
   const MatchesScreen({super.key});
 
@@ -78,8 +78,9 @@ class _MatchesScreenState extends State<MatchesScreen>
       _errorPreferred = null;
     });
     try {
-      final list = await _matchService.getMatchSuggestions(limit: 50);
-      // Preferred = profiles that satisfy ALL set preferences (100%).
+      final list = await _matchService.getUsersInterestedInMe(limit: 100);
+      // Preferred = people whose partner preferences YOUR profile satisfies
+      // 100% (i.e. people looking for you).
       final perfect = list.where((item) {
         final c = item is Map ? item['compatibility'] : null;
         final score = (c is Map && c['score'] is num)
@@ -247,7 +248,7 @@ class _MatchesScreenState extends State<MatchesScreen>
                         fontWeight: FontWeight.bold,
                         color: AppTheme.textPrimary(context))),
                 const SizedBox(height: 2),
-                Text('Your connections & perfect-fit profiles',
+                Text('Your connections & people looking for you',
                     style: GoogleFonts.poppins(
                         fontSize: 13, color: AppTheme.textSecondary(context))),
               ],
@@ -335,8 +336,8 @@ class _MatchesScreenState extends State<MatchesScreen>
           child: _preferred.isEmpty
               ? _emptyState(
                   Icons.auto_awesome_rounded,
-                  'No perfect matches yet',
-                  'Profiles that match 100% of your preferences show here. Keep your preferences sharp and check back.',
+                  'No one\'s a perfect fit yet',
+                  'People whose partner preferences your profile matches 100% show here — the people looking for someone exactly like you.',
                 )
               : view.isEmpty
                   ? _emptyState(Icons.filter_alt_off_rounded, 'Nothing matches that filter',

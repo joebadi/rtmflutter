@@ -79,6 +79,30 @@ class MatchService {
     }
   }
 
+  /// Users whose partner preferences my profile satisfies — "people looking for
+  /// me". Items are shaped like suggestions: `{ profile, compatibility }`.
+  Future<List<dynamic>> getUsersInterestedInMe({int limit = 50}) async {
+    try {
+      final token = await _storage.read(key: 'access_token');
+      _dio.options.headers['Authorization'] = 'Bearer $token';
+
+      final response = await _dio.get(
+        '${ApiConfig.baseUrl}/matches/interested-in-me',
+        queryParameters: {'limit': limit},
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data']['matches'] ?? [];
+      } else {
+        throw Exception(
+          response.data['message'] ?? 'Failed to fetch matches',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error fetching matches: $e');
+    }
+  }
+
   /// Get mutual compatibility with another user.
   /// Returns `{ theyMatchYou: {score, matches, dealBreakers},
   ///            youMatchThem: {score, matches, dealBreakers} }`.
