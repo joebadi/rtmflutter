@@ -1531,38 +1531,9 @@ class _UserProfilePageState extends State<UserProfilePage>
     );
   }
 
+  // Plain profile fields share the same aligned row as everything else.
   Widget _buildDetailItem(IconData icon, String label, String? value) {
-    if (value == null || value.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xFFFF5722), size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.white.withOpacity(0.7),
-              ),
-            ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
-      ),
-    );
+    return _fieldRow(icon, label, value);
   }
 
   Widget _buildActionButtons() {
@@ -1980,9 +1951,10 @@ class _UserProfilePageState extends State<UserProfilePage>
     return _theyMatchYouMatches.contains(fieldKey);
   }
 
-  /// Shared field row used by BOTH the Profile and Preferences tabs: an icon, a
-  /// label (with optional deal-breaker chip), a right-aligned value, and an
-  /// optional ✓/✗ match marker.
+  /// Shared field row used by BOTH the Profile and Preferences tabs. Label (with
+  /// an optional deal-breaker chip) sits on top and the value directly beneath,
+  /// so labels never get crushed and every value lines up in one clean column.
+  /// A ✓/✗ marker (when provided) is pinned to the right edge so markers align.
   Widget _fieldRow(
     IconData icon,
     String label,
@@ -1995,52 +1967,55 @@ class _UserProfilePageState extends State<UserProfilePage>
     }
     final bool failedDealBreaker = isDealBreaker && matched == false;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(icon, color: const Color(0xFFFF5722), size: 18),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.7),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        label,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          color: Colors.white.withOpacity(0.55),
+                        ),
+                      ),
                     ),
+                    if (isDealBreaker) ...[
+                      const SizedBox(width: 8),
+                      _dealBreakerChip(failedDealBreaker),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
-                if (isDealBreaker) ...[
-                  const SizedBox(width: 6),
-                  _dealBreakerChip(failedDealBreaker),
-                ],
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ),
           if (matched != null) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Icon(
               matched ? Icons.check_circle_rounded : Icons.cancel_rounded,
               color: matched
                   ? const Color(0xFF4CAF50)
                   : (failedDealBreaker
                         ? const Color(0xFFFF5252)
-                        : Colors.white.withOpacity(0.28)),
-              size: 18,
+                        : Colors.white.withOpacity(0.30)),
+              size: 19,
             ),
           ],
         ],
