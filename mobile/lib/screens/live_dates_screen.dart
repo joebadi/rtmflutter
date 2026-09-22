@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -293,14 +294,57 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
   }
 
   Widget _buildEventList() {
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-      itemCount: _events.length,
-      itemBuilder: (context, index) => _buildEventCard(_events[index] as Map),
+    final live = _events.where((e) => e['status'] == 'LIVE').toList();
+    final upcoming = _events.where((e) => e['status'] != 'LIVE').toList();
+
+    final children = <Widget>[];
+    var idx = 0;
+    if (live.isNotEmpty) {
+      children.add(_sectionHeader('Happening now', AppTheme.accentBright, live: true));
+      for (final e in live) {
+        children.add(_buildEventCard(e as Map, index: idx++));
+      }
+    }
+    if (upcoming.isNotEmpty) {
+      children.add(_sectionHeader(
+          live.isEmpty ? 'Upcoming events' : 'Coming up', AppTheme.textSecondary(context)));
+      for (final e in upcoming) {
+        children.add(_buildEventCard(e as Map, index: idx++));
+      }
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 110),
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: children,
     );
   }
 
-  Widget _buildEventCard(Map event) {
+  Widget _sectionHeader(String label, Color color, {bool live = false}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 14, 4, 12),
+      child: Row(
+        children: [
+          if (live)
+            const _PulsingDot(color: AppTheme.accentBright, size: 9)
+          else
+            Container(
+              width: 4,
+              height: 16,
+              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+            ),
+          const SizedBox(width: 9),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+                color: color, fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventCard(Map event, {int index = 0}) {
     final type = event['type']?.toString() ?? 'SPEED_DATING';
     final isBlind = type == 'BLIND_DATE';
     final status = event['status']?.toString() ?? 'SCHEDULED';
@@ -311,140 +355,218 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
     final spotsLeft = (event['spotsLeft'] ?? 0) as int;
     final isFull = event['isFull'] == true;
     final myStatus = event['myBookingStatus']?.toString();
+    final iAmBooked = myStatus == 'BOOKED' || myStatus == 'ATTENDED';
     final attendees = (event['attendeePreview'] as List?) ?? [];
     final coverUrl = _fullUrl(event['coverImageUrl']?.toString());
 
-    final accent = isBlind ? const Color(0xFF7E57C2) : AppTheme.accent;
-    final accentLight = isBlind ? const Color(0xFF9575CD) : AppTheme.accentLight;
+    final accent = isBlind ? const Color(0xFF8E5BD8) : AppTheme.accent;
+    final accentLight = isBlind ? const Color(0xFFB388E0) : AppTheme.accentLight;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.surface(context), AppTheme.surface2(context)],
-        ),
-        border: Border.all(
-          color: isLive ? accent.withOpacity(0.6) : AppTheme.hairline(context),
-          width: isLive ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (isLive ? accent : Colors.black).withOpacity(isLive ? 0.3 : 0.4),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
+    // Whole-card tap is a fast path to "Join Room" while an event is live and
+    // you're booked; otherwise it's a no-op (the explicit CTA handles booking).
+    final VoidCallback? cardTap = (isLive && iAmBooked)
+        ? () => context.push('/live-room', extra: {
+              'eventId': event['id'].toString(),
+              'eventTitle': event['title']?.toString() ?? 'Live Date',
+              'audioOnly': isBlind,
+            })
+        : null;
+
+    return _EntranceFade(
+      delayMs: 70 * index,
+      child: _PressableScale(
+        onTap: cardTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          height: 384,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: (isLive ? accent : Colors.black).withOpacity(isLive ? 0.42 : 0.28),
+                blurRadius: 28,
+                spreadRadius: isLive ? 1 : 0,
+                offset: const Offset(0, 14),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ----- Cover / banner -----
-            Stack(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                SizedBox(
-                  height: 130,
-                  width: double.infinity,
-                  child: coverUrl.isNotEmpty
-                      ? Image.network(
-                          coverUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _bannerFallback(accent, accentLight, isBlind),
-                        )
-                      : _bannerFallback(accent, accentLight, isBlind),
-                ),
-                // dark gradient for text legibility
-                Positioned.fill(
+                // ----- Full-bleed cover -----
+                coverUrl.isNotEmpty
+                    ? Image.network(
+                        coverUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (ctx, child, prog) => prog == null
+                            ? child
+                            : _bannerFallback(accent, accentLight, isBlind),
+                        errorBuilder: (_, __, ___) => _bannerFallback(accent, accentLight, isBlind),
+                      )
+                    : _bannerFallback(accent, accentLight, isBlind),
+
+                // Legibility scrim: subtle at top, deep at the bottom.
+                const Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, AppTheme.surface(context).withOpacity(0.95)],
+                        stops: [0.0, 0.35, 1.0],
+                        colors: [
+                          Color(0x66000000),
+                          Color(0x22000000),
+                          Color(0xF2000000),
+                        ],
                       ),
                     ),
                   ),
                 ),
-                // Format badge
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: _pill(
-                    icon: isBlind ? Icons.visibility_off_rounded : Icons.videocam_rounded,
-                    label: isBlind ? 'Blind Date · Audio' : 'Speed Dating · Video',
-                    color: accent,
-                  ),
-                ),
-                // Live / countdown badge
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: isLive ? _liveBadge(accent) : _countdownBadge(event),
-                ),
-              ],
-            ),
 
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(event['title']?.toString() ?? 'Live Date',
-                      style: GoogleFonts.poppins(
-                          color: AppTheme.textPrimary(context), fontSize: 19, fontWeight: FontWeight.bold)),
-                  if ((event['description']?.toString() ?? '').isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(event['description'].toString(),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(color: AppTheme.textSecondary(context), fontSize: 13, height: 1.4)),
-                  ],
-                  const SizedBox(height: 14),
-
-                  // Attendees + capacity
-                  Row(
-                    children: [
-                      _attendeeStack(attendees, booked, isBlind, accent),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isFull ? 'Full · waitlist open' : '$spotsLeft spot${spotsLeft == 1 ? '' : 's'} left',
-                              style: GoogleFonts.poppins(
-                                  color: isFull ? AppTheme.accentBright : AppTheme.textPrimary(context),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 5),
-                            _capacityBar(booked, capacity, accent),
-                          ],
+                // Live accent glow at the bottom for live events.
+                if (isLive)
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.center,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, accent.withOpacity(0.28)],
                         ),
+                      ),
+                    ),
+                  ),
+
+                // ----- Overlay content -----
+                Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          _glassPill(
+                            icon: isBlind ? Icons.visibility_off_rounded : Icons.videocam_rounded,
+                            label: isBlind ? 'Blind Date' : 'Speed Dating',
+                            tint: accentLight,
+                          ),
+                          const Spacer(),
+                          isLive ? _liveBadge(accent) : _countdownBadge(event),
+                        ],
+                      ),
+                      const Spacer(),
+                      _glassPanel(
+                        event: event,
+                        isBlind: isBlind,
+                        isLive: isLive,
+                        isFull: isFull,
+                        cost: cost,
+                        capacity: capacity,
+                        booked: booked,
+                        spotsLeft: spotsLeft,
+                        myStatus: myStatus,
+                        attendees: attendees,
+                        accent: accent,
+                        accentLight: accentLight,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-                  // Cost + CTA
-                  Row(
-                    children: [
-                      if (cost > 0)
-                        _pill(icon: Icons.diamond, label: '$cost', color: AppTheme.accent)
-                      else
-                        _pill(icon: Icons.celebration_rounded, label: 'Free', color: Colors.green),
-                      const SizedBox(width: 10),
-                      Expanded(child: _ctaButton(event, isLive, isFull, myStatus, accent)),
-                    ],
+  /// Frosted-glass info panel that floats over the bottom of the cover.
+  Widget _glassPanel({
+    required Map event,
+    required bool isBlind,
+    required bool isLive,
+    required bool isFull,
+    required int cost,
+    required int capacity,
+    required int booked,
+    required int spotsLeft,
+    required String? myStatus,
+    required List attendees,
+    required Color accent,
+    required Color accentLight,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.30),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white.withOpacity(0.14)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                event['title']?.toString() ?? 'Live Date',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                    color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700, height: 1.1),
+              ),
+              if ((event['description']?.toString() ?? '').isNotEmpty) ...[
+                const SizedBox(height: 5),
+                Text(
+                  event['description'].toString(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                      color: Colors.white.withOpacity(0.78), fontSize: 12.5, height: 1.35),
+                ),
+              ],
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  _attendeeStack(attendees, booked, isBlind, accentLight),
+                  const SizedBox(width: 11),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isFull
+                              ? 'Full · waitlist open'
+                              : '$spotsLeft spot${spotsLeft == 1 ? '' : 's'} left',
+                          style: GoogleFonts.poppins(
+                              color: isFull ? accentLight : Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 6),
+                        _capacityBar(booked, capacity, accentLight),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  if (cost > 0)
+                    _costChip(icon: Icons.diamond, label: '$cost', color: AppTheme.accent)
+                  else
+                    _costChip(icon: Icons.celebration_rounded, label: 'Free', color: const Color(0xFF34C759)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _ctaButton(event, isLive, isFull, myStatus, accent, accentLight)),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -462,29 +584,57 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
       child: Center(
         child: Icon(
           isBlind ? Icons.favorite_rounded : Icons.video_camera_front_rounded,
-          color: AppTheme.fg(context, 0.85),
-          size: 46,
+          color: Colors.white.withOpacity(0.85),
+          size: 52,
         ),
       ),
     );
   }
 
-  Widget _pill({required IconData icon, required String label, required Color color}) {
+  /// Frosted pill for the format badge over the cover.
+  Widget _glassPill({required IconData icon, required String label, required Color tint}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.32),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.18)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: tint, size: 14),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: GoogleFonts.poppins(
+                      color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _costChip({required IconData icon, required String label, required Color color}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.18),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4)),
+        color: color.withOpacity(0.22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 14),
+          Icon(icon, color: color == const Color(0xFF34C759) ? color : AppTheme.accentBright, size: 15),
           const SizedBox(width: 5),
           Text(label,
               style: GoogleFonts.poppins(
-                  color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+                  color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -492,13 +642,17 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
 
   Widget _liveBadge(Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: color.withOpacity(0.6), blurRadius: 12, offset: const Offset(0, 3))],
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 7, height: 7, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
-          const SizedBox(width: 6),
+          const _PulsingDot(color: Colors.white, size: 7),
+          const SizedBox(width: 7),
           Text('LIVE NOW',
               style: GoogleFonts.poppins(
                   color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
@@ -509,21 +663,28 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
 
   Widget _countdownBadge(Map event) {
     final label = _countdownLabel(event['startsAt']?.toString());
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.schedule_rounded, color: Colors.white, size: 13),
-          const SizedBox(width: 5),
-          Text(label,
-              style: GoogleFonts.poppins(
-                  color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-        ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.38),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.18)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.schedule_rounded, color: Colors.white, size: 13),
+              const SizedBox(width: 5),
+              Text(label,
+                  style: GoogleFonts.poppins(
+                      color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -549,16 +710,16 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
         height: 36,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: accent.withOpacity(0.15),
+          color: Colors.white.withOpacity(0.14),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: accent.withOpacity(0.4)),
+          border: Border.all(color: Colors.white.withOpacity(0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.people_alt_rounded, size: 14, color: accent),
             const SizedBox(width: 3),
-            Text('$total', style: GoogleFonts.poppins(color: accent, fontSize: 12, fontWeight: FontWeight.w700)),
+            Text('$total', style: GoogleFonts.poppins(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
           ],
         ),
       );
@@ -584,12 +745,12 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
                 height: 34,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppTheme.surface2(context),
+                  color: Colors.white.withOpacity(0.16),
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.bg(context), width: 2),
+                  border: Border.all(color: Colors.white.withOpacity(0.85), width: 2),
                 ),
                 child: Text('+$extra',
-                    style: GoogleFonts.poppins(color: AppTheme.textSecondary(context), fontSize: 10, fontWeight: FontWeight.w700)),
+                    style: GoogleFonts.poppins(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
               ),
             ),
         ],
@@ -603,14 +764,14 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
       height: 34,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppTheme.bg(context), width: 2),
-        color: AppTheme.surface2(context),
+        border: Border.all(color: Colors.white.withOpacity(0.85), width: 2),
+        color: Colors.white.withOpacity(0.12),
       ),
       child: ClipOval(
         child: url.isEmpty
-            ? Icon(Icons.person, color: AppTheme.textFaint(context), size: 18)
+            ? const Icon(Icons.person, color: Colors.white70, size: 18)
             : Image.network(url, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(Icons.person, color: AppTheme.textFaint(context), size: 18)),
+                errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white70, size: 18)),
       ),
     );
   }
@@ -622,39 +783,46 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
       child: LinearProgressIndicator(
         value: pct,
         minHeight: 6,
-        backgroundColor: AppTheme.hairline(context),
+        backgroundColor: Colors.white.withOpacity(0.22),
         valueColor: AlwaysStoppedAnimation<Color>(accent),
       ),
     );
   }
 
-  Widget _ctaButton(Map event, bool isLive, bool isFull, String? myStatus, Color accent) {
+  Widget _ctaButton(
+      Map event, bool isLive, bool isFull, String? myStatus, Color accent, Color accentLight) {
     final id = event['id'].toString();
     final busy = _busy.contains(id);
     final booked = myStatus == 'BOOKED' || myStatus == 'ATTENDED';
     final waitlisted = myStatus == 'WAITLISTED';
 
-    String label;
-    IconData icon;
-    Color bg;
-    VoidCallback? onTap;
-
     if (busy) {
-      return SizedBox(
-        height: 46,
+      return Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(15),
+        ),
         child: Center(
           child: SizedBox(
-            width: 22, height: 22,
-            child: PremiumLoader(strokeWidth: 2.5, color: accent),
+            width: 22,
+            height: 22,
+            child: PremiumLoader(strokeWidth: 2.5, color: Colors.white),
           ),
         ),
       );
     }
 
+    String label;
+    IconData icon;
+    List<Color> gradient;
+    bool glass = false; // frosted style for secondary states
+    VoidCallback? onTap;
+
     if (isLive && booked) {
       label = 'Join Room';
       icon = Icons.videocam_rounded;
-      bg = accent;
+      gradient = [accent, accentLight];
       onTap = () => context.push('/live-room', extra: {
             'eventId': event['id'].toString(),
             'eventTitle': event['title']?.toString() ?? 'Live Date',
@@ -663,41 +831,61 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
     } else if (booked) {
       label = 'Booked · Tap to cancel';
       icon = Icons.check_circle_rounded;
-      bg = Colors.green.shade600;
+      gradient = [const Color(0xFF2FA84F), const Color(0xFF48C96B)];
       onTap = () => _cancel(event);
     } else if (waitlisted) {
       label = 'On waitlist · Leave';
       icon = Icons.hourglass_top_rounded;
-      bg = AppTheme.surface2(context);
+      gradient = const [Colors.transparent, Colors.transparent];
+      glass = true;
       onTap = () => _cancel(event);
     } else if (isFull) {
       label = 'Join Waitlist';
       icon = Icons.playlist_add_rounded;
-      bg = AppTheme.surface2(context);
+      gradient = const [Colors.transparent, Colors.transparent];
+      glass = true;
       onTap = () => _book(event);
     } else {
-      label = 'Book a Slot';
-      icon = Icons.bolt_rounded;
-      bg = accent;
+      label = 'Book Your Spot';
+      icon = Icons.favorite_rounded;
+      gradient = [accent, accentLight];
       onTap = () => _book(event);
     }
 
-    return SizedBox(
-      height: 46,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 18, color: Colors.white),
-        label: Text(label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: bg,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
+    final child = Container(
+      height: 50,
+      decoration: BoxDecoration(
+        gradient: glass ? null : LinearGradient(colors: gradient),
+        color: glass ? Colors.white.withOpacity(0.14) : null,
+        borderRadius: BorderRadius.circular(15),
+        border: glass ? Border.all(color: Colors.white.withOpacity(0.28)) : null,
+        boxShadow: glass
+            ? null
+            : [
+                BoxShadow(
+                  color: gradient.first.withOpacity(0.45),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18, color: Colors.white),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                    color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13.5)),
+          ),
+        ],
       ),
     );
+
+    return _PressableScale(onTap: onTap, scale: 0.96, child: child);
   }
 
   Widget _buildBody() {
@@ -737,6 +925,142 @@ class _LiveDatesScreenState extends State<LiveDatesScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A small dot that gently pulses — used for LIVE indicators.
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot({required this.color, this.size = 8});
+  final Color color;
+  final double size;
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, _) {
+        final t = _c.value; // 0..1
+        return SizedBox(
+          width: widget.size + 8,
+          height: widget.size + 8,
+          child: Center(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Expanding halo
+                Container(
+                  width: widget.size + t * 8,
+                  height: widget.size + t * 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: widget.color.withOpacity(0.35 * (1 - t)),
+                  ),
+                ),
+                Container(
+                  width: widget.size,
+                  height: widget.size,
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: widget.color),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Wraps a child so it scales down slightly while pressed — a tactile feel for
+/// cards and buttons. A null [onTap] disables the interaction (no scale).
+class _PressableScale extends StatefulWidget {
+  const _PressableScale({required this.child, this.onTap, this.scale = 0.98});
+  final Widget child;
+  final VoidCallback? onTap;
+  final double scale;
+
+  @override
+  State<_PressableScale> createState() => _PressableScaleState();
+}
+
+class _PressableScaleState extends State<_PressableScale> {
+  bool _down = false;
+
+  void _set(bool v) {
+    if (widget.onTap == null) return;
+    if (mounted) setState(() => _down = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => _set(true),
+      onTapUp: (_) => _set(false),
+      onTapCancel: () => _set(false),
+      child: AnimatedScale(
+        scale: _down ? widget.scale : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// A one-shot fade + slide-up entrance for list items, staggered by [delayMs].
+class _EntranceFade extends StatefulWidget {
+  const _EntranceFade({required this.child, this.delayMs = 0});
+  final Widget child;
+  final int delayMs;
+
+  @override
+  State<_EntranceFade> createState() => _EntranceFadeState();
+}
+
+class _EntranceFadeState extends State<_EntranceFade> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 480));
+  late final Animation<double> _fade =
+      CurvedAnimation(parent: _c, curve: Curves.easeOut);
+  late final Animation<Offset> _slide =
+      Tween(begin: const Offset(0, 0.06), end: Offset.zero).animate(_fade);
+  Timer? _start;
+
+  @override
+  void initState() {
+    super.initState();
+    _start = Timer(Duration(milliseconds: widget.delayMs), () {
+      if (mounted) _c.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _start?.cancel();
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }
